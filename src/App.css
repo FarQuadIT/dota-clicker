@@ -4,7 +4,16 @@
   padding: 2rem;
   text-align: center;
 }
+/* Запрещаем прокрутку на всём приложении */
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
 
+#root {
+  height: 100%;
+  overflow: hidden;
+}
 .logo {
   height: 6em;
   padding: 1.5em;

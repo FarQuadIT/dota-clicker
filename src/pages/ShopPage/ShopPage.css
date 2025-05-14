@@ -1,13 +1,13 @@
-
 .shop-page {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 90px); /* Вычитаем высоту Header и Footer */
+    height: calc(100vh - 90px);
     width: 100vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
-    margin-top: 40px; /* Компенсируем отступ от main */
+    margin-top: 40px;
+    overflow: hidden; /* ДОБАВИТЬ ЭТУ СТРОКУ */
 }
 
 .shop-top {
@@ -20,6 +20,7 @@
     background-size: cover;
     display: block;
     border-bottom: 2px solid #888;
+    overflow: hidden; /* ИЗМЕНИТЬ С overflow-y: auto НА overflow: hidden */
     position: relative;
 }
 
@@ -30,7 +31,8 @@
     color: white;
     display: block;
     padding: 60px 0px 0px 0px;
-    overflow-y: auto;
+    overflow: hidden; /* ИЗМЕНИТЬ С overflow-y: auto НА overflow: hidden */
+    position: relative; /* ДОБАВИТЬ ЭТУ СТРОКУ */
 }
 
 .menu-container {
@@ -86,7 +88,11 @@
     height: 30px;
     object-fit: contain;
 }
-
+.shop-top,
+.menu-container,
+.characteristics {
+    overflow: hidden;
+}
 .characteristics {
     position: absolute;
     top: 20px;
@@ -284,6 +290,34 @@
       transform: translateY(0);
     }
   }
+
+/* Добавьте эти стили в КОНЕЦ файла ShopPage.css */
+
+/* Контейнер для прокрутки предметов */
+.items-scroll-area {
+    height: 100%;
+    overflow-y: auto; /* Прокрутка только здесь */
+    padding-bottom: 20px;
+}
+
+/* Стилизация скроллбара */
+.items-scroll-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.items-scroll-area::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.items-scroll-area::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.items-scroll-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
 /* Адаптивность для мобильных */
 @media (max-width: 768px) {
     .menu-container {

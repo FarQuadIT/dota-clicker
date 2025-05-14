@@ -18,10 +18,12 @@ function AppContent() {
       <Footer />
       
       <main style={{
-        marginTop: '40px',    // Отступ для Header
-        marginBottom: '50px', // Отступ для Footer
-        padding: isShopPage ? '0' : '20px', // Убираем padding для ShopPage
-      }}>
+  marginTop: '40px',
+  marginBottom: '50px',
+  padding: isShopPage ? '0' : '20px',
+  height: 'calc(100vh - 90px)', // ДОБАВИТЬ
+  overflow: 'hidden' // ДОБАВИТЬ
+}}>
         <Routes>
           <Route path="/" element={<Navigate to="/main" replace />} />
           <Route path="/main" element={<MainPage />} />
