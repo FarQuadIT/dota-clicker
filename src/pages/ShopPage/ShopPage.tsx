@@ -5,12 +5,11 @@ import { shopCategories } from '../../shared/constants/shopConfig';
 import './ShopPage.css';
 
 export default function ShopPage() {
-  // Состояние для активной категории
   const [activeCategory, setActiveCategory] = useState<string>("max-health");
+  const mockItems = [1, 2, 3, 4, 5];
 
   return (
     <div className="shop-page">
-      {/* Верхняя часть с фоном башни */}
       <div className="shop-top">
         <div className="characteristics">
           <span>
@@ -19,7 +18,6 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* Меню категорий */}
       <div className="menu-container">
         <div className="menu-grid">
           {Object.entries(shopCategories).map(([key, category]) => (
@@ -45,12 +43,28 @@ export default function ShopPage() {
         </div>
       </div>
 
-      {/* Нижняя часть для предметов */}
       <div className="shop-bottom">
         <div className="items-scroll-area">
-          <p style={{ textAlign: 'center', marginTop: '20px' }}>
-            Здесь будут предметы категории "{shopCategories[activeCategory].name}"
-          </p>
+          {mockItems.map((item) => (
+            <div key={item} className="item-placeholder">
+              <div className="item-icon-wrapper">
+                <div className="item-icon-placeholder"></div>
+                <div className="item-level">Ур. {item}</div>
+              </div>
+              <div className="item-details-placeholder">
+                <div className="item-title-placeholder"></div>
+                <div className="item-stats-placeholder">
+                  <div className="stat-value"></div>
+                  <div className="stat-arrow">→</div>
+                  <div className="stat-next"></div>
+                </div>
+              </div>
+              <div className="item-button-placeholder">
+                <div className="button-price"></div>
+                <div className="button-icon"></div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
