@@ -1,17 +1,24 @@
 // src/features/ui/Header/Header.tsx
 
 import { useState } from 'react';
+import { useGold } from '../../../contexts/GoldContext'; // Импортируем хук для золота
 import './Header.css';
 
+/**
+ * Компонент заголовка
+ * 
+ * Отображает верхнюю панель с золотом, пассивным доходом и кнопками управления
+ */
 export default function Header() {
-  // Временные данные для отображения
+  // Получаем золото и пассивный доход из контекста
+  const { gold, passiveIncome } = useGold();
+  
+  // Состояние для отображения/скрытия настроек
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const tempGold = 1000;
-  const tempIncome = 5;
 
   return (
     <header className="top-bar">
-      {/* Левая иконка */}
+      {/* Левая иконка (возврат) */}
       <div id="resume-button" className="settings-button">
         <div className="left-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 472.615 472.615" width="24" height="24">
@@ -24,18 +31,18 @@ export default function Header() {
       {/* Центральная фигура */}
       <div className="top-bar-figure"></div>
 
-      {/* Блок золота */}
+      {/* Блок золота - теперь отображает реальные значения из контекста */}
       <div id="gold-container">
         <div id="gold-row">
-          <span id="gold-amount">{tempGold.toFixed(2)}</span>
+          <span id="gold-amount">{gold.toFixed(2)}</span>
           <img src="/media/shop/images/gold.png" alt="Золото" width="18px" height="18px" />
         </div>
         <span id="passive-income">
-          {tempIncome.toFixed(2)} <img src="/media/shop/images/gold.png" alt="Золото" width="18px" height="18px" />/сек
+          {passiveIncome.toFixed(2)} <img src="/media/shop/images/gold.png" alt="Золото" width="18px" height="18px" />/сек
         </span>
       </div>
 
-      {/* Правая иконка */}
+      {/* Правая иконка (настройки) */}
       <div id="pause-button" className="right-icon">
         <button
           className={`settings-icon ${isSettingsOpen ? 'active' : ''}`}

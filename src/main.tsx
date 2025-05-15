@@ -1,16 +1,16 @@
-import { logConstants } from './shared/constants';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import App from './App.tsx';
+import { GoldProvider } from './contexts/GoldContext'; // Импортируем GoldProvider
 
-// Тестируем при запуске
-logConstants();
-
-// Остальной код остается как был
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-
+/**
+ * Точка входа в приложение
+ * 
+ * Оборачиваем приложение в GoldProvider для доступа к состоянию золота
+ * во всех компонентах
+ */
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  <GoldProvider>
     <App />
-  </StrictMode>,
-)
+  </GoldProvider>
+);

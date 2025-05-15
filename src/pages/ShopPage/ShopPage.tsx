@@ -2,14 +2,46 @@
 
 import { useState } from 'react';
 import { shopCategories } from '../../shared/constants/shopConfig';
+import { testShopItems } from '../../shared/constants/shopItems';
+import type { ShopItem } from '../../shared/types'; // Импортируем тип
+import { useGold } from '../../contexts/GoldContext';
+import ShopItemCard from '../../features/shop/ShopItemCard/ShopItemCard';
 import './ShopPage.css';
 
+/**
+ * Компонент страницы магазина
+ * 
+ * Отображает категории товаров и список предметов текущей категории
+ * Позволяет покупать предметы за золото
+ */
 export default function ShopPage() {
+  // Состояние для хранения активной категории
   const [activeCategory, setActiveCategory] = useState<string>("max-health");
-  const mockItems = [1, 2, 3, 4, 5];
+  
+  // Получаем золото и функцию для его изменения из контекста
+  const { gold, setGold } = useGold();
+  
+  // Получаем список предметов для активной категории (или пустой массив)
+  const categoryItems = testShopItems[activeCategory] || [];
+
+  /**
+   * Функция для покупки предмета
+   * 
+   * @param item - Предмет, который нужно купить
+   */
+  const buyItem = (item: ShopItem) => { // Добавляем явный тип ShopItem
+    // Проверяем, достаточно ли золота для покупки
+    if (gold >= item.currentPrice) {
+      // Уменьшаем золото на стоимость предмета
+      setGold(gold - item.currentPrice);
+      // Выводим сообщение в консоль (временно, потом заменим на реальную покупку)
+      console.log(`Куплен предмет ${item.title} за ${item.currentPrice} золота`);
+    }
+  };
 
   return (
     <div className="shop-page">
+      {/* Верхняя часть с фоном башни */}
       <div className="shop-top">
         <div className="characteristics">
           <span>
@@ -18,6 +50,7 @@ export default function ShopPage() {
         </div>
       </div>
 
+      {/* Меню категорий */}
       <div className="menu-container">
         <div className="menu-grid">
           {Object.entries(shopCategories).map(([key, category]) => (
@@ -43,13 +76,27 @@ export default function ShopPage() {
         </div>
       </div>
 
+      {/* Нижняя часть со списком предметов */}
       <div className="shop-bottom">
         <div className="items-scroll-area">
-          {mockItems.map((item) => (
-            <div key={item} className="item-placeholder">
+          {categoryItems.length > 0 ? (
+            // Отображаем карточки предметов, если они есть
+            categoryItems.map((item) => (
+              <ShopItemCard
+                key={item.id}
+                item={item}
+                category={shopCategories[activeCategory]}
+                isAffordable={gold >= item.currentPrice} // Проверяем, хватает ли золота
+                currentValue={100} // Временное значение (позже заменим на реальное)
+                onBuy={() => buyItem(item)} // Передаем функцию покупки
+              />
+            ))
+          ) : (
+            // Заглушка, если предметов нет
+            <div className="item-placeholder">
               <div className="item-icon-wrapper">
                 <div className="item-icon-placeholder"></div>
-                <div className="item-level">Ур. {item}</div>
+                <div className="item-level">Ур. 1</div>
               </div>
               <div className="item-details-placeholder">
                 <div className="item-title-placeholder"></div>
@@ -64,7 +111,7 @@ export default function ShopPage() {
                 <div className="button-icon"></div>
               </div>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
