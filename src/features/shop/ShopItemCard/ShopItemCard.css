@@ -109,7 +109,8 @@
     color: white;
     font-size: 16px;
     font-weight: bold;
-    text-align: right; /* Выравниваем текст по правому краю */
+    align-items: center;
+    justify-content: center; /* Центрируем содержимое */ /* Выравниваем текст по правому краю */
     white-space: nowrap; /* Предотвращаем перенос текста */
     overflow: hidden; /* Скрываем переполнение */
     text-overflow: ellipsis; /* Добавляем многоточие при переполнении */
