@@ -85,45 +85,49 @@
     font-weight: bold;
   }
   
-  /* Кнопка покупки */
-  .item-buy-button {
-    width: 110px;
+/* Улучшенный стиль кнопки покупки */
+.item-buy-button {
+    width: 120px; /* Увеличиваем ширину для больших чисел */
     height: 45px;
     background: linear-gradient(to bottom, #244af3, #040266);
     border: 2px solid #FFC300;
     border-radius: 4px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    justify-content: center; /* Центрируем содержимое */
+    gap: 6px; /* Меньший отступ между ценой и иконкой */
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
-    padding: 0;
+    padding: 0 10px; /* Добавляем горизонтальные отступы */
     font-family: inherit;
+    position: relative; /* Для лучшего позиционирования содержимого */
   }
   
-  .item-buy-button:hover:not(.disabled) {
-    transform: translateY(1px);
-    background: linear-gradient(to bottom, #1a3ab9, #030147);
-  }
-  
-  .item-buy-button.disabled {
-    background: linear-gradient(to bottom, #333, #111);
-    border-color: #555;
-    cursor: not-allowed;
-    opacity: 0.7;
-  }
-  
+  /* Улучшенный стиль цены */
   .button-price {
     color: white;
     font-size: 16px;
     font-weight: bold;
+    text-align: right; /* Выравниваем текст по правому краю */
+    white-space: nowrap; /* Предотвращаем перенос текста */
+    overflow: hidden; /* Скрываем переполнение */
+    text-overflow: ellipsis; /* Добавляем многоточие при переполнении */
+    flex: 1; /* Занимаем доступное пространство */
+    max-width: 70px; /* Максимальная ширина для текста */
   }
   
+  /* Улучшенный стиль иконки */
   .button-icon {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0; /* Запрещаем сжиматься */
+    margin-left: auto; /* Прижимаем к правой стороне */
+  }
+  
+  /* Стиль для кнопки с большими числами */
+  .item-buy-button.large-price .button-price {
+    font-size: 15px; /* Уменьшаем шрифт для больших чисел */
   }
   
   /* Анимация появления */
@@ -185,5 +189,40 @@
     .item-buy-button {
       width: 90px;
       height: 36px;
+    }
+  }
+
+  /* Адаптивность для маленьких экранов */
+@media (max-width: 768px) {
+    .item-buy-button {
+      width: 110px;
+      height: 40px;
+    }
+    
+    .button-price {
+      font-size: 14px;
+      max-width: 60px;
+    }
+    
+    .button-icon {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .item-buy-button {
+      width: 100px;
+      height: 36px;
+    }
+    
+    .button-price {
+      font-size: 13px;
+      max-width: 55px;
+    }
+    
+    .button-icon {
+      width: 18px;
+      height: 18px;
     }
   }
