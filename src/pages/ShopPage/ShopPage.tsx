@@ -8,7 +8,7 @@ import { useGold } from '../../contexts/GoldContext';
 import { useHeroStore, type HeroStats } from '../../contexts/heroStore'; // Импортируем наше хранилище
 import ShopItemCard from '../../features/shop/ShopItemCard/ShopItemCard';
 import './ShopPage.css';
-
+ 
 /**
  * Компонент страницы магазина
  * 
