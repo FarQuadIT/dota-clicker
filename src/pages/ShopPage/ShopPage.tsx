@@ -31,6 +31,11 @@ export default function ShopPage() {
    */
   const buyItem = (item: ShopItem) => { // Добавляем явный тип ShopItem
     // Проверяем, достаточно ли золота для покупки
+      // Добавим дополнительную проверку здесь
+    if (gold < item.currentPrice) {
+      console.log(`Недостаточно золота для покупки ${item.title}. Нужно: ${item.currentPrice}, доступно: ${gold.toFixed(2)}`);
+      return; // Выходим из функции, если золота недостаточно
+    }
     if (gold >= item.currentPrice) {
       // Уменьшаем золото на стоимость предмета
       setGold(gold - item.currentPrice);

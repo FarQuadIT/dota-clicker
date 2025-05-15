@@ -54,9 +54,9 @@ export default function ShopItemCard({
       <button 
         className={`item-buy-button ${!isAffordable ? 'disabled' : ''} ${isLargePrice ? 'large-price' : ''}`}
         onClick={isAffordable ? onBuy : undefined}
-        disabled={!isAffordable}
+        disabled={!isAffordable} // Добавляем атрибут disabled
         aria-label={`Купить ${item.title} за ${item.currentPrice} золота`}
-      >
+        >
         {/* Отображение цены предмета */}
         <span className="button-price">{item.currentPrice}</span>
         {/* Иконка золота */}

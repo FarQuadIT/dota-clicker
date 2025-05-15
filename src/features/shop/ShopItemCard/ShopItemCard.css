@@ -103,7 +103,20 @@
     font-family: inherit;
     position: relative; /* Для лучшего позиционирования содержимого */
   }
+  /* Стиль для неактивной кнопки */
+.item-buy-button.disabled {
+    background: linear-gradient(to bottom, #333, #111) !important; /* Серый градиент, !important для перекрытия других стилей */
+    border-color: #555 !important; /* Серая граница */
+    cursor: not-allowed !important; /* Курсор "запрещено" */
+    opacity: 0.7 !important; /* Прозрачность для эффекта неактивности */
+    pointer-events: none !important; /* Блокирует все события мыши */
+  }
   
+  /* Убираем все hover эффекты для неактивной кнопки */
+  .item-buy-button.disabled:hover {
+    transform: none !important;
+    background: linear-gradient(to bottom, #333, #111) !important;
+  }
   /* Улучшенный стиль цены */
   .button-price {
     color: white;
