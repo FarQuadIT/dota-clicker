@@ -1,8 +1,6 @@
 // src/pages/MainPage/MainPage.tsx
 
-import { useEffect } from 'react';
 import { useHeroStore } from '../../contexts/heroStore';
-import type { HeroStats } from '../../shared/types'; // Используем общий тип
 
 /**
  * Компонент главной страницы
@@ -10,28 +8,8 @@ import type { HeroStats } from '../../shared/types'; // Используем о�
  * Отображает информацию о герое и его характеристиках
  */
 export default function MainPage() {
-  // Получаем характеристики героя и функцию для их установки из хранилища
+  // Получаем характеристики героя из хранилища
   const stats = useHeroStore((state) => state.stats);
-  const setStats = useHeroStore((state) => state.setStats);
-
-  // Для демонстрации - создаем тестовые характеристики героя при первой загрузке
-  useEffect(() => {
-    // Если характеристики еще не установлены, создаем тестовые
-    if (!stats) {
-      const initialStats: HeroStats = {
-        "max-health": 100,
-        "health-regen": 1,
-        "max-mana": 50,
-        "mana-regen": 0.5,
-        "damage": 10,
-        "vampirism": 0,
-        "movement-speed": 5,
-        "income": 5,
-        heroId: "1"
-      };
-      setStats(initialStats);
-    }
-  }, [stats, setStats]);
 
   return (
     <div style={{ 

@@ -24,3 +24,20 @@ export function logConstants() {
   console.log(`👤 Тестовый пользователь: ${TEST_USER_ID}`);
   console.log(`🦸 Тестовый герой: ${TEST_HERO_ID}`);
 }
+
+// src/shared/constants/index.ts - добавить только следующее:
+
+// Категории товаров
+export const SHOP_CATEGORIES = {
+  MAX_HEALTH: "max-health",
+  HEALTH_REGEN: "health-regen",
+  MAX_MANA: "max-mana",
+  MANA_REGEN: "mana-regen",
+  DAMAGE: "damage",
+  VAMPIRISM: "vampirism",
+  MOVEMENT_SPEED: "movement-speed",
+  INCOME: "income"
+};
+
+// Формула расчета цены предметов
+export const PRICE_MULTIPLIER = 1.15;      // Множитель цены при покупке предмета

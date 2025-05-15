@@ -1,17 +1,15 @@
 // src/pages/ShopPage/ShopPage.tsx
 
-// src/pages/ShopPage/ShopPage.tsx
-
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { shopCategories } from '../../shared/constants/shopConfig';
 import { testShopItems } from '../../shared/constants/shopItems';
-import type { ShopItem, HeroStats } from '../../shared/types'; // Используем общие типы
+import type { ShopItem, HeroStats } from '../../shared/types';
 import { useGold } from '../../contexts/GoldContext';
 import { useHeroStore } from '../../contexts/heroStore';
 import ShopItemCard from '../../features/shop/ShopItemCard/ShopItemCard';
 import './ShopPage.css';
+import { SHOP_CATEGORIES } from '../../shared/constants';
 
- 
 /**
  * Компонент страницы магазина
  * 
@@ -20,7 +18,7 @@ import './ShopPage.css';
  */
 export default function ShopPage() {
   // Состояние для хранения активной категории
-  const [activeCategory, setActiveCategory] = useState<string>("max-health");
+  const [activeCategory, setActiveCategory] = useState<string>(SHOP_CATEGORIES.MAX_HEALTH);
   
   // Получаем золото и функции для его изменения из контекста
   const { gold, setGold, setPassiveIncome } = useGold();
@@ -28,29 +26,9 @@ export default function ShopPage() {
   // Получаем характеристики героя и функции для их изменения из хранилища
   const stats = useHeroStore((state) => state.stats);
   const updateStat = useHeroStore((state) => state.updateStat);
-  const setStats = useHeroStore((state) => state.setStats);
   
   // Получаем список предметов для активной категории (или пустой массив)
   const categoryItems = testShopItems[activeCategory] || [];
-
-  // Для демонстрации - создаем тестовые характеристики героя при первой загрузке
-  useEffect(() => {
-    // Если характеристики еще не установлены, создаем тестовые
-    if (!stats) {
-      const initialStats: HeroStats = {
-        "max-health": 100,
-        "health-regen": 1,
-        "max-mana": 50,
-        "mana-regen": 0.5,
-        "damage": 10,
-        "vampirism": 0,
-        "movement-speed": 5,
-        "income": 5,
-        heroId: "1"
-      };
-      setStats(initialStats);
-    }
-  }, [stats, setStats]);
 
   /**
    * Функция для покупки предмета
@@ -78,7 +56,7 @@ export default function ShopPage() {
     updateStat(activeCategory as keyof HeroStats, newValue);
     
     // Если это предмет, увеличивающий доход, обновляем пассивный доход
-    if (activeCategory === 'income') {
+    if (activeCategory === SHOP_CATEGORIES.INCOME) {
       setPassiveIncome(newValue);
     }
     
