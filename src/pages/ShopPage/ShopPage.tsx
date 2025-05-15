@@ -1,13 +1,16 @@
 // src/pages/ShopPage/ShopPage.tsx
 
+// src/pages/ShopPage/ShopPage.tsx
+
 import { useState, useEffect } from 'react';
 import { shopCategories } from '../../shared/constants/shopConfig';
 import { testShopItems } from '../../shared/constants/shopItems';
-import type { ShopItem } from '../../shared/types';
+import type { ShopItem, HeroStats } from '../../shared/types'; // Используем общие типы
 import { useGold } from '../../contexts/GoldContext';
-import { useHeroStore, type HeroStats } from '../../contexts/heroStore'; // Импортируем наше хранилище
+import { useHeroStore } from '../../contexts/heroStore';
 import ShopItemCard from '../../features/shop/ShopItemCard/ShopItemCard';
 import './ShopPage.css';
+
  
 /**
  * Компонент страницы магазина

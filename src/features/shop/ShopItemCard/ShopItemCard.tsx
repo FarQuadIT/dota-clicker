@@ -1,7 +1,7 @@
 // src/features/shop/ShopItemCard/ShopItemCard.tsx
 
 import './ShopItemCard.css';
-import type { ShopItem, ShopCategory } from '../../../shared/types';
+import type { ShopItem, ShopCategory } from '../../../shared/types'; // Используем общие типы
 
 interface ShopItemCardProps {
   item: ShopItem;

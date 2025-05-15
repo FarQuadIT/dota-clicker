@@ -1,7 +1,8 @@
 // src/pages/MainPage/MainPage.tsx
 
 import { useEffect } from 'react';
-import { useHeroStore, type HeroStats } from '../../contexts/heroStore';
+import { useHeroStore } from '../../contexts/heroStore';
+import type { HeroStats } from '../../shared/types'; // Используем общий тип
 
 /**
  * Компонент главной страницы
