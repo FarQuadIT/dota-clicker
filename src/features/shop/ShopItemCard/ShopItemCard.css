@@ -109,21 +109,29 @@
     color: white;
     font-size: 16px;
     font-weight: bold;
-    align-items: center;
-    justify-content: center; /* Центрируем содержимое */ /* Выравниваем текст по правому краю */
-    white-space: nowrap; /* Предотвращаем перенос текста */
-    overflow: hidden; /* Скрываем переполнение */
-    text-overflow: ellipsis; /* Добавляем многоточие при переполнении */
-    flex: 1; /* Занимаем доступное пространство */
-    max-width: 70px; /* Максимальная ширина для текста */
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    max-width: 70px;
+    /* Добавляем свойства для вертикального выравнивания */
+    display: flex;          /* Используем flexbox для вертикального выравнивания */
+    align-items: center;    /* Центрируем текст по вертикали */
+    justify-content: flex-end; /* Выравниваем по правому краю */
+    line-height: 1;         /* Нормализуем высоту строки */
+    padding-bottom: 0;      /* Убираем нижний отступ, если он был */
+    margin: 0;              /* Сбрасываем все внешние отступы */
   }
   
   /* Улучшенный стиль иконки */
   .button-icon {
     width: 22px;
     height: 22px;
-    flex-shrink: 0; /* Запрещаем сжиматься */
-    margin-left: auto; /* Прижимаем к правой стороне */
+    flex-shrink: 0;
+    object-fit: contain;     /* Сохраняем пропорции изображения */
+    margin: 0;               /* Убираем все внешние отступы */
+    align-self: center;      /* Центрируем иконку по вертикали */
   }
   
   /* Стиль для кнопки с большими числами */
