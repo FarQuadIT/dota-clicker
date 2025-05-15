@@ -109,7 +109,7 @@
     color: white;
     font-size: 16px;
     font-weight: bold;
-    text-align: right;
+    text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -118,7 +118,7 @@
     /* Добавляем свойства для вертикального выравнивания */
     display: flex;          /* Используем flexbox для вертикального выравнивания */
     align-items: center;    /* Центрируем текст по вертикали */
-    justify-content: flex-end; /* Выравниваем по правому краю */
+    justify-content: center; /* Выравниваем по правому краю */
     line-height: 1;         /* Нормализуем высоту строки */
     padding-bottom: 0;      /* Убираем нижний отступ, если он был */
     margin: 0;              /* Сбрасываем все внешние отступы */
