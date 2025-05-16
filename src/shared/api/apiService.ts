@@ -213,7 +213,16 @@ export async function fetchHeroItems(userId: string, heroId: string): Promise<Re
     console.log('🛍️ Получены данные о предметах:', rawData);
     
     // Используем функцию маппинга для преобразования данных
-    return mapItemsData(rawData);
+    const items = mapItemsData(rawData);
+    
+    // Сортировка предметов по baseValue в каждой категории
+    Object.keys(items).forEach(category => {
+      if (Array.isArray(items[category])) {
+        items[category].sort((a, b) => a.baseValue - b.baseValue);
+      }
+    });
+    
+    return items;
   } catch (error) {
     console.error('❌ Ошибка при загрузке предметов героя:', error);
     return null;
@@ -271,3 +280,50 @@ export async function testHeroItems() {
 // Можно вызвать эту функцию в консоли браузера:
 // import { testHeroStats } from './src/shared/api/apiService';
 // testHeroStats().then(data => console.log('Результат:', data));
+
+/**
+ * Функция для обновления уровня предмета на сервере
+ * @param payload - Данные для отправки на сервер
+ * @returns Promise с результатом запроса
+ */
+export async function updateItemLevel(payload: {
+  userId: string;
+  heroId: string;
+  itemId: string;
+  currentLevel: number;
+  currentValue: number;
+  cost: number;
+  currentPrice: number;
+  maxHealth: number;
+  healthRegen: number;
+  maxEnergy: number;
+  energyRegen: number;
+  damage: number;
+  movementSpeed: number;
+  vampirism: number;
+  currentIncome: number;
+}) {
+  try {
+    console.log('📤 Отправка запроса на обновление предмета:', payload);
+    
+    const response = await fetch(`${API_BASE_URL}/update_item_level`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Ошибка при обновлении предмета: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('📥 Ответ сервера:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('❌ Ошибка отправки уровня предмета:', error);
+    throw error; // Пробрасываем ошибку дальше для обработки в компоненте
+  }
+}
