@@ -4,7 +4,10 @@
 // Эти значения используются по всему приложению
 
 // URL сервера API
-export const API_BASE_URL = 'http://176.124.212.234:5000';
+// src/shared/constants/index.ts - обновить константу API_BASE_URL
+
+// URL сервера API
+export const API_BASE_URL = 'http://127.0.0.1:5000'; // Обновлено на реальный адрес сервера
 
 // Игровые константы
 export const INITIAL_GOLD = 1000;          // Стартовое золото игрока

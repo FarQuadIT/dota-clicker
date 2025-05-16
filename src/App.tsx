@@ -11,6 +11,12 @@ import { useEffect } from 'react';
 import { useHeroStore } from './contexts/heroStore';
 import type { HeroStats } from './shared/types';
 import { API_BASE_URL, TEST_USER_ID, TEST_HERO_ID } from './shared/constants';
+// src/App.tsx - добавить импорт и маршрут
+
+// Добавить этот импорт
+import ApiTestPage from './pages/ApiTestPage/ApiTestPage';
+
+
 
 /**
  * Компонент содержимого приложения
@@ -75,6 +81,8 @@ function AppContent() {
           <Route path="/shop" element={<ShopPage />} />
           <Route path="/game" element={<GamePage />} />
           <Route path="/help" element={<HelpPage />} />
+          // Добавить этот маршрут внутри Routes компонента
+          <Route path="/api-test" element={<ApiTestPage />} />
         </Routes>
       </main>
     </div>
