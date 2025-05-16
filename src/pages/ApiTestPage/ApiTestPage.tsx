@@ -1,14 +1,29 @@
 // src/pages/ApiTestPage/ApiTestPage.tsx
 
 import { useState } from 'react';
-import { testApiConnection, pingServer, testPostRequest } from '../../shared/api/apiService';
+import { testApiConnection, pingServer, testPostRequest, testHeroStats, testHeroItems} from '../../shared/api/apiService';
 import { API_BASE_URL } from '../../shared/constants';
 
 export default function ApiTestPage() {
   const [status, setStatus] = useState<string>('Ожидание тестирования...');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [testResults, setTestResults] = useState<any>(null);
-
+  const handleTestHeroStats = async () => {
+    setIsLoading(true);
+    setStatus('Загрузка характеристик героя...');
+    try {
+      const result = await testHeroStats();
+      setTestResults(result);
+      setStatus(result 
+        ? '✅ Характеристики героя успешно загружены' 
+        : '❌ Не удалось загрузить характеристики героя');
+    } catch (error) {
+      setStatus(`❌ Ошибка при загрузке характеристик героя: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      setTestResults({ error });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const handlePingServer = async () => {
     setIsLoading(true);
     setStatus('Проверка доступности сервера...');
@@ -54,6 +69,23 @@ export default function ApiTestPage() {
         : `❌ Ошибка POST запроса: ${result.error}`);
     } catch (error) {
       setStatus(`❌ Ошибка при отправке POST запроса: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      setTestResults({ error });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTestHeroItems = async () => {
+    setIsLoading(true);
+    setStatus('Загрузка предметов героя...');
+    try {
+      const result = await testHeroItems();
+      setTestResults(result);
+      setStatus(result 
+        ? '✅ Предметы героя успешно загружены' 
+        : '❌ Не удалось загрузить предметы героя');
+    } catch (error) {
+      setStatus(`❌ Ошибка при загрузке предметов героя: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
       setTestResults({ error });
     } finally {
       setIsLoading(false);
@@ -131,6 +163,36 @@ export default function ApiTestPage() {
         >
           Проверить POST запрос
         </button>
+        <button 
+          onClick={handleTestHeroStats}
+          disabled={isLoading}
+          style={{
+            padding: '10px 15px',
+            background: '#1a1a1a',
+            color: 'white',
+            border: '1px solid #444',
+            borderRadius: '4px',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.7 : 1
+          }}
+        >
+          Загрузить героя
+        </button>
+        <button 
+          onClick={handleTestHeroItems}
+          disabled={isLoading}
+          style={{
+            padding: '10px 15px',
+            background: '#1a1a1a',
+            color: 'white',
+            border: '1px solid #444',
+            borderRadius: '4px',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.7 : 1
+          }}
+        >
+  Загрузить предметы
+</button>
       </div>
       
       <div style={{ 

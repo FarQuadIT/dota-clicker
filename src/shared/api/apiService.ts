@@ -1,7 +1,8 @@
 // src/services/apiService.ts
 
 import { API_BASE_URL, TEST_USER_ID, TEST_HERO_ID } from '../constants/index';
-
+import { mapHeroData, mapItemsData } from './mappers';
+import type { ShopItem } from '../types';
 /**
  * Функция для тестирования подключения к серверу API
  * Проверяет доступность сервера и возвращает данные о герое
@@ -143,3 +144,130 @@ export async function testPostRequest() {
     };
   }
 }
+
+// Добавим в src/shared/api/apiService.ts
+
+/**
+ * Функция для получения характеристик героя с сервера
+ * @param userId ID пользователя
+ * @param heroId ID героя
+ * @returns Характеристики героя или null в случае ошибки
+ */
+export async function fetchHeroStats(userId: string, heroId: string) {
+  try {
+    console.log(`🔍 Запрашиваем характеристики героя: userId=${userId}, heroId=${heroId}`);
+    
+    // Создаем параметры запроса
+    const query = new URLSearchParams({ userId, heroId }).toString();
+    
+    // Выполняем GET запрос к API
+    const response = await fetch(`${API_BASE_URL}/hero_data?${query}`);
+    
+    // Проверяем успешность запроса
+    if (!response.ok) {
+      throw new Error(`Ошибка загрузки героя: ${response.status} ${response.statusText}`);
+    }
+    
+    // Преобразуем ответ в JSON
+    const rawData = await response.json();
+    console.log('📊 Получены данные героя:', rawData);
+    
+    // Маппинг данных с сервера в наш формат
+    const mappedStats = mapHeroData(rawData);
+    
+    // Возвращаем как маппированные данные, так и дополнительную информацию
+    return {
+      stats: mappedStats,
+      gold: rawData.coins ?? 0,
+      income: rawData.currentIncome ?? 0
+    };
+  } catch (error) {
+    console.error('❌ Ошибка при загрузке характеристик героя:', error);
+    return null;
+  }
+}
+
+/**
+ * Функция для получения предметов героя с сервера
+ * @param userId ID пользователя
+ * @param heroId ID героя
+ * @returns Объект с предметами по категориям или пустой объект в случае ошибки
+ */
+export async function fetchHeroItems(userId: string, heroId: string): Promise<Record<string, ShopItem[]> | null> {
+  try {
+    console.log(`🔍 Запрашиваем предметы героя: userId=${userId}, heroId=${heroId}`);
+    
+    // Создаем параметры запроса
+    const query = new URLSearchParams({ userId, heroId }).toString();
+    
+    // Выполняем GET запрос к API
+    const response = await fetch(`${API_BASE_URL}/hero_items?${query}`);
+    
+    // Проверяем успешность запроса
+    if (!response.ok) {
+      throw new Error(`Ошибка получения предметов: ${response.status} ${response.statusText}`);
+    }
+    
+    // Преобразуем ответ в JSON
+    const rawData = await response.json();
+    console.log('🛍️ Получены данные о предметах:', rawData);
+    
+    // Используем функцию маппинга для преобразования данных
+    return mapItemsData(rawData);
+  } catch (error) {
+    console.error('❌ Ошибка при загрузке предметов героя:', error);
+    return null;
+  }
+}
+
+// Обновим в src/shared/api/apiService.ts
+
+/**
+ * Функция для тестирования загрузки характеристик героя в консоли
+ */
+export async function testHeroStats() {
+  console.log('🧪 Тестирование загрузки характеристик героя...');
+  const result = await fetchHeroStats(TEST_USER_ID, TEST_HERO_ID);
+  
+  if (result) {
+    console.log('✅ Успешно загружены характеристики героя:');
+    console.log('Сырые данные:', result);
+    console.log('Маппированные характеристики:', result.stats);
+    return result;
+  } else {
+    console.error('❌ Не удалось загрузить характеристики героя');
+    return null;
+  }
+}
+
+/**
+ * Функция для тестирования загрузки предметов героя в консоли
+ */
+export async function testHeroItems() {
+  console.log('🧪 Тестирование загрузки предметов героя...');
+  const items = await fetchHeroItems(TEST_USER_ID, TEST_HERO_ID);
+  
+  if (items) {
+    console.log('✅ Успешно загружены предметы героя:');
+    console.log('Маппированные предметы:', items);
+    
+    // Выведем общее количество предметов и категорий
+    const totalItems = Object.values(items).reduce((sum, arr) => sum + arr.length, 0);
+    console.log(`Всего категорий: ${Object.keys(items).length}`);
+    console.log(`Всего предметов: ${totalItems}`);
+    
+    // Выведем пример предмета из первой категории
+    const firstCategory = Object.keys(items)[0];
+    if (firstCategory && items[firstCategory].length > 0) {
+      console.log('Пример предмета:', items[firstCategory][0]);
+    }
+    
+    return items;
+  } else {
+    console.error('❌ Не удалось загрузить предметы героя');
+    return null;
+  }
+}
+// Можно вызвать эту функцию в консоли браузера:
+// import { testHeroStats } from './src/shared/api/apiService';
+// testHeroStats().then(data => console.log('Результат:', data));
