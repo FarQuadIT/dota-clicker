@@ -1,6 +1,16 @@
 // src/pages/ShopPage/ShopPage.tsx
 
-import { useState, useEffect } from 'react';
+/**
+ * @fileoverview Страница магазина игры Dota Clicker
+ * 
+ * Данный компонент представляет основную страницу магазина, где игрок может
+ * приобретать предметы для улучшения различных характеристик своего героя.
+ * Магазин разделен на категории по типам улучшаемых характеристик (здоровье,
+ * мана, урон и т.д.). Каждая покупка мгновенно влияет на соответствующую
+ * характеристику героя и синхронизируется с сервером.
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { shopCategories } from '../../shared/constants/shopConfig';
 import type { ShopItem, HeroStats } from '../../shared/types';
 import { useGold } from '../../contexts/GoldContext';
@@ -8,13 +18,15 @@ import { useHeroStore } from '../../contexts/heroStore';
 import ShopItemCard from '../../features/shop/ShopItemCard/ShopItemCard';
 import './ShopPage.css';
 import { SHOP_CATEGORIES, TEST_USER_ID, TEST_HERO_ID } from '../../shared/constants';
-import { fetchHeroItems , updateItemLevel } from '../../shared/api/apiService';
+import { fetchHeroItems, updateItemLevel } from '../../shared/api/apiService';
 
 /**
  * Компонент страницы магазина
  * 
- * Отображает категории товаров и список предметов текущей категории
- * Позволяет покупать предметы за золото и улучшать характеристики героя
+ * Отображает категории товаров и список предметов текущей категории,
+ * позволяет покупать предметы за золото и улучшать характеристики героя.
+ * Включает в себя меню категорий, информацию о текущей характеристике
+ * и список доступных предметов для покупки.
  */
 export default function ShopPage() {
   // Состояние для хранения активной категории
@@ -39,152 +51,167 @@ export default function ShopPage() {
   const stats = useHeroStore((state) => state.stats);
   const updateStat = useHeroStore((state) => state.updateStat);
   
-  // Эффект для загрузки предметов с сервера при монтировании компонента
-  useEffect(() => {
-    const loadItems = async () => {
-      if (Object.keys(items).length > 0) return; // Предотвращаем повторную загрузку
+  /**
+   * Загружает предметы с сервера
+   * 
+   * Выполняет запрос за доступными предметами для героя,
+   * устанавливает их в состояние или обрабатывает ошибку
+   */
+  const loadItems = useCallback(async () => {
+    // Предотвращаем повторную загрузку, если данные уже есть
+    if (Object.keys(items).length > 0) return;
+    
+    setIsInitialLoading(true);
+    setError(null);
+    
+    try {
+      const fetchedItems = await fetchHeroItems(TEST_USER_ID, TEST_HERO_ID);
       
-      setIsInitialLoading(true);
-      setError(null);
-      
-      try {
-        console.log('🔍 Загружаем предметы магазина...');
-        const fetchedItems = await fetchHeroItems(TEST_USER_ID, TEST_HERO_ID);
-        
-        if (fetchedItems) {
-          console.log('✅ Предметы успешно загружены:', fetchedItems);
-          setItems(fetchedItems);
-        } else {
-          throw new Error('Не удалось загрузить предметы');
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Ошибка загрузки предметов';
-        console.error('❌', errorMessage);
-        setError(errorMessage);
-      } finally {
-        setIsInitialLoading(false);
+      if (fetchedItems) {
+        setItems(fetchedItems);
+      } else {
+        throw new Error('Не удалось загрузить предметы магазина');
       }
-    };
-    
-    loadItems();
-  }, []);
-  
- /**
- * Функция покупки предмета - обновляет предмет и отправляет данные на сервер
- */
-/**
- * Функция покупки предмета - обновляет предмет и отправляет данные на сервер
- */
-const buyItem = async (category: string, itemIndex: number) => {
-  // Получаем текущий предмет
-  const item = items[category][itemIndex];
-  
-  // Если предмет уже в процессе покупки, предотвращаем повторное нажатие
-  if (purchasingItemIds.has(item.id)) return;
-  
-  // Проверяем, хватает ли золота
-  if (gold < item.currentPrice) {
-    console.log(`Недостаточно золота для ${item.title}. Нужно: ${item.currentPrice}, доступно: ${gold}`);
-    return;
-  }
-  
-  // Проверяем, инициализированы ли характеристики героя
-  if (!stats) {
-    console.log('Характеристики героя не инициализированы');
-    return;
-  }
-  
-  // Отмечаем предмет как покупаемый (для показа индикатора загрузки)
-  setPurchasingItemIds(prev => new Set(prev).add(item.id));
-  
-  try {
-    // Сохраняем текущую стоимость для отправки на сервер (то, сколько заплатили)
-    const cost = item.currentPrice;
-    
-    // Уменьшаем золото на стоимость предмета
-    setGold(prev => prev - cost);
-    
-    // Обновляем характеристику героя в зависимости от категории предмета
-    const newStatValue = Number(stats[category]) + item.baseValue;
-    updateStat(category as keyof HeroStats, newStatValue);
-    
-    // Если это предмет, увеличивающий доход, обновляем пассивный доход
-    if (category === SHOP_CATEGORIES.INCOME) {
-      setPassiveIncome(newStatValue);
+    } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Ошибка загрузки предметов магазина';
+      setError(errorMessage);
+    } finally {
+      setIsInitialLoading(false);
     }
-    
-    // Создаем обновленный предмет с новым уровнем и ценой
-    const updatedItem = {
-      ...item,
-      level: item.level + 1,
-      currentPrice: item.priceFormula(item.currentPrice),
-    };
-    
-    // Обновляем только этот конкретный предмет в массиве предметов
-    setItems(prev => {
-      const newItems = { ...prev };
-      newItems[category] = [...newItems[category]]; // Создаем новый массив
-      newItems[category][itemIndex] = updatedItem;  // Заменяем только конкретный предмет
-      return newItems;
-    });
-    
-    console.log(`Куплен предмет ${item.title} за ${cost} золота`);
-    console.log(`Характеристика ${category} увеличена до ${newStatValue}`);
-    
-    // Получаем обновленные характеристики героя для отправки на сервер
-    const currentStats = useHeroStore.getState().stats!;
-    
-    // Создаем payload для отправки на сервер, соблюдая формат сервера
-    const payload = {
-      userId: TEST_USER_ID,
-      heroId: TEST_HERO_ID,
-      itemId: item.id,
-      currentLevel: updatedItem.level,
-      currentValue: newStatValue, // Текущее значение характеристики (после покупки)
-      cost: cost, // Стоимость, которую заплатили
-      currentPrice: updatedItem.currentPrice, // Новая цена для следующей покупки
-      maxHealth: currentStats["max-health"],
-      healthRegen: currentStats["health-regen"],
-      maxEnergy: currentStats["max-mana"],
-      energyRegen: currentStats["mana-regen"],
-      damage: currentStats["damage"],
-      movementSpeed: currentStats["movement-speed"],
-      vampirism: currentStats["vampirism"],
-      currentIncome: currentStats["income"]
-    };
-    
-    console.log("🟡 === CLIENT DEBUG ===");
-    console.log("Gold (до):", gold);
-    console.log("Item ID:", item.id);
-    console.log("Cost:", cost);
-    console.log("Level:", updatedItem.level);
-    console.log("Price (следующий):", updatedItem.currentPrice);
-    console.log("Current stats:", currentStats);
-    console.log("Payload, отправляемый на сервер:", payload);
-    console.log("🟡 ====================\n");
-    
-    // Отправляем данные на сервер
-    await updateItemLevel(payload);
-    
-    // Синхронизируем золото с сервером
-    await syncGoldWithServer(category === SHOP_CATEGORIES.INCOME);
-    
-  } catch (error) {
-    console.error('❌ Ошибка при покупке предмета:', error);
-    // Возвращаем золото, если произошла ошибка
-    setGold(prev => prev + item.currentPrice);
-  } finally {
-    // Снимаем флаг "в процессе покупки"
+  }, [items]);
+  
+  // Эффект для загрузки предметов при монтировании компонента
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+  
+  /**
+   * Устанавливает флаг покупки для предмета
+   * 
+   * @param itemId - ID предмета
+   * @param isPurchasing - Устанавливаемый флаг покупки
+   */
+  const setItemPurchasingState = useCallback((itemId: string, isPurchasing: boolean) => {
     setPurchasingItemIds(prev => {
       const newSet = new Set(prev);
-      newSet.delete(item.id);
+      if (isPurchasing) {
+        newSet.add(itemId);
+      } else {
+        newSet.delete(itemId);
+      }
       return newSet;
     });
-  }
-};
+  }, []);
+  
+  /**
+   * Обрабатывает покупку предмета
+   * 
+   * Проверяет возможность покупки, обновляет характеристики героя,
+   * синхронизирует изменения с сервером
+   * 
+   * @param category - Категория предмета
+   * @param itemIndex - Индекс предмета в массиве данной категории
+   */
+  const buyItem = useCallback(async (category: string, itemIndex: number) => {
+    // Получаем текущий предмет
+    const item = items[category][itemIndex];
+    
+    // Проверяем возможность покупки
+    if (purchasingItemIds.has(item.id) || gold < item.currentPrice || !stats) {
+      return;
+    }
+    
+    // Отмечаем предмет как покупаемый (для индикатора загрузки)
+    setItemPurchasingState(item.id, true);
+    
+    try {
+      // Стоимость предмета
+      const cost = item.currentPrice;
+      
+      // Уменьшаем золото
+      setGold(prev => prev - cost);
+      
+      // Рассчитываем новое значение характеристики
+      const newStatValue = Number(stats[category]) + item.baseValue;
+      
+      // Обновляем характеристику героя
+      updateStat(category as keyof HeroStats, newStatValue);
+      
+      // Если это предмет дохода, обновляем также пассивный доход
+      if (category === SHOP_CATEGORIES.INCOME) {
+        setPassiveIncome(newStatValue);
+      }
+      
+      // Создаем обновленный предмет с новым уровнем и ценой
+      const updatedItem = {
+        ...item,
+        level: item.level + 1,
+        currentPrice: item.priceFormula(item.currentPrice),
+      };
+      
+      // Обновляем только этот конкретный предмет в массиве
+      setItems(prev => {
+        const newItems = { ...prev };
+        newItems[category] = [...newItems[category]];
+        newItems[category][itemIndex] = updatedItem;
+        return newItems;
+      });
+      
+      // Получаем обновленные характеристики героя
+      const currentStats = useHeroStore.getState().stats!;
+      
+      // Создаем данные для отправки на сервер
+      const payload = {
+        userId: TEST_USER_ID,
+        heroId: TEST_HERO_ID,
+        itemId: item.id,
+        currentLevel: updatedItem.level,
+        currentValue: newStatValue,
+        cost: cost,
+        currentPrice: updatedItem.currentPrice,
+        maxHealth: currentStats["max-health"],
+        healthRegen: currentStats["health-regen"],
+        maxEnergy: currentStats["max-mana"],
+        energyRegen: currentStats["mana-regen"],
+        damage: currentStats["damage"],
+        movementSpeed: currentStats["movement-speed"],
+        vampirism: currentStats["vampirism"],
+        currentIncome: currentStats["income"]
+      };
+      
+      // Отправляем данные на сервер
+      await updateItemLevel(payload);
+      
+      // Синхронизируем золото с сервером (с флагом, если обновлен доход)
+      await syncGoldWithServer(category === SHOP_CATEGORIES.INCOME);
+      
+    } catch (error) {
+      // В случае ошибки возвращаем золото
+      setGold(prev => prev + item.currentPrice);
+      
+      // Оповещаем пользователя об ошибке
+      setError('Ошибка при покупке предмета. Попробуйте еще раз.');
+      
+      // Сбрасываем ошибку через 3 секунды
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      // Снимаем флаг покупки
+      setItemPurchasingState(item.id, false);
+    }
+  }, [items, purchasingItemIds, gold, stats, setItemPurchasingState, setGold, updateStat, setPassiveIncome, syncGoldWithServer]);
 
   // Получаем список предметов для активной категории (или пустой массив)
   const categoryItems = items[activeCategory] || [];
+
+  /**
+   * Обработчик перезагрузки страницы при ошибке
+   */
+  const handleRetry = useCallback(() => {
+    setError(null);
+    loadItems();
+  }, [loadItems]);
 
   return (
     <div className="shop-page">
@@ -193,8 +220,8 @@ const buyItem = async (category: string, itemIndex: number) => {
         <div className="characteristics">
           <span>
             {shopCategories[activeCategory]?.name}: {stats 
-              ? Number(stats[activeCategory]).toFixed(2) 
-              : '0.00'}
+              ? Number(stats[activeCategory]).toFixed(2).replace(/\.?0+$/, '')
+              : '0'}
           </span>
         </div>
       </div>
@@ -229,7 +256,7 @@ const buyItem = async (category: string, itemIndex: number) => {
       <div className="shop-bottom">
         <div className="items-scroll-area">
           {isInitialLoading ? (
-            // Отображаем скелетон-загрузку, если идет первоначальная загрузка предметов
+            // Скелетон-загрузка для предметов
             Array(3).fill(0).map((_, index) => (
               <div key={`skeleton-${index}`} className="item-placeholder">
                 <div className="item-icon-wrapper">
@@ -251,7 +278,7 @@ const buyItem = async (category: string, itemIndex: number) => {
               </div>
             ))
           ) : error ? (
-            // Отображаем сообщение об ошибке, если загрузка не удалась
+            // Сообщение об ошибке с возможностью повторить
             <div style={{ 
               padding: '20px', 
               textAlign: 'center', 
@@ -259,7 +286,7 @@ const buyItem = async (category: string, itemIndex: number) => {
             }}>
               <p>{error}</p>
               <button 
-                onClick={() => window.location.reload()} 
+                onClick={handleRetry} 
                 style={{
                   padding: '8px 16px',
                   background: '#1a1a1a',
@@ -274,20 +301,20 @@ const buyItem = async (category: string, itemIndex: number) => {
               </button>
             </div>
           ) : categoryItems.length > 0 ? (
-            // Отображаем карточки предметов, если они есть
+            // Карточки предметов для выбранной категории
             categoryItems.map((item, index) => (
               <ShopItemCard
                 key={item.id}
                 item={item}
                 category={shopCategories[activeCategory]}
-                isAffordable={gold >= item.currentPrice} // Проверяем, хватает ли золота
-                currentValue={stats ? Number(stats[activeCategory]) : 0} // Текущее значение характеристики
-                onBuy={() => buyItem(activeCategory, index)} // Передаем функцию покупки
-                isPurchasing={purchasingItemIds.has(item.id)} // Флаг покупки для анимации
+                isAffordable={gold >= item.currentPrice}
+                currentValue={stats ? Number(stats[activeCategory]) : 0}
+                onBuy={() => buyItem(activeCategory, index)}
+                isPurchasing={purchasingItemIds.has(item.id)}
               />
             ))
           ) : (
-            // Заглушка, если предметов в категории нет
+            // Заглушка для пустых категорий
             <div style={{ 
               padding: '20px', 
               textAlign: 'center', 

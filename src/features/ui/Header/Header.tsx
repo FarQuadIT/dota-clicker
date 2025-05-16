@@ -1,8 +1,21 @@
 // src/features/ui/Header/Header.tsx
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useGold } from '../../../contexts/GoldContext'; // Импортируем хук для золота
 import './Header.css';
+
+/**
+ * Форматирует числовое значение для отображения
+ * удаляя ненужные нули после запятой
+ * 
+ * @param value - Числовое значение для форматирования
+ * @param decimals - Количество десятичных знаков (по умолчанию 2)
+ * @returns Отформатированная строка
+ */
+const formatNumber = (value: number, decimals = 2): string => {
+  const formatted = value.toFixed(decimals);
+  return formatted.replace(/\.?0+$/, '');
+};
 
 /**
  * Компонент заголовка
@@ -15,6 +28,15 @@ export default function Header() {
   
   // Состояние для отображения/скрытия настроек
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Мемоизируем отформатированные значения золота и дохода
+  const formattedGold = useMemo(() => formatNumber(gold), [gold]);
+  const formattedIncome = useMemo(() => formatNumber(passiveIncome), [passiveIncome]);
+  
+  // Оптимизированный обработчик для кнопки настроек
+  const toggleSettings = useCallback(() => {
+    setIsSettingsOpen(prev => !prev);
+  }, []);
 
   return (
     <header className="top-bar">
@@ -31,14 +53,28 @@ export default function Header() {
       {/* Центральная фигура */}
       <div className="top-bar-figure"></div>
 
-      {/* Блок золота - теперь отображает реальные значения из контекста */}
+      {/* Блок золота - с отформатированными значениями */}
       <div id="gold-container">
         <div id="gold-row">
-          <span id="gold-amount">{gold.toFixed(2)}</span>
-          <img src="/media/shop/images/gold.png" alt="Золото" width="18px" height="18px" />
+          <span id="gold-amount">{formattedGold}</span>
+          <img 
+            src="/media/shop/images/gold.png" 
+            alt="Золото" 
+            width="18" 
+            height="18" 
+            loading="lazy"
+          />
         </div>
         <span id="passive-income">
-          {passiveIncome.toFixed(2)} <img src="/media/shop/images/gold.png" alt="Золото" width="18px" height="18px" />/сек
+          {formattedIncome} 
+          <img 
+            src="/media/shop/images/gold.png" 
+            alt="Золото" 
+            width="18" 
+            height="18" 
+            loading="lazy"
+          />
+          /сек
         </span>
       </div>
 
@@ -46,7 +82,8 @@ export default function Header() {
       <div id="pause-button" className="right-icon">
         <button
           className={`settings-icon ${isSettingsOpen ? 'active' : ''}`}
-          onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+          onClick={toggleSettings}
+          aria-label="Настройки"
         >
           <i className="fas fa-cog"></i>
         </button>

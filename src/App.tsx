@@ -11,7 +11,6 @@ import { useEffect, useState } from 'react';
 import { useHeroStore } from './contexts/heroStore';
 import type { HeroStats } from './shared/types';
 import { TEST_USER_ID, TEST_HERO_ID } from './shared/constants';
-import ApiTestPage from './pages/ApiTestPage/ApiTestPage';
 import { fetchHeroStats } from './shared/api/apiService';
 
 /**
@@ -35,44 +34,36 @@ function AppContent() {
       setIsLoading(true); 
       setError(null);
       
-      console.log('Загрузка характеристик героя с сервера...');
-      
       // Запрашиваем данные героя с сервера
       fetchHeroStats(TEST_USER_ID, TEST_HERO_ID)
       .then(result => {
         if (result) {
-          console.log('✅ Характеристики героя загружены:', result);
-          
           // Устанавливаем характеристики героя в хранилище
           setStats(result.stats);
           
           // Инициализируем золото и доход
           if (result.gold !== undefined && result.income !== undefined) {
-            console.log(`💰 Золото: ${result.gold}, 📈 Доход: ${result.income}/сек`);
-            
-            // Просто инициализируем контекст золота - сервер сам учитывает офлайн-заработок
+            // Инициализируем контекст золота
             if ((window as any).initializeGoldContext) {
               (window as any).initializeGoldContext(result.gold, result.income);
             }
           }
         } else {
             // Обрабатываем ошибку при загрузке данных
-            const errorMessage = 'Не удалось загрузить характеристики героя с сервера';
-            console.error('❌', errorMessage);
+            const errorMessage = 'Не удалось загрузить характеристики героя';
             setError(errorMessage);
             
-            // В случае ошибки используем тестовые данные для демонстрации
-            setTestHeroStats();
+            // В случае ошибки используем стандартные данные
+            setDefaultHeroStats();
           }
         })
         .catch(err => {
           // Обрабатываем ошибки при запросе
           const errorMessage = `Ошибка при загрузке характеристик героя: ${err.message}`;
-          console.error('❌', errorMessage);
           setError(errorMessage);
           
-          // В случае ошибки используем тестовые данные для демонстрации
-          setTestHeroStats();
+          // В случае ошибки используем стандартные данные
+          setDefaultHeroStats();
         })
         .finally(() => {
           // Снимаем флаг загрузки
@@ -81,11 +72,13 @@ function AppContent() {
     }
   }, [stats, setStats]);
   
-  // Функция для установки тестовых данных (на случай ошибки)
-  const setTestHeroStats = () => {
-    console.log('⚠️ Используем тестовые характеристики героя');
-    
-    // Создаем тестовые характеристики для демонстрации
+  /**
+   * Функция для установки стандартных данных в случае ошибки
+   * Инициализирует базовые характеристики героя для работы приложения
+   * в автономном режиме, когда сервер недоступен
+   */
+  const setDefaultHeroStats = () => {
+    // Создаем стандартные характеристики для демонстрации
     const initialStats: HeroStats = {
       "max-health": 100,
       "health-regen": 1,
@@ -149,7 +142,6 @@ function AppContent() {
             <Route path="/shop" element={<ShopPage />} />
             <Route path="/game" element={<GamePage />} />
             <Route path="/help" element={<HelpPage />} />
-            <Route path="/api-test" element={<ApiTestPage />} />
           </Routes>
         )}
       </main>

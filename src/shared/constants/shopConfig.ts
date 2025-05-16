@@ -2,7 +2,17 @@
 
 import type { ShopCategory } from '../types';
 
-// Конфигурация категорий магазина
+/**
+ * Конфигурация категорий магазина
+ * 
+ * Данный файл содержит настройки визуального представления и стилизации
+ * всех категорий товаров в магазине игры. Каждая категория соответствует
+ * одной из характеристик героя и имеет уникальные визуальные параметры.
+ * 
+ * Структура объекта:
+ * - Ключи объекта соответствуют свойствам в объекте HeroStats
+ * - Значения содержат параметры визуализации для UI компонентов
+ */
 export const shopCategories: Record<string, ShopCategory> = {
   "max-health": {
     name: "Максимальное здоровье",
@@ -52,4 +62,4 @@ export const shopCategories: Record<string, ShopCategory> = {
     color: "#d6de00",
     filter: "invert(80%) sepia(40%) saturate(500%) hue-rotate(60deg) brightness(95%) contrast(105%)",
   },
-};
+} as const;
