@@ -1,0 +1,1041 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Подробный пошаговый план рефакторинга Dota Clicker для нейросети
+
+Прежде чем начать, возможно, в данной инструкции далее не оговорено, но:
+1. Ты обязан ознакомиться целиком и полностью с документациями: [all_pixijs_content.txt](mdc:docs pixi/all_pixijs_content.txt), [pixi_examples.txt](mdc:docs pixi/pixi_examples.txt), [react_ts_pixi_doc.txt](mdc:docs pixi/react_ts_pixi_doc.txt), [skeleton boy.txt](mdc:docs pixi/skeleton boy.txt), @https://pixijs.download/release/docs/index.html. Если не получается с ними ознакомиться, то объясни причину и предложи решения.
+2. [Header.tsx](mdc:src/features/ui/Header/Header.tsx) и [Footer.tsx](mdc:src/features/ui/Footer/Footer.tsx) должны быть активны и на странице с игрой. Они являются общими для всех страниц проекта, в том числе игры.
+2. Прогрузка приложения = прогрузка игры. Поэтому надо будет добавить прелоудер приложения, загружающий все компоненты, в том числе игру. Этот момент надо продумать заранее и определить момент, когда это сделать - сразу или потом.
+
+Выполнять последующие действия нужно по подпунктам (1.1 выполнили, отладили, я сказал, что все нормально и идем к 1.2 и т.д.)
+
+## 1. Базовое создание игрового компонента с Pixi.js
+
+### 1.1. Создание основного игрового компонента
+
+**Задача**: Реализовать компонент `PixiGame.tsx`, который инициализирует Pixi.js в контексте React
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [PixiGame.tsx](mdc:src/game/PixiGame.tsx) `
+- Изучи файл ` [pixiTest.ts](mdc:src/game/pixiTest.ts)` (@src/game/pixiTest.ts) для понимания базовой инициализации Pixi.js v8
+- Обрати внимание на разницу между инициализацией в Pixi.js v8 и старом файле `game.js` ([game.js](mdc:old_project_game/front1/game/game.js) ) - используй асинхронную инициализацию с `await app.init()`
+- Создай React-компонент, который принимает пропсы для настройки канваса (ширина, высота, цвет фона)
+- Используй хуки `useRef` для ссылок на DOM-элемент и Pixi.js приложение
+- В `useEffect` инициализируй приложение Pixi.js асинхронно с `await app.init()`
+- Добавь лог в консоль для отслеживания успешной инициализации
+- Реализуй очистку ресурсов при размонтировании компонента
+- Верни div с рефом, в который будет монтироваться canvas
+
+**Ожидаемый результат**: Компонент, создающий канвас Pixi.js, который занимает всю доступную область.
+
+**Проверка**: В консоли появится сообщение об успешной инициализации Pixi.js.
+
+### 1.2. Интеграция игрового компонента в GamePage
+
+**Задача**: Встроить созданный игровой компонент в существующую страницу
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [GamePage.tsx](mdc:src/pages/GamePage/GamePage.tsx)` 
+- Изучи текущую структуру файла, который сейчас использует ` [pixiTest.ts](mdc:src/game/pixiTest.ts)` для проверки работы Pixi.js
+- Замени прямое использование ` [pixiTest.ts](mdc:src/game/pixiTest.ts)` на импорт компонента `PixiGame` из `../../game/PixiGame`
+- Сохрани существующие стили и структуру контейнера, который сейчас используется для отображения тестового Pixi.js
+- Заверни компонент в контейнер, который будет занимать большую часть экрана
+- Обеспечь корректное отображение в мобильном и десктопном режимах
+
+**Ожидаемый результат**: На странице игры отображается черный канвас Pixi.js.
+
+**Проверка**: Визуально убедиться, что канвас занимает большую часть экрана.
+
+## 2. Реализация фонового слоя игры
+
+### 2.1. Создание класса фона с параллаксом
+
+**Задача**: Реализовать движущийся фон игры
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [Background.ts](mdc:src/game/entities/Background.ts)`
+- Детально изучи структуру старого класса ` [background.js](mdc:old_project_game/front1/game/background.js)` (@background.js), обрати особое внимание на:
+  - Метод `setSpeed(speed)`, который зависит от ширины экрана: `this.backgroundSpeed = canvas.width/200`
+  - Метод `resize(canvas)` для адаптации размеров фона под экран
+  - Свойство `defaultSpeed` и механизм остановки/возобновления движения
+  - Использование ` [background.js](mdc:old_project_game/front1/game/background.js)` в файле ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js), где инициализируется фон
+- Изучи использование фонового изображения ` [forest_background.png](mdc:old_project_game/media/game/images/forest_background.png)`, которое в новом проекте должно быть в ` [forest_background.png](mdc:public/media/game/images/forest_background.png)`
+- Создай класс `Background` с полями: 
+  - `texture`: Текстура фона
+  - `backgroundX`: Позиция по X
+  - `backgroundSpeed`: Скорость движения
+  - `defaultSpeed`: Исходная скорость для возврата
+  - `isStopped`: Флаг остановки
+- Реализуй метод `draw(renderer, delta)` для отрисовки фона
+- Реализуй методы управления скоростью: 
+  - `setSpeed(speed)` - установка скорости
+  - `stopSpeed()` - остановка движения
+  - `returnSpeed()` - восстановление исходной скорости
+- Используй `TilingSprite` из Pixi.js для создания бесконечного фона
+
+**Ожидаемый результат**: Класс, способный рисовать движущийся параллаксный фон.
+
+### 2.2. Интеграция фона в игровой компонент
+
+**Задача**: Добавить фон на игровую сцену
+
+**Детальные инструкции для нейросети**:
+
+- Модифицируй ` [PixiGame.tsx](mdc:src/game/PixiGame.tsx)`, добавив загрузку текстуры фона через `Assets.load`
+- Изучи в ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js) как создается и инициализируется фон:
+  ```javascript
+  const background = new Background(assets);
+  background.setSpeed(canvas.width/200);
+  ```
+- Создай экземпляр класса `Background` с загруженной текстурой
+- Установи скорость в зависимости от ширины экрана, как в оригинальном коде
+- Добавь фон на сцену (app.stage.addChild)
+- Добавь обновление фона в игровой цикл (app.ticker.add)
+
+**Ожидаемый результат**: На экране отображается движущийся фоновый слой.
+
+**Проверка**: Визуально убедиться, что фон движется слева направо.
+
+## 3. Создание системы управления ресурсами
+
+### 3.1. Реализация менеджера ассетов
+
+**Задача**: Создать систему для загрузки и управления игровыми ресурсами
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [AssetsManager.ts](mdc:src/game/managers/AssetsManager.ts)`
+- Изучи структуру старого класса ` [assetsLoader.js](mdc:old_project_game/front1/game/assetsLoader.js)` (@assetsLoader.js), обрати внимание на:
+  - Массив `testResources` с путями ко всем изображениям и звукам
+  - Структуру загрузчика и организацию ресурсов по категориям
+  - Метод `loadImages` и функцию `loadAndDecodeImage` для декодирования
+  - Обработку ошибок загрузки
+- Также изучи структуру ` [TestImages.tsx](mdc:src/TestImages.tsx) ` (@src/TestImages.tsx) для понимания полных путей ко всем ресурсам
+- Создай класс-синглтон `AssetsManager` с полями: 
+  - `textures`: Map для хранения загруженных текстур
+  - `sounds`: Map для хранения загруженных звуков
+  - `isLoading`: Флаг процесса загрузки
+  - `loadedCount`: Счетчик загруженных ресурсов
+  - `totalCount`: Общее количество ресурсов для загрузки
+- Реализуй методы: 
+  - `loadTextures(urls)` - для загрузки текстур через `Assets.load` в Pixi.js v8
+  - `loadSpriteSheets(urls)` - для загрузки спрайтшитов
+  - `loadSounds(urls)` - для загрузки звуков, используя @pixi/sound
+  - `getTexture(name)` - для получения загруженной текстуры
+  - `getProgress()` - для получения процента загрузки
+- Добавь обработку событий прогресса загрузки
+- Сохрани оригинальную структуру путей к ресурсам, например:
+  ```
+  /media/game/images/forest_background.png
+  /media/game/assets/heroes/juggernaut_idle.png
+  /media/game/assets/creeps/dire_creep_idle.png
+  ```
+
+**Ожидаемый результат**: Система, способная загружать и управлять игровыми ресурсами.
+
+**Проверка**: Лог в консоли о загруженных ресурсах.
+
+## 4. Реализация анимированных спрайтов
+
+### 4.1. Создание базового класса анимированного спрайта
+
+**Задача**: Разработать базовый класс для всех анимированных объектов
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [AnimatedSprite.ts](mdc:src/game/core/AnimatedSprite.ts)`
+- Детально изучи код анимаций в следующих файлах:
+  - ` [hero.js](mdc:old_project_game/front1/game/heroes/hero.js)` (@hero.js) - методы `updateTimers`, использование и смена анимаций
+  - ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js) - метод `updateAnimation` и система переключения анимаций
+- Изучи структуру анимаций в ` [heroConfig.js](mdc:old_project_game/front1/game/heroes/heroConfig.js)` (@heroConfig.js) и ` [creepsConfig.js](mdc:old_project_game/front1/game/creepData/creepsConfig.js)` (@creepsConfig.js), обрати внимание на:
+  ```javascript
+  animations: {
+    run: {
+      spriteSheet: 'juggernautRunSpriteSheet',
+      frameWidth: 512,
+      frameHeight: 512,
+      totalFrames: 21,
+      framesPerRow: 7,
+      frameInterval: 40,
+      sound: new Audio('/media/game/sounds/heroes/juggernaut/run/jugger_run.mp3')
+    },
+    // ...другие анимации
+  }
+  ```
+- Создай класс `AnimatedSprite`, расширяющий `Pixi.Container`, с полями: 
+  - `currentAnimation`: Текущая анимация
+  - `currentFrame`: Текущий кадр
+  - `animations`: Map с анимациями и их параметрами
+  - `frameTimer`: Счетчик времени для смены кадров
+  - `sprite`: Внутренний спрайт для отображения текущего кадра
+- Реализуй методы: 
+  - `addAnimation(name, config)` - добавление анимации с параметрами
+  - `playAnimation(name, loop = true)` - воспроизведение анимации
+  - `update(delta)` - обновление состояния анимации
+  - `isAnimationPlaying(name)` - проверка текущей анимации
+  - `getCurrentFrame()` - получение текущего кадра
+  - `setupFrameTextures(spritesheet, config)` - настройка текстур из спрайтшита
+- Добавь поддержку колбэков для событий анимации:
+  - `onAnimationStart(name, callback)`
+  - `onAnimationComplete(name, callback)`
+  - `onFrameChange(name, frame, callback)`
+
+**Ожидаемый результат**: Базовый класс для анимированных объектов.
+
+### 4.2. Создание класса игровой сущности
+
+**Задача**: Разработать базовый класс для всех игровых объектов
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [GameEntity.ts](mdc:src/game/core/GameEntity.ts)`
+- Изучи общие свойства и методы сущностей в:
+  - ` [hero.js](mdc:old_project_game/front1/game/heroes/hero.js)` (@hero.js) - полоски здоровья/маны, урон, состояния
+  - ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js) ` (@creep.js) - полоски здоровья, проверка жизненного статуса
+- Изучи методы отрисовки полосок здоровья:
+  - `drawBars` в ` [hero.js](mdc:old_project_game/front1/game/heroes/hero.js)`
+  - `drawHealthBar` в ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)s`
+- Создай абстрактный класс ` [GameEntity.ts](mdc:src/game/core/GameEntity.ts)y`, расширяющий `AnimatedSprite`, с полями: 
+  - `health`: Текущее здоровье
+  - `maxHealth`: Максимальное здоровье
+  - `isAliveFlag`: Флаг жизненного статуса
+  - `isColliding`: Флаг столкновения
+  - `position`: Позиция в мире
+- Реализуй методы: 
+  - `takeDamage(amount)` - получение урона
+  - `heal(amount)` - восстановление здоровья
+  - `isAlive()` - проверка жизненного статуса
+  - `drawHealthBar(renderer)` - отрисовка полоски здоровья, используя Graphics из Pixi.js v8
+  - `abstract update(delta)` - абстрактный метод для обновления состояния
+
+**Ожидаемый результат**: Базовый класс для всех игровых сущностей.
+
+## 5. Реализация героя
+
+### 5.1. Создание класса героя
+
+**Задача**: Реализовать класс героя с анимациями и атрибутами
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [Hero.ts](mdc:src/game/entities/Hero.ts) `
+- Детально изучи структуру старого класса ` [hero.js](mdc:old_project_game/front1/game/heroes/hero.js)` (@hero.js), обрати внимание на:
+  - Конструктор с полным набором параметров
+  - Метод `attack(creep)` и логику кулдауна маны
+  - Методы `stopSound` и `resumeSound` для управления звуками
+  - Метод `updateTimers` для обновления состояния и восстановления ресурсов
+  - Отрисовку полосок здоровья и маны
+- Изучи использование `heroConfig.js` (@heroConfig.js) для загрузки параметров и анимаций
+- Создай класс `Hero`, расширяющий `GameEntity`, с дополнительными полями: 
+  - `energy`: Текущая мана (энергия)
+  - `maxEnergy`: Максимальная мана
+  - `energyRegen`: Скорость восстановления маны
+  - `healthRegen`: Скорость восстановления здоровья
+  - `damage`: Урон
+  - `vampirism`: Процент вампиризма (восстановления здоровья от урона)
+  - `direction`: Направление движения (1 или -1)
+  - `energyCooldown`: Флаг кулдауна маны
+  - `manaCooldown`: Объект таймера кулдауна
+- Реализуй специфические методы: 
+  - `attack(creep)` - атака врага с проверкой маны, используя `waitForTimeout` из оригинального кода
+  - `update(delta)` - обновление состояния героя, восстановление ресурсов
+  - `drawManaBars(renderer)` - отрисовка полосок здоровья и маны
+  - `stopSound(end = false)` и `resumeSound()` - управление звуками
+  - `addCoins(amount)` - увеличение золота игрока
+- Перенеси логику анимаций и кулдауна маны из старого файла
+
+**Ожидаемый результат**: Класс героя с анимациями и характеристиками.
+
+### 5.2. Создание фабрики героев
+
+**Задача**: Реализовать фабрику для создания героев
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [HeroFactory.ts](mdc:src/game/factories/HeroFactory.ts)`
+- Изучи структуру старого класса ` [heroFactory.js](mdc:old_project_game/front1/game/heroes/heroFactory.js)` (@heroFactory.js), обрати внимание на:
+  - Конструктор, принимающий ресурсы и фон
+  - Метод `createHero(type)` для создания героя по типу
+  - Проверку конфигурации и работу с ошибками
+- Убедись, что ты понимаешь, как система фабрик используется в ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js):
+  ```javascript
+  let hero = new HeroFactory(assets, background).createHero('juggernaut');
+  ```
+- Создай класс `HeroFactory` с методами: 
+  - `constructor(assetsManager, background)` - принимает инстансы менеджера ресурсов и фона
+  - `createHero(type)` - создание героя определенного типа из конфигурации
+  - `loadHeroConfig(type)` - загрузка конфигурации героя
+
+**Ожидаемый результат**: Фабрика, способная создавать героев разных типов.
+
+### 5.3. Конфигурация героев
+
+**Задача**: Перенести и адаптировать конфигурацию героев
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [heroConfig.ts](mdc:src/game/config/heroConfig.ts)s`
+- Детально изучи структуру старого файла ` [heroConfig.js](mdc:old_project_game/front1/game/heroes/heroConfig.js)` (@heroConfig.js), обрати внимание на:
+  - Структуру конфигурации и базовые параметры
+  - Конфигурацию анимаций с кадрами и звуками
+  - Использование `getCachedHeroData()` для получения данных из хранилища
+  - Все характеристики героя, включая доход (income)
+- Создай типизированную версию конфигурации с интерфейсами:
+  - `HeroConfigItem` - для одного героя
+  - `HeroAnimationConfig` - для настроек анимации
+  - `HeroSpriteConfig` - для настроек спрайта
+- Перенеси конфигурацию героев с типизацией
+- Добавь дефолтные значения для всех параметров
+- Адаптируй структуру под новую систему анимаций
+
+**Ожидаемый результат**: Типизированная конфигурация героев.
+
+### 5.4. Добавление героя на сцену
+
+**Задача**: Интегрировать героя в игровой компонент
+
+**Детальные инструкции для нейросети**:
+
+- Модифицируй ` [PixiGame.tsx](mdc:src/game/PixiGame.tsx)` для создания и добавления героя
+- Изучи, как герой создается и добавляется в ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js):
+  ```javascript
+  let hero = new HeroFactory(assets, background).createHero('juggernaut');
+  ```
+- Загрузи необходимые ресурсы через `AssetsManager`:
+  ```
+  /media/game/assets/heroes/juggernaut_idle.png
+  /media/game/assets/heroes/juggernaut_run.png
+  /media/game/assets/heroes/juggernaut_attack.png
+  ```
+- Создай героя через `HeroFactory`
+- Добавь героя на сцену (app.stage.addChild)
+- Настрой обновление героя в игровом цикле (app.ticker.add)
+- Интегрируй с хранилищем героя (useHeroStore) для получения характеристик
+
+**Ожидаемый результат**: На экране отображается анимированный герой.
+
+**Проверка**: Герой с анимацией бега отображается в левой части экрана.
+
+## 6. Реализация врагов
+
+### 6.1. Создание класса врага
+
+**Задача**: Реализовать класс врага с анимациями и атрибутами
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [Creep.ts](mdc:src/game/entities/Creep.ts)`
+- Детально изучи структуру старого класса ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js), обрати внимание на:
+  - Конструктор с параметрами
+  - Методы `initialize` и `spawn` для инициализации
+  - Метод `updateAnimation` для управления анимациями
+  - Метод `checkCollision` для проверки столкновения с героем
+  - Метод `handleAttack` для получения урона от героя
+  - Метод `dealDamage` для нанесения урона герою
+  - Метод `showCoinAnimation` для отображения получения золота
+- Изучи использование параметров `imgConfigs` из `creepsConfig.js` (@creepsConfig.js):
+  ```javascript
+  imgConfigs: {
+    imgScale: 1,
+    deltaY: -30,
+    swingFrame: 5,
+    attackFrame: 11,
+    yBarDelta: 0.3,
+    xBarDelta: -10,
+  }
+  ```
+- Создай класс `Creep`, расширяющий `GameEntity`, с дополнительными полями: 
+  - `type`: Тип врага
+  - `coinsEarned`: Награда в золоте
+  - `creepRank`: Ранг (уровень сложности)
+  - `creepNumber`: Номер врага (для подсчета убитых)
+  - `isDying`: Флаг анимации смерти
+  - `creepsToLvlup`: Количество крипов до повышения ранга
+  - `imgConfigs`: Настройки отображения
+  - `functions`: Специальные функции (эффекты)
+- Реализуй методы: 
+  - `initialize(canvas)` - настройка начальных параметров
+  - `spawn(canvas)` - создание врага в указанной позиции
+  - `updateAnimation(delta, hero)` - обновление анимации
+  - `takeDamage(amount)` - получение урона с анимацией
+  - `die()` - обработка смерти с анимацией
+  - `checkCollision(hero)` - проверка столкновения с героем
+  - `handleAttack(hero)` - получение урона от героя
+  - `dealDamage(hero)` - нанесение урона герою
+  - `swing()` - воспроизведение звука замаха
+  - `showCoinAnimation(x, y, amount)` - анимация получения золота
+
+**Ожидаемый результат**: Класс врага с анимациями и состояниями.
+
+### 6.2. Создание фабрики врагов
+
+**Задача**: Реализовать фабрику для создания врагов
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [CreepFactory.ts](mdc:src/game/factories/CreepFactory.ts)`
+- Изучи структуру старого класса ` [creepFactory.js](mdc:old_project_game/front1/game/creepData/creepFactory.js)` (@creepFactory.js), обрати внимание на:
+  - Конструктор, принимающий ресурсы и фон
+  - Метод `createCreep(type, creepNumber, creepRank)` для создания врага
+  - Обработку ошибок с неизвестными типами врагов
+- Изучи использование фабрики в `game.js` (@game.js):
+  ```javascript
+  // Создаем фабрику крипов
+  const creepFactory = new CreepFactory(assets, background);
+  // Создание первого крипа
+  spawnNewCreep("defaultCreep");
+  // Функция спавна
+  function spawnNewCreep(type) {
+    if (type === "random") {
+      type = generateUnlockedCreep(hero.level);
+    }
+    const creepNumber = currentCreep ? currentCreep.creepNumber : 1;
+    const creepRank = currentCreep ? currentCreep.creepRank : 0;
+    currentCreep = creepFactory.createCreep(type, creepRank, creepNumber);
+    // ...
+  }
+  ```
+- Создай класс `CreepFactory` с методами: 
+  - `constructor(assetsManager, background)` - принимает инстансы менеджера ресурсов и фона
+  - `createCreep(type, rank = 0, number = 1)` - создание врага определенного типа
+  - `generateRandomCreep(level)` - создание случайного врага для уровня
+
+**Ожидаемый результат**: Фабрика, способная создавать врагов разных типов.
+
+### 6.3. Конфигурация врагов
+
+**Задача**: Перенести и адаптировать конфигурацию врагов
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [creepsConfig.ts](mdc:src/game/config/creepsConfig.ts)`
+- Детально изучи структуру старого файла ` [creepsConfig.js](mdc:old_project_game/front1/game/creepData/creepsConfig.js)` (@creepsConfig.js), обрати внимание на:
+  - Конфигурацию типов врагов с параметрами
+  - Конфигурацию анимаций, включая пути к спрайтам и звукам
+  - Настройки `imgConfigs` для позиционирования и отображения
+  - Специальные эффекты в объекте `functions`, например:
+    ```javascript
+    functions: {
+      // Отравление при ударе - на секунду пропадает восстановление хп
+      attack_modifier: function(hero) {
+        hero.healthRegen = 0
+        if (this.isPoisoned) {
+          clearTimeout(this.isPoisoned);
+        }
+        this.isPoisoned = setTimeout(() => {
+          hero.healthRegen = hero.baseHealthRegen;
+        }, 1000)
+      }
+    }
+    ```
+- Создай типизированную версию конфигурации с интерфейсами:
+  - `CreepConfigItem` - для конфигурации одного типа врага
+  - `CreepAnimationConfig` - для настроек анимации
+  - `CreepImageConfig` - для настроек отображения
+  - `CreepEffectFunction` - тип для функций эффектов
+- Перенеси конфигурацию врагов с типизацией
+- Адаптируй специальные эффекты врагов (яд, снижение маны) под новую систему
+
+**Ожидаемый результат**: Типизированная конфигурация врагов с различными эффектами.
+
+### 6.4. Добавление врага на сцену
+
+**Задача**: Интегрировать врага в игровой компонент
+
+**Детальные инструкции для нейросети**:
+
+- Модифицируй ` [PixiGame.tsx](mdc:src/game/PixiGame.tsx)` для создания и добавления врага
+- Изучи, как враг создается и добавляется в ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js):
+  ```javascript
+  function spawnNewCreep(type) {
+    // ...
+    currentCreep = creepFactory.createCreep(type, creepRank, creepNumber);
+    currentCreep.initialize(canvas);
+    currentCreep.spawn(canvas);
+  }
+  ```
+- Загрузи необходимые ресурсы через `AssetsManager`:
+  ```
+  /media/game/assets/creeps/dire_creep_idle.png
+  /media/game/assets/creeps/dire_creep_attack.png
+  /media/game/assets/creeps/dire_creep_death.png
+  ```
+- Создай тестового врага через `CreepFactory` (тип "defaultCreep" из конфигурации)
+- Инициализируй и спавни врага
+- Добавь врага на сцену (app.stage.addChild)
+- Настрой обновление врага в игровом цикле (app.ticker.add)
+
+**Ожидаемый результат**: На экране отображается анимированный враг.
+
+**Проверка**: Враг с анимацией покоя отображается в правой части экрана.
+
+## 7. Реализация взаимодействий и столкновений
+
+### 7.1. Создание утилит обнаружения столкновений
+
+**Задача**: Разработать функции для определения столкновений
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [collisionUtils.ts](mdc:src/game/utils/collisionUtils.ts)`
+- Детально изучи логику столкновений из старого файла ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js), метод `checkCollision`:
+  ```javascript
+  checkCollision(hero) {
+    const creepRight = this.creepX + this.creepWidth * this.scale;
+    const heroRight = 0.4 * hero.heroWidth + hero.heroX;
+    const isCollideX = heroRight >= this.creepX && hero.heroX <= creepRight;
+    
+    // Игнорируем коллизию, если крип умирает
+    if (this.isDying) return;
+    
+    // Если столкновение произошло, но ещё не зафиксировано
+    if (isCollideX && !this.isColliding) {
+      this.isColliding = true;
+      this.background.stopSpeed();
+      this.currentAnimation = "attack";
+    }
+    
+    // Если больше нет пересечения, сбрасываем флаг
+    if (!isCollideX && this.isColliding) {
+      this.isColliding = false;
+    }
+    return isCollideX;
+  }
+  ```
+- Реализуй функции: 
+  - `checkRectCollision(a, b)` - проверка пересечения прямоугольников
+    ```typescript
+    interface Rectangle {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }
+    ```
+  - `checkSpriteCollision(spriteA, spriteB, offsetA = 0, offsetB = 0)` - проверка столкновения спрайтов с возможностью задать смещение границ
+  - `calculateOverlap(a, b)` - расчет степени перекрытия объектов
+
+**Ожидаемый результат**: Утилиты для определения столкновений между объектами.
+
+### 7.2. Реализация механики столкновения
+
+**Задача**: Добавить обработку столкновений между героем и врагами
+
+**Детальные инструкции для
+
+- Изучи обработку столкновений в игровом цикле в ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js):
+  ```javascript
+  // Проверка столкновений и управление состоянием крипа
+  if (!currentCreep.isDying) {
+    let isColide = currentCreep.checkCollision(heroData);
+    if (isColide && hero.currentAnimation != 'attack') {
+      hero.currentAnimation = 'idle';
+    }
+  }
+  ```
+- Модифицируй ` [PixiGame.tsx](mdc:src/game/PixiGame.tsx)` для проверки столкновений в игровом цикле
+- Используй созданные утилиты столкновений
+- При столкновении: 
+  - Останавливай движение фона (background.stopSpeed())
+  - Переключай анимацию героя на 'idle'
+  - Переключай анимацию врага на 'attack'
+- При отсутствии столкновения: 
+  - Восстанавливай движение фона (background.returnSpeed())
+  - Переключай анимацию героя на 'run'
+
+**Ожидаемый результат**: При столкновении героя с врагом фон останавливается и запускаются анимации покоя/атаки.
+
+**Проверка**: Визуально убедиться, что при сближении объектов происходит остановка движения.
+
+## 8. Реализация боевой механики
+
+### 8.1. Реализация атаки по клику
+
+**Задача**: Добавить механику атаки при клике мышью
+
+**Детальные инструкции для нейросети**:
+
+- Модифицируй ` [PixiGame.tsx](mdc:src/game/PixiGame.tsx) ` для обработки кликов по экрану
+- Изучи обработчик кликов в ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js):
+  ```javascript
+  // Обработка кликов на холсте
+  canvas.addEventListener("click", () => {
+    console.log('click')
+    hero.attack(background, currentCreep); // Атака Джаггернаута
+    if (!currentCreep.isAlive && currentCreep.isDying && spamBlock) {
+      spamBlock = false;
+      
+      // Запускаем процесс спауна с паузой
+      spawnProcess = waitForTimeout(
+        3000,
+        () => {
+          spawnNewCreep("random");
+          spamBlock = true; // Сбрасываем блокировку
+        },
+        () => {
+          console.log("Спавн на паузе");
+        }
+      );
+    }
+  });
+  ```
+- Перенеси функцию `waitForTimeout` из ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js) в отдельную утилиту, изучив ее реализацию:
+  ```javascript
+  export function waitForTimeout(timeout, callback, onPause = () => {}) {
+    let steps = Math.ceil(timeout / 100);
+    let currentStep = 0; // Текущий шаг
+    let timeoutId = null; // Идентификатор текущего таймера
+    function step() {
+      if (isPaused) return; // Если пауза, не продолжаем выполнение
+      
+      currentStep++;
+      if (currentStep >= 100) {
+        callback(); // Выполняем основной коллбэк, если все шаги завершены
+      } else {
+        timeoutId = setTimeout(step, steps); // Переходим к следующему шагу
+      }
+    }
+    
+    // Функция для паузы
+    function pause() {
+      isPaused = true;
+      clearTimeout(timeoutId); // Останавливаем текущий таймер
+      onPause(); // Вызываем коллбэк для паузы, если он есть
+    }
+    
+    // Функция для продолжения
+    function resume() {
+      if (isPaused) {
+        isPaused = false;
+        step(); // Возобновляем выполнение
+      }
+    }
+    
+    step(); // Запускаем процесс
+    return { pause, resume }; // Возвращаем функции для управления
+  }
+  ```
+- При клике: 
+  - Вызывай метод `hero.attack(creep)` для атаки врага
+  - Проверяй наличие маны у героя (как в оригинальном коде)
+  - Реализуй ту же логику блокировки спама и спавна нового врага
+
+**Ожидаемый результат**: При клике герой атакует врага, тратя ману.
+
+**Проверка**: Клик вызывает анимацию атаки и уменьшает ману героя.
+
+### 8.2. Реализация нанесения урона врагу
+
+**Задача**: Добавить механику получения урона врагом
+
+**Детальные инструкции для нейросети**:
+
+- Модифицируй класс `Creep` для обработки получения урона
+- Изучи метод `handleAttack` в ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js):
+  ```javascript
+  handleAttack(hero) {
+    if (this.isColliding && this.isAlive && hero.isAttacking) {
+      this.creepHealthLeft -= hero.damage;
+      if (this.creepHealthLeft <= 0) {
+        const death_sound = this.animations.death.sound;
+        death_sound.volume = this.volume;
+        death_sound.currentTime = 0; // Сбрасываем звук, если он уже проигрывается
+        death_sound.play();
+        
+        this.isAlive = false;
+        this.isDying = true;
+        this.currentAnimation = "death";
+        this.currentFrame = 0;
+        
+        // Анимация монет
+        console.log(`Крип ${this.creepNumber} уничтожен`);
+        const coinX = this.creepX + (this.creepWidth * this.scale) / 2 + this.imgConfigs.xBarDelta;
+        const coinY = this.creepY + this.imgConfigs.yBarDelta * this.creepY;
+        // Анимация монет
+        this.showCoinAnimation(coinX, coinY, (Math.floor(this.coinsEarned**1.07**(this.creepRank))));
+        
+        if (this.creepNumber === this.creepsToLvlup) {
+          this.creepRank += 1;
+          console.log(`Уровень крипов: ${this.creepRank}`);
+        }
+        this.creepNumber = (this.creepNumber % this.creepsToLvlup) + 1;
+        
+        // Обновляем информацию о крипе в интерфейсе
+        this.updateCreepInfo();
+        hero.addCoins(Math.floor(this.coinsEarned**1.07**(this.creepRank)));
+        changeGold(Math.floor(this.coinsEarned**1.07**(this.creepRank)))
+      }
+    }
+  }
+  ```
+- При получении урона: 
+  - Уменьшай здоровье врага
+  - Отображай урон над врагом (опционально) или используй визуальный эффект
+  - Обновляй полоску здоровья
+- При смерти врага: 
+  - Запускай анимацию смерти
+  - Отключай проверку столкновений
+  - Добавляй золото игроку через имеющиеся системы (useGold, changeGold)
+  - Отображай анимацию получения золота
+
+**Ожидаемый результат**: Враг получает урон при атаке героя, а при нулевом здоровье умирает.
+
+**Проверка**: После нескольких атак враг должен умереть с соответствующей анимацией.
+
+### 8.3. Реализация атаки врага
+
+**Задача**: Добавить механику атаки врага по герою
+
+**Детальные инструкции для нейросети**:
+
+- Модифицируй класс `Creep` для реализации атаки
+- Изучи методы `swing` и `dealDamage` в ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js):
+  ```javascript
+  swing() {
+    const attacks = this.animations.attack.sounds.attack_start.length
+    const attack_sound = this.animations.attack.sounds.attack_start[Math.floor(Math.random() * attacks)]
+    attack_sound.volume = this.volume;
+    attack_sound.currentTime = 0; // Сбрасываем звук, если он уже проигрывается
+    attack_sound.play()    
+  }
+  
+  dealDamage(hero) {
+    if (hero.health > 0) {
+      hero.health = Math.max(0, hero.health - this.creepDamage);
+    }
+    if (this.functions['attack_modifier']){
+      this.functions@'attack_modifier';
+    }
+    const attacks = this.animations.attack.sounds.attack_end.length
+    const attack_sound = this.animations.attack.sounds.attack_end[Math.floor(Math.random() * attacks)]
+    attack_sound.volume = this.volume;
+    attack_sound.currentTime = 0; // Сбрасываем звук, если он уже проигрывается
+    attack_sound.play()    
+  }
+  ```
+- Изучи использование `swingFrame` и `attackFrame` в `updateAnimation`:
+  ```javascript
+  if (this.currentAnimation === "attack" && this.currentFrame === this.imgConfigs.swingFrame && this.isGameActive) {
+    this.swing();
+  }
+  if (this.currentAnimation === "attack" && this.currentFrame === this.imgConfigs.attackFrame && this.isGameActive) {
+    this.dealDamage(hero);
+  }
+  ```
+- Используй таймеры или систему кадров анимации для определения момента нанесения урона
+- Реализуй специальные эффекты врагов (яд, снижение маны) через функцию `functions['attack_modifier']`
+- Добавь механику восстановления здоровья героя через вампиризм в методе `Hero.attack`
+
+**Ожидаемый результат**: Враг атакует героя во время столкновения, нанося урон.
+
+**Проверка**: Здоровье героя уменьшается при атаке врага.
+
+## 9. Реализация спавна врагов и прогрессии
+
+### 9.1. Реализация механики спавна врагов
+
+**Задача**: Добавить систему появления новых врагов
+
+**Детальные инструкции для нейросети**:
+
+- Изучи логику спавна из старого файла ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js):
+  ```javascript
+  // Функция для спауна нового крипа
+  function generateUnlockedCreep(level) {
+    const indices = [];
+    creepsConfig.forEach((creep, index) => {
+      if (creep.unlockedLevel <= level) {
+        indices.push(index);
+      }
+    });
+    const randomCreep = creepsConfig[indices[Math.floor(Math.random() * indices.length)]].type
+    return randomCreep
+  }
+  
+  function spawnNewCreep(type) {
+    if (type === "random") {
+      type = generateUnlockedCreep(hero.level); // Берем тип случайного крипа
+    }
+    const creepNumber = currentCreep ? currentCreep.creepNumber : 1;
+    const creepRank = currentCreep ? currentCreep.creepRank : 0;
+    currentCreep = creepFactory.createCreep(type, creepRank, creepNumber);
+    currentCreep.initialize(canvas);
+    currentCreep.spawn(canvas);
+  }
+  ```
+- Модифицируй ` [PixiGame.tsx](mdc:src/game/PixiGame.tsx)` для добавления функции спавна новых врагов
+- Реализуй: 
+  - Функцию `generateUnlockedCreep(level)` для выбора доступных типов врагов
+  - Функцию `spawnNewCreep(type)` для создания нового врага
+  - Спавн нового врага после смерти текущего (с задержкой в 3 секунды)
+  - Увеличение ранга врагов после каждых 100 убитых
+  - Увеличение сложности врагов с рангом через формулы:
+    ```javascript
+    this.creepHealthTotal = Math.floor(this.creepHealthTotal ** 1.15 ** (this.creepRank));
+    this.creepDamage = Math.floor(this.creepDamage ** 1.15 ** (this.creepRank));
+    ```
+
+**Ожидаемый результат**: После убийства врага появляется новый, с увеличивающейся сложностью.
+
+**Проверка**: После убийства врага через некоторое время появляется новый.
+
+### 9.2. Интеграция с GoldContext
+
+**Задача**: Связать игровую механику с существующей системой золота
+
+**Детальные инструкции для нейросети**:
+
+- Импортируй и используй GoldContext (`useGold` хук) в ` [PixiGame.tsx](mdc:src/game/PixiGame.tsx)`
+- Изучи как обновляется золото в ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js):
+  ```javascript
+  hero.addCoins(Math.floor(this.coinsEarned**1.07**(this.creepRank)));
+  changeGold(Math.floor(this.coinsEarned**1.07**(this.creepRank)))
+  ```
+- Изучи реализацию `addCoins` в `hero.js` (@hero.js) и `changeGold` в `main.js`
+- При убийстве врага: 
+  - Обновляй золото в контексте через `setGold`
+  - Отображай анимацию получения золота через `showCoinAnimation`
+  - Синхронизируй золото с общим состоянием приложения через `syncGoldWithServer` из GoldContext
+
+**Ожидаемый результат**: Убийство врагов увеличивает золото игрока, доступное в других частях приложения.
+
+**Проверка**: После убийства врага количество золота увеличивается.
+
+## 10. Реализация звуковой системы
+
+### 10.1. Создание звукового менеджера
+
+**Задача**: Реализовать систему воспроизведения звуков
+
+**Детальные инструкции для нейросети**:
+
+- Открой файл ` [SoundManager.ts](mdc:src/game/managers/SoundManager.ts)`
+- Изучи звуковую систему из старых файлов:
+  - в ` [hero.js](mdc:old_project_game/front1/game/heroes/hero.js)` (@hero.js): воспроизведение звуков анимации
+  - в ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js): звуки атаки и смерти
+  - обрати внимание на структуру звуков в конфигурациях анимаций
+- Изучи пути к звуковым файлам:
+  ```
+  /media/game/sounds/heroes/juggernaut/run/jugger_run.mp3
+  /media/game/sounds/heroes/juggernaut/attack/jugger_attack_*.mp3
+  /media/game/sounds/creeps/attack/attack_start_*.mp3
+  /media/game/sounds/creeps/attack/attack_end_*.mp3
+  /media/game/sounds/creeps/death/*.mp3
+  ```
+- Создай класс-синглтон `SoundManager` с методами: 
+  - `loadSounds(urls)` - загрузка звуков через @pixi/sound
+  - `play(name, volume = 1)` - воспроизведение звука
+  - `stop(name)` - остановка звука
+  - `setMuted(muted)` - включение/выключение звука
+  - `setVolume(volume)` - установка громкости всех звуков
+  - `playRandom(category)` - воспроизведение случайного звука из категории
+- Добавь поддержку кеширования звуков для быстрого доступа
+- Используй @pixi/sound для работы со звуками
+
+**Ожидаемый результат**: Система для воспроизведения игровых звуков.
+
+### 10.2. Интеграция звуков с игровыми событиями
+
+**Задача**: Связать звуки с действиями в игре
+
+**Детальные инструкции для нейросети**:
+
+- Модифицируй классы `Hero` и `Creep` для использования `SoundManager` вместо прямых Audio объектов
+- Изучи логику воспроизведения звуков:
+  - в ` [hero.js](mdc:old_project_game/front1/game/heroes/hero.js)` (@hero.js) методы `stopSound`, `resumeSound` и аудио-объекты анимаций
+  - в ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js) методы `swing`, `dealDamage` и звуки в анимациях
+- Добавь звуки для: 
+  - Движения героя (бег в анимации `run`)
+  - Атаки героя (в методе `attack`)
+  - Атаки врагов (в методах `swing` и `dealDamage`)
+  - Получения урона (при `takeDamage`)
+  - Смерти врага (при `die`)
+  - Получения золота (при `showCoinAnimation`)
+- Обеспечь контроль громкости через глобальный параметр `volume`
+- Добавь функционал мьюта/анмьюта звуков
+
+**Ожидаемый результат**: Игровые события сопровождаются соответствующими звуками.
+
+**Проверка**: При атаке и других действиях воспроизводятся звуки.
+
+## 11. Создание пользовательского интерфейса
+
+### 11.1. Добавление игрового HUD
+
+**Задача**: Создать интерфейс с информацией о игре
+
+**Детальные инструкции для нейросети**:
+
+- Изучи элементы интерфейса в старых файлах:
+  - В ` [hero.js](mdc:old_project_game/front1/game/heroes/hero.js)` (@hero.js): отображение полосок здоровья и маны
+  - В ` [creep.js](mdc:old_project_game/front1/game/creepData/creep.js)` (@creep.js): метод `updateCreepInfo` и отображение здоровья
+- Создай компоненты для отображения: 
+  - Текущего золота (используя данные из GoldContext)
+  - Счетчика убитых врагов (на основе `creepNumber` и `creepRank`)
+  - Текущего уровня сложности (ранг врагов)
+- Используй Pixi.js классы для создания элементов интерфейса:
+  - Текст через `PIXI.Text` с настройкой стиля
+  - Графические элементы через `PIXI.Graphics`
+  - Контейнеры через `PIXI.Container` для группировки
+- Размести элементы HUD в верхней и/или боковой части экрана
+- Обновляй информацию в игровом цикле
+
+**Ожидаемый результат**: На экране отображается игровая статистика.
+
+**Проверка**: HUD отображает актуальную информацию о золоте и убитых врагах.
+
+### 11.2. Создание меню паузы
+
+**Задача**: Добавить возможность приостановки игры
+
+**Детальные инструкции для нейросети**:
+
+- Изучи логику паузы из старого файла ` [game.js](mdc:old_project_game/front1/game/game.js)` (@game.js):
+  ```javascript
+  function pauseGame() {
+    if (hero) {
+      pauseControls.style.display = "flex";
+      isGameRunning = false; // Останавливаем игровой цикл
+      hero.stopSound();
+    }
+  }
+  
+  function resumeGame() {
+    console.log('continue')
+    if (!isGameRunning) {
+      pauseControls.style.display = "none";
+      isGameRunning = true; // Возобновляем игровой цикл
+      isPaused = false
+      hero.resumeSound();
+      gameLoop(); // Запускаем игровой цикл снова
+    }
+  }
+  ```
+- Изучи HTML-элементы меню паузы из ` [index.html](mdc:index.html)` (@index.html):
+  ```html
+  <div id="pause-controls" style="display: none;">
+    <button id="resume1-button" class="pause-button">Продолжить</button>
+    <button id="mute-button" class="pause-button">Выключить звук</button>
+  </div>
+  ```
+- Реализуй систему паузы игры с меню:
+  - Создай компонент меню паузы, используя Pixi.js элементы
+  - Реализуй функции `pauseGame` и `resumeGame`
+  - Интегрируй с системой обработки событий для клавиши Escape
+- Добавь кнопки: 
+  - Продолжить игру
+  - Выключить/включить звук (интеграция с SoundManager)
+  - Вернуться в главное меню (интеграция с React Router)
+- Обеспечь остановку всех анимаций, звуков и обновлений при паузе
+
+**Ожидаемый результат**: Функциональное меню паузы.
+
+**Проверка**: При нажатии на кнопку паузы игра приостанавливается и появляется меню.
+
+## 12. Оптимизация и финальная интеграция
+
+### 12.1. Оптимизация производительности
+
+**Задача**: Повысить производительность игры
+
+**Детальные инструкции для нейросети**:
+
+- Используй RenderGroups для оптимизации рендеринга:
+  ```typescript
+  const gameWorld = new Container({ isRenderGroup: true });
+  app.stage.addChild(gameWorld);
+  ```
+- Применяй cacheAsTexture для статических объектов:
+  ```typescript
+  background.cacheAsTexture(true);
+  ```
+- Оптимизируй обновление объектов в игровом цикле:
+  - Пропускай обновление неактивных или невидимых объектов
+  - Используй culling для объектов, выходящих за пределы экрана
+  - Реализуй систему переиспользования объектов вместо создания новых
+- Оптимизируй ресурсы:
+  - Используй атласы спрайтов вместо отдельных изображений
+  - Загружай ресурсы асинхронно и в фоне
+  - Освобождай неиспользуемые ресурсы
+
+**Ожидаемый результат**: Стабильная частота кадров даже при большом количестве объектов.
+
+**Проверка**: Мониторинг FPS в процессе игры.
+
+### 12.2. Интеграция с существующими системами
+
+**Задача**: Связать игру с остальными частями приложения
+
+**Детальные инструкции для нейросети**:
+
+- Интегрируй характеристики героя из heroStore с игровой механикой:
+  - Изучи ` [MainPage.tsx](mdc:src/pages/MainPage/MainPage.tsx)` (@src/pages/MainPage/MainPage.tsx) для понимания использования heroStore
+  - Изучи взаимосвязь между обновлением статов и покупками в магазине через ` [ShopPage.tsx](mdc:src/pages/ShopPage/ShopPage.tsx)` (@src/pages/ShopPage/ShopPage.tsx)
+  - Используй параметры из heroStore для инициализации героя:
+    ```typescript
+    const stats = useHeroStore((state) => state.stats);
+    if (stats) {
+      // Используем параметры из stats для создания героя
+      hero.maxHealth = stats["max-health"];
+      hero.healthRegen = stats["health-regen"];
+      // ...
+    }
+    ```
+- Обеспечь синхронизацию золота между игрой и магазином:
+  - Изучи механизм сохранения золота в ` [GoldContext.tsx](mdc:src/contexts/GoldContext.tsx)` (@src/contexts/GoldContext.tsx)
+  - Используй методы синхронизации с сервером для обновления золота
+- Добавь навигацию между игрой и другими экранами:
+  - Интегрируй с React Router для переходов между страницами
+  - Добавь обработку закрытия игры и сохранения прогресса
+  - Обеспечь корректную очистку ресурсов при переходе между страницами
+
+**Ожидаемый результат**: Полностью интегрированная игра с сохранением прогресса.
+
+**Проверка**: Покупки в магазине влияют на характеристики героя в игре.
+
+## Важные моменты для реализации нейросетью:
+
+1. **Следование оригинальной механике**: При рефакторинге сохраняй все ключевые геймплейные элементы из старого проекта. Внимательно изучай файлы:
+   - [game.js](mdc:old_project_game/front1/game/game.js) - основная игровая логика
+   - [hero.js](mdc:old_project_game/front1/game/heroes/hero.js) - механика героя
+   - [creep.js](mdc:old_project_game/front1/game/creepData/creep.js) - механика врагов
+   - [background.js](mdc:old_project_game/front1/game/background.js) - параллаксный фон
+   - [assetsLoader.js](mdc:old_project_game/front1/game/assetsLoader.js) - система загрузки ресурсов
+
+2. **Структура ресурсов**: Обрати внимание на структуру ресурсов, которые должны быть в папке `public`:
+   ```
+   [forest_background.png](mdc:public/media/game/images/forest_background.png)
+   /public/media/game/assets/heroes/juggernaut_*.png
+   /public/media/game/assets/creeps/dire_creep_*.png
+   /public/media/game/sounds/heroes/juggernaut/**/*.mp3
+   /public/media/game/sounds/creeps/**/*.mp3
+   ```
+
+3. **Масштабируемость**: Обеспечь легкое добавление новых героев, врагов и эффектов через систему конфигураций и фабрик.
+
+4. **Производительность**: Оптимизируй рендеринг с использованием современных возможностей Pixi.js v8:
+   - RenderGroups для оптимизации рендеринга
+   - cacheAsTexture для статических объектов
+   - Асинхронная загрузка ресурсов через Assets API
+
+5. **Типизация**: Используй строгую типизацию TypeScript для всех компонентов, особенно для конфигураций героев и врагов.
+
+6. **Интеграция**: Обеспечь взаимодействие игрового модуля с существующими системами:
+   - heroStore ( [heroStore.ts](mdc:src/contexts/heroStore.ts)) - для характеристик героя
+   - GoldContext ( [GoldContext.tsx](mdc:src/contexts/GoldContext.tsx)) - для управления золотом
+   - React Router - для навигации между экранами
+
+7. **Пошаговая реализация**: Каждую микрозадачу следует реализовывать таким образом, чтобы можно было сразу увидеть и протестировать результат, постепенно наращивая функциональность игры.
+
+8. **Анимации и звуки**: Точно воспроизведи логику анимаций и звуков из оригинального проекта, обращая внимание на механизмы синхронизации кадров и событий.
+
+9. **Эффекты врагов**: Реализуй специальные эффекты врагов (яд, снижение маны) как в оригинальном проекте, через функциональный подход.
+
+
+10. **Тестирование**: Регулярно тестируй каждый компонент, обеспечивая постепенное наращивание функциональности игры с возможностью быстрой проверки результатов на каждом этапе.

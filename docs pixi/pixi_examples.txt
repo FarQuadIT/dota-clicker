@@ -1,0 +1,6653 @@
+Pixi examples
+
+Examples
+Welcome to the PixiJS Examples page! Here you can find a variety of demos and code snippets to help you get started with PixiJS.
+
+Check out some of our featured examples below:
+
+Basic Container
+Blend Modes
+Tiling Sprite
+Animated Sprite
+Text
+Graphics
+
+
+
+Container
+
+import { Application, Assets, Container, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Create and add a container to the stage
+    const container = new Container();
+
+    app.stage.addChild(container);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Create a 5x5 grid of bunnies in the container
+    for (let i = 0; i < 25; i++)
+    {
+        const bunny = new Sprite(texture);
+
+        bunny.x = (i % 5) * 40;
+        bunny.y = Math.floor(i / 5) * 40;
+        container.addChild(bunny);
+    }
+
+    // Move the container to the center
+    container.x = app.screen.width / 2;
+    container.y = app.screen.height / 2;
+
+    // Center the bunny sprites in local container coordinates
+    container.pivot.x = container.width / 2;
+    container.pivot.y = container.height / 2;
+
+    // Listen for animate update
+    app.ticker.add((time) =>
+    {
+        // Continuously rotate the container!
+        // * use delta to create frame-independent transform *
+        container.rotation -= 0.01 * time.deltaTime;
+    });
+})();
+
+
+Transparent Background
+
+import { Application, Assets, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application with a transparent background
+    await app.init({ backgroundAlpha: 0, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Create a new Sprite with the texture
+    const bunny = new Sprite(texture);
+
+    // Center the sprite's anchor point
+    bunny.anchor.set(0.5);
+
+    // Move the sprite to the center of the screen
+    bunny.x = app.screen.width / 2;
+    bunny.y = app.screen.height / 2;
+
+    app.stage.addChild(bunny);
+
+    // Listen for animate update
+    app.ticker.add(() =>
+    {
+        // Just for fun, let's rotate our bunny over time!
+        bunny.rotation += 0.1;
+    });
+})();
+
+
+Tinting
+
+import { Application, Assets, Rectangle, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the alien texture
+    const texture = await Assets.load('https://pixijs.com/assets/eggHead.png');
+
+    // Create an array to store the aliens
+    const aliens = [];
+
+    const totalDudes = 20;
+
+    for (let i = 0; i < totalDudes; i++)
+    {
+        // Create a new alien Sprite
+        const dude = new Sprite(texture);
+
+        // Set the anchor point so the texture is centered on the sprite
+        dude.anchor.set(0.5);
+
+        // Set a random scale for the dude - no point them all being the same size!
+        dude.scale.set(0.8 + Math.random() * 0.3);
+
+        // Finally lets set the dude to be at a random position..
+        dude.x = Math.random() * app.screen.width;
+        dude.y = Math.random() * app.screen.height;
+
+        dude.tint = Math.random() * 0xffffff;
+
+        // Create some extra properties that will control movement: ---------------------
+
+        // Create a random direction in radians.
+        // This is a number between 0 and PI*2 which is the equivalent of 0 - 360 degrees
+        dude.direction = Math.random() * Math.PI * 2;
+
+        // This number will be used to modify the direction of the dude over time
+        dude.turningSpeed = Math.random() - 0.8;
+
+        // Create a random speed for the dude between 2 - 4
+        dude.speed = 2 + Math.random() * 2;
+
+        // Finally we push the dude into the aliens array so it it can be easily accessed later
+        aliens.push(dude);
+
+        app.stage.addChild(dude);
+    }
+
+    // Create a bounding box for the little dudes
+    const dudeBoundsPadding = 100;
+    const dudeBounds = new Rectangle(
+        -dudeBoundsPadding,
+        -dudeBoundsPadding,
+        app.screen.width + dudeBoundsPadding * 2,
+        app.screen.height + dudeBoundsPadding * 2,
+    );
+
+    app.ticker.add(() =>
+    {
+        // Iterate through the dudes and update their position
+        for (let i = 0; i < aliens.length; i++)
+        {
+            const dude = aliens[i];
+
+            dude.direction += dude.turningSpeed * 0.01;
+            dude.x += Math.sin(dude.direction) * dude.speed;
+            dude.y += Math.cos(dude.direction) * dude.speed;
+            dude.rotation = -dude.direction - Math.PI / 2;
+
+            // Constrain the dudes' position by testing their bounds...
+            if (dude.x < dudeBounds.x)
+            {
+                dude.x += dudeBounds.width;
+            }
+            else if (dude.x > dudeBounds.x + dudeBounds.width)
+            {
+                dude.x -= dudeBounds.width;
+            }
+
+            if (dude.y < dudeBounds.y)
+            {
+                dude.y += dudeBounds.height;
+            }
+            else if (dude.y > dudeBounds.y + dudeBounds.height)
+            {
+                dude.y -= dudeBounds.height;
+            }
+        }
+    });
+})();
+
+
+Particle Container
+
+import { Application, Assets, Container, Rectangle, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the maggot texture
+    const texture = await Assets.load('https://pixijs.com/assets/maggot_tiny.png');
+
+    // Create a container for all the maggots particles and add it to the stage
+    const sprites = new Container();
+
+    app.stage.addChild(sprites);
+
+    // Create an array to store all the sprites
+    const maggots = [];
+
+    const totalSprites = 10000;
+
+    for (let i = 0; i < totalSprites; i++)
+    {
+        // Create a new maggot Sprite
+        const dude = new Sprite(texture);
+
+        // Set the anchor point so the texture is centerd on the sprite
+        dude.anchor.set(0.5);
+
+        // Different maggots, different sizes
+        dude.scale.set(0.8 + Math.random() * 0.3);
+
+        // Scatter them all
+        dude.x = Math.random() * app.screen.width;
+        dude.y = Math.random() * app.screen.height;
+
+        dude.tint = Math.random() * 0x808080;
+
+        // Create a random direction in radians
+        dude.direction = Math.random() * Math.PI * 2;
+
+        // This number will be used to modify the direction of the sprite over time
+        dude.turningSpeed = Math.random() - 0.8;
+
+        // Create a random speed between 0 - 2, and these maggots are slooww
+        dude.speed = (2 + Math.random() * 2) * 0.2;
+
+        dude.offset = Math.random() * 100;
+
+        // Finally we push the dude into the maggots array so it it can be easily accessed later
+        maggots.push(dude);
+
+        sprites.addChild(dude);
+    }
+
+    // Create a bounding box box for the little maggots
+    const dudeBoundsPadding = 100;
+    const dudeBounds = new Rectangle(
+        -dudeBoundsPadding,
+        -dudeBoundsPadding,
+        app.screen.width + dudeBoundsPadding * 2,
+        app.screen.height + dudeBoundsPadding * 2,
+    );
+
+    let tick = 0;
+
+    app.ticker.add(() =>
+    {
+        // Iterate through the sprites and update their position
+        for (let i = 0; i < maggots.length; i++)
+        {
+            const dude = maggots[i];
+
+            dude.scale.y = 0.95 + Math.sin(tick + dude.offset) * 0.05;
+            dude.direction += dude.turningSpeed * 0.01;
+            dude.x += Math.sin(dude.direction) * (dude.speed * dude.scale.y);
+            dude.y += Math.cos(dude.direction) * (dude.speed * dude.scale.y);
+            dude.rotation = -dude.direction + Math.PI;
+
+            // Wrap the maggots
+            if (dude.x < dudeBounds.x)
+            {
+                dude.x += dudeBounds.width;
+            }
+            else if (dude.x > dudeBounds.x + dudeBounds.width)
+            {
+                dude.x -= dudeBounds.width;
+            }
+
+            if (dude.y < dudeBounds.y)
+            {
+                dude.y += dudeBounds.height;
+            }
+            else if (dude.y > dudeBounds.y + dudeBounds.height)
+            {
+                dude.y -= dudeBounds.height;
+            }
+        }
+
+        // Increment the ticker
+        tick += 0.1;
+    });
+})();
+
+
+Blend Modes
+
+import { Application, Assets, Container, Sprite, Text, Texture } from 'pixi.js';
+import 'pixi.js/advanced-blend-modes';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        antialias: true,
+        backgroundColor: 'white',
+        resizeTo: window,
+        // NEEDS TO BE TRUE FOR WEBGL!
+        useBackBuffer: true,
+    });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const pandaTexture = await Assets.load(`https://pixijs.com/assets/panda.png`);
+    const rainbowGradient = await Assets.load(`https://pixijs.com/assets/rainbow-gradient.png`);
+
+    const allBlendModes = [
+        'normal',
+        'add',
+        'screen',
+        'darken',
+        'lighten',
+        'color-dodge',
+        'color-burn',
+        'linear-burn',
+        'linear-dodge',
+        'linear-light',
+        'hard-light',
+        'soft-light',
+        'pin-light',
+        'difference',
+        'exclusion',
+        'overlay',
+        'saturation',
+        'color',
+        'luminosity',
+        'add-npm',
+        'subtract',
+        'divide',
+        'vivid-light',
+        'hard-mix',
+        'negation',
+    ];
+
+    const size = 800 / 5;
+
+    const pandas = [];
+
+    for (let i = 0; i < allBlendModes.length; i++)
+    {
+        const container = new Container();
+
+        const sprite = new Sprite({
+            texture: pandaTexture,
+            width: 100,
+            height: 100,
+            anchor: 0.5,
+            position: { x: size / 2, y: size / 2 },
+        });
+
+        pandas.push(sprite);
+
+        const sprite2 = new Sprite({
+            texture: rainbowGradient,
+            width: size,
+            height: size,
+            blendMode: allBlendModes[i],
+        });
+
+        container.addChild(sprite, sprite2);
+
+        const text = new Text({
+            text: allBlendModes[i],
+            style: {
+                fontSize: 16,
+                fontFamily: 'short-stack',
+            },
+        });
+
+        // Add blend mode text labels
+        text.x = size / 2 - text.width / 2;
+        text.y = size - text.height;
+        const textBackground = new Sprite(Texture.WHITE);
+
+        textBackground.x = text.x - 2;
+        textBackground.y = text.y;
+        textBackground.width = text.width + 4;
+        textBackground.height = text.height + 4;
+        container.addChild(textBackground, text);
+
+        app.stage.addChild(container);
+
+        container.x = (i % 5) * size;
+        container.y = Math.floor(i / 5) * size;
+    }
+
+    app.ticker.add(() =>
+    {
+        pandas.forEach((panda, i) =>
+        {
+            panda.rotation += 0.01 * (i % 2 ? 1 : -1);
+        });
+    });
+})();
+
+Mesh Plane
+
+import { Application, Assets, MeshPlane } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the grass texture
+    const texture = await Assets.load('https://pixijs.com/assets/bg_grass.jpg');
+
+    // Create a simple grass plane and add it to the stage
+    const plane = new MeshPlane({ texture, verticesX: 10, verticesY: 10 });
+
+    plane.x = 100;
+    plane.y = 100;
+
+    app.stage.addChild(plane);
+
+    // Get the buffer for vertex positions.
+    const { buffer } = plane.geometry.getAttribute('aPosition');
+
+    // Listen for animate update
+    let timer = 0;
+
+    app.ticker.add(() =>
+    {
+        // Randomize the vertice positions a bit to create movement.
+        for (let i = 0; i < buffer.data.length; i++)
+        {
+            buffer.data[i] += Math.sin(timer / 10 + i) * 0.5;
+        }
+        buffer.update();
+        timer++;
+    });
+})();
+
+
+Render Group
+
+import { Application, Assets, Container, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        backgroundColor: 'brown',
+        resizeTo: window,
+    });
+
+    const treeTexture = await Assets.load(`https://pixijs.com/assets/tree.png`);
+
+    const worldContainer = new Container({
+        // this will make moving this container GPU powered
+        isRenderGroup: true,
+    });
+
+    const worldSize = 5000;
+
+    for (let i = 0; i < 100000; i++)
+    {
+        const yPos = Math.random() * worldSize;
+
+        const tree = new Sprite({
+            texture: treeTexture,
+            x: Math.random() * worldSize,
+            y: yPos,
+            scale: 0.25,
+            anchor: 0.5,
+        });
+
+        worldContainer.addChild(tree);
+    }
+
+    // sort the trees by their y position
+    worldContainer.children.sort((a, b) => a.position.y - b.position.y);
+
+    app.stage.addChild(worldContainer);
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    let x = 0;
+    let y = 0;
+
+    app.canvas.addEventListener('mousemove', (e) =>
+    {
+        x = e.clientX;
+        y = e.clientY;
+    });
+
+    app.ticker.add(() =>
+    {
+        const screenWidth = app.renderer.width;
+        const screenHeight = app.renderer.height;
+
+        const targetX = (x / screenWidth) * (worldSize - screenWidth);
+        const targetY = (y / screenHeight) * (worldSize - screenHeight);
+
+        worldContainer.x += (-targetX - worldContainer.x) * 0.1;
+        worldContainer.y += (-targetY - worldContainer.y) * 0.1;
+    });
+})();
+
+
+Cache As Texture
+
+import { Application, Assets, Container, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // load resources
+    await Assets.load('https://pixijs.com/assets/spritesheet/monsters.json');
+
+    // holder to store aliens
+    const aliens = [];
+    const alienFrames = ['eggHead.png', 'flowerTop.png', 'helmlok.png', 'skully.png'];
+
+    let count = 0;
+
+    // create an empty container
+    const alienContainer = new Container();
+
+    alienContainer.x = app.screen.width / 2;
+    alienContainer.y = app.screen.height / 2;
+
+    // make the stage interactive
+    app.stage.eventMode = 'static';
+    app.stage.addChild(alienContainer);
+
+    // add a bunch of aliens with textures from image paths
+    for (let i = 0; i < 100; i++)
+    {
+        const frameName = alienFrames[i % 4];
+
+        // create an alien using the frame name..
+        const alien = Sprite.from(frameName);
+
+        alien.tint = Math.random() * 0xffffff;
+
+        alien.x = Math.random() * app.screen.width - app.screen.width / 2;
+        alien.y = Math.random() * app.screen.height - app.screen.height / 2;
+        alien.anchor.x = 0.5;
+        alien.anchor.y = 0.5;
+        aliens.push(alien);
+        alienContainer.addChild(alien);
+    }
+
+    // Combines both mouse click + touch tap
+    app.stage.on('pointertap', onClick);
+
+    function onClick()
+    {
+        alienContainer.cacheAsTexture(!alienContainer.isCachedAsTexture);
+    }
+
+    app.ticker.add(() =>
+    {
+        // let's rotate the aliens a little bit
+        for (let i = 0; i < 100; i++)
+        {
+            const alien = aliens[i];
+
+            alien.rotation += 0.1;
+        }
+
+        count += 0.01;
+
+        alienContainer.scale.x = Math.sin(count);
+        alienContainer.scale.y = Math.sin(count);
+        alienContainer.rotation += 0.01;
+    });
+})();
+
+
+ADVANCED
+
+Slots
+
+import {
+    Application,
+    Assets,
+    BlurFilter,
+    Color,
+    Container,
+    FillGradient,
+    Graphics,
+    Sprite,
+    Text,
+    TextStyle,
+    Texture,
+} from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the textures
+    await Assets.load([
+        'https://pixijs.com/assets/eggHead.png',
+        'https://pixijs.com/assets/flowerTop.png',
+        'https://pixijs.com/assets/helmlok.png',
+        'https://pixijs.com/assets/skully.png',
+    ]);
+
+    const REEL_WIDTH = 160;
+    const SYMBOL_SIZE = 150;
+
+    // Create different slot symbols
+    const slotTextures = [
+        Texture.from('https://pixijs.com/assets/eggHead.png'),
+        Texture.from('https://pixijs.com/assets/flowerTop.png'),
+        Texture.from('https://pixijs.com/assets/helmlok.png'),
+        Texture.from('https://pixijs.com/assets/skully.png'),
+    ];
+
+    // Build the reels
+    const reels = [];
+    const reelContainer = new Container();
+
+    for (let i = 0; i < 5; i++)
+    {
+        const rc = new Container();
+
+        rc.x = i * REEL_WIDTH;
+        reelContainer.addChild(rc);
+
+        const reel = {
+            container: rc,
+            symbols: [],
+            position: 0,
+            previousPosition: 0,
+            blur: new BlurFilter(),
+        };
+
+        reel.blur.blurX = 0;
+        reel.blur.blurY = 0;
+        rc.filters = [reel.blur];
+
+        // Build the symbols
+        for (let j = 0; j < 4; j++)
+        {
+            const symbol = new Sprite(slotTextures[Math.floor(Math.random() * slotTextures.length)]);
+            // Scale the symbol to fit symbol area.
+
+            symbol.y = j * SYMBOL_SIZE;
+            symbol.scale.x = symbol.scale.y = Math.min(SYMBOL_SIZE / symbol.width, SYMBOL_SIZE / symbol.height);
+            symbol.x = Math.round((SYMBOL_SIZE - symbol.width) / 2);
+            reel.symbols.push(symbol);
+            rc.addChild(symbol);
+        }
+        reels.push(reel);
+    }
+    app.stage.addChild(reelContainer);
+
+    // Build top & bottom covers and position reelContainer
+    const margin = (app.screen.height - SYMBOL_SIZE * 3) / 2;
+
+    reelContainer.y = margin;
+    reelContainer.x = Math.round(app.screen.width - REEL_WIDTH * 5);
+    const top = new Graphics().rect(0, 0, app.screen.width, margin).fill({ color: 0x0 });
+    const bottom = new Graphics().rect(0, SYMBOL_SIZE * 3 + margin, app.screen.width, margin).fill({ color: 0x0 });
+
+    // Create gradient fill
+    const fill = new FillGradient(0, 0, 0, 2);
+
+    const colors = [0xffffff, 0x00ff99].map((color) => Color.shared.setValue(color).toNumber());
+
+    colors.forEach((number, index) =>
+    {
+        const ratio = index / colors.length;
+
+        fill.addColorStop(ratio, number);
+    });
+
+    // Add play text
+    const style = new TextStyle({
+        fontFamily: 'Arial',
+        fontSize: 36,
+        fontStyle: 'italic',
+        fontWeight: 'bold',
+        fill: { fill },
+        stroke: { color: 0x4a1850, width: 5 },
+        dropShadow: {
+            color: 0x000000,
+            angle: Math.PI / 6,
+            blur: 4,
+            distance: 6,
+        },
+        wordWrap: true,
+        wordWrapWidth: 440,
+    });
+
+    const playText = new Text('Spin the wheels!', style);
+
+    playText.x = Math.round((bottom.width - playText.width) / 2);
+    playText.y = app.screen.height - margin + Math.round((margin - playText.height) / 2);
+    bottom.addChild(playText);
+
+    // Add header text
+    const headerText = new Text('PIXI MONSTER SLOTS!', style);
+
+    headerText.x = Math.round((top.width - headerText.width) / 2);
+    headerText.y = Math.round((margin - headerText.height) / 2);
+    top.addChild(headerText);
+
+    app.stage.addChild(top);
+    app.stage.addChild(bottom);
+
+    // Set the interactivity.
+    bottom.eventMode = 'static';
+    bottom.cursor = 'pointer';
+    bottom.addListener('pointerdown', () =>
+    {
+        startPlay();
+    });
+
+    let running = false;
+
+    // Function to start playing.
+    function startPlay()
+    {
+        if (running) return;
+        running = true;
+
+        for (let i = 0; i < reels.length; i++)
+        {
+            const r = reels[i];
+            const extra = Math.floor(Math.random() * 3);
+            const target = r.position + 10 + i * 5 + extra;
+            const time = 2500 + i * 600 + extra * 600;
+
+            tweenTo(r, 'position', target, time, backout(0.5), null, i === reels.length - 1 ? reelsComplete : null);
+        }
+    }
+
+    // Reels done handler.
+    function reelsComplete()
+    {
+        running = false;
+    }
+
+    // Listen for animate update.
+    app.ticker.add(() =>
+    {
+        // Update the slots.
+        for (let i = 0; i < reels.length; i++)
+        {
+            const r = reels[i];
+            // Update blur filter y amount based on speed.
+            // This would be better if calculated with time in mind also. Now blur depends on frame rate.
+
+            r.blur.blurY = (r.position - r.previousPosition) * 8;
+            r.previousPosition = r.position;
+
+            // Update symbol positions on reel.
+            for (let j = 0; j < r.symbols.length; j++)
+            {
+                const s = r.symbols[j];
+                const prevy = s.y;
+
+                s.y = ((r.position + j) % r.symbols.length) * SYMBOL_SIZE - SYMBOL_SIZE;
+                if (s.y < 0 && prevy > SYMBOL_SIZE)
+                {
+                    // Detect going over and swap a texture.
+                    // This should in proper product be determined from some logical reel.
+                    s.texture = slotTextures[Math.floor(Math.random() * slotTextures.length)];
+                    s.scale.x = s.scale.y = Math.min(SYMBOL_SIZE / s.texture.width, SYMBOL_SIZE / s.texture.height);
+                    s.x = Math.round((SYMBOL_SIZE - s.width) / 2);
+                }
+            }
+        }
+    });
+
+    // Very simple tweening utility function. This should be replaced with a proper tweening library in a real product.
+    const tweening = [];
+
+    function tweenTo(object, property, target, time, easing, onchange, oncomplete)
+    {
+        const tween = {
+            object,
+            property,
+            propertyBeginValue: object[property],
+            target,
+            easing,
+            time,
+            change: onchange,
+            complete: oncomplete,
+            start: Date.now(),
+        };
+
+        tweening.push(tween);
+
+        return tween;
+    }
+    // Listen for animate update.
+    app.ticker.add(() =>
+    {
+        const now = Date.now();
+        const remove = [];
+
+        for (let i = 0; i < tweening.length; i++)
+        {
+            const t = tweening[i];
+            const phase = Math.min(1, (now - t.start) / t.time);
+
+            t.object[t.property] = lerp(t.propertyBeginValue, t.target, t.easing(phase));
+            if (t.change) t.change(t);
+            if (phase === 1)
+            {
+                t.object[t.property] = t.target;
+                if (t.complete) t.complete(t);
+                remove.push(t);
+            }
+        }
+        for (let i = 0; i < remove.length; i++)
+        {
+            tweening.splice(tweening.indexOf(remove[i]), 1);
+        }
+    });
+
+    // Basic lerp funtion.
+    function lerp(a1, a2, t)
+    {
+        return a1 * (1 - t) + a2 * t;
+    }
+
+    // Backout function from tweenjs.
+    // https://github.com/CreateJS/TweenJS/blob/master/src/tweenjs/Ease.js
+    function backout(amount)
+    {
+        return (t) => --t * t * ((amount + 1) * t + amount) + 1;
+    }
+})();
+
+
+Scratch Card
+
+import { Application, Assets, Graphics, Point, RenderTexture, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // prepare circle texture, that will be our brush
+    const brush = new Graphics().circle(0, 0, 50).fill({ color: 0xffffff });
+
+    // Create a line that will interpolate the drawn points
+    const line = new Graphics();
+
+    // Load the textures
+    await Assets.load(['https://pixijs.com/assets/bg_grass.jpg', 'https://pixijs.com/assets/bg_rotate.jpg']);
+
+    const { width, height } = app.screen;
+    const stageSize = { width, height };
+
+    const background = Object.assign(Sprite.from('https://pixijs.com/assets/bg_grass.jpg'), stageSize);
+    const imageToReveal = Object.assign(Sprite.from('https://pixijs.com/assets/bg_rotate.jpg'), stageSize);
+    const renderTexture = RenderTexture.create(stageSize);
+    const renderTextureSprite = new Sprite(renderTexture);
+
+    imageToReveal.mask = renderTextureSprite;
+
+    app.stage.addChild(background, imageToReveal, renderTextureSprite);
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+    app.stage
+        .on('pointerdown', pointerDown)
+        .on('pointerup', pointerUp)
+        .on('pointerupoutside', pointerUp)
+        .on('pointermove', pointerMove);
+
+    let dragging = false;
+    let lastDrawnPoint = null;
+
+    function pointerMove({ global: { x, y } })
+    {
+        if (dragging)
+        {
+            brush.position.set(x, y);
+            app.renderer.render({
+                container: brush,
+                target: renderTexture,
+                clear: false,
+                skipUpdateTransform: false,
+            });
+            // Smooth out the drawing a little bit to make it look nicer
+            // this connects the previous drawn point to the current one
+            // using a line
+            if (lastDrawnPoint)
+            {
+                line.clear().moveTo(lastDrawnPoint.x, lastDrawnPoint.y).lineTo(x, y).stroke({ width: 100, color: 0xffffff });
+                app.renderer.render({
+                    container: line,
+                    target: renderTexture,
+                    clear: false,
+                    skipUpdateTransform: false,
+                });
+            }
+            lastDrawnPoint = lastDrawnPoint || new Point();
+            lastDrawnPoint.set(x, y);
+        }
+    }
+
+    function pointerDown(event)
+    {
+        dragging = true;
+        pointerMove(event);
+    }
+
+    function pointerUp(event)
+    {
+        dragging = false;
+        lastDrawnPoint = null;
+    }
+})();
+
+Star Warp
+
+import { Application, Assets, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the star texture
+    const starTexture = await Assets.load('https://pixijs.com/assets/star.png');
+
+    const starAmount = 1000;
+    let cameraZ = 0;
+    const fov = 20;
+    const baseSpeed = 0.025;
+    let speed = 0;
+    let warpSpeed = 0;
+    const starStretch = 5;
+    const starBaseSize = 0.05;
+
+    // Create the stars
+    const stars = [];
+
+    for (let i = 0; i < starAmount; i++)
+    {
+        const star = {
+            sprite: new Sprite(starTexture),
+            z: 0,
+            x: 0,
+            y: 0,
+        };
+
+        star.sprite.anchor.x = 0.5;
+        star.sprite.anchor.y = 0.7;
+        randomizeStar(star, true);
+        app.stage.addChild(star.sprite);
+        stars.push(star);
+    }
+
+    function randomizeStar(star, initial)
+    {
+        star.z = initial ? Math.random() * 2000 : cameraZ + Math.random() * 1000 + 2000;
+
+        // Calculate star positions with radial random coordinate so no star hits the camera.
+        const deg = Math.random() * Math.PI * 2;
+        const distance = Math.random() * 50 + 1;
+
+        star.x = Math.cos(deg) * distance;
+        star.y = Math.sin(deg) * distance;
+    }
+
+    // Change flight speed every 5 seconds
+    setInterval(() =>
+    {
+        warpSpeed = warpSpeed > 0 ? 0 : 1;
+    }, 5000);
+
+    // Listen for animate update
+    app.ticker.add((time) =>
+    {
+        // Simple easing. This should be changed to proper easing function when used for real.
+        speed += (warpSpeed - speed) / 20;
+        cameraZ += time.deltaTime * 10 * (speed + baseSpeed);
+        for (let i = 0; i < starAmount; i++)
+        {
+            const star = stars[i];
+
+            if (star.z < cameraZ) randomizeStar(star);
+
+            // Map star 3d position to 2d with really simple projection
+            const z = star.z - cameraZ;
+
+            star.sprite.x = star.x * (fov / z) * app.renderer.screen.width + app.renderer.screen.width / 2;
+            star.sprite.y = star.y * (fov / z) * app.renderer.screen.width + app.renderer.screen.height / 2;
+
+            // Calculate star scale & rotation.
+            const dxCenter = star.sprite.x - app.renderer.screen.width / 2;
+            const dyCenter = star.sprite.y - app.renderer.screen.height / 2;
+            const distanceCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter);
+            const distanceScale = Math.max(0, (2000 - z) / 2000);
+
+            star.sprite.scale.x = distanceScale * starBaseSize;
+            // Star is looking towards center so that y axis is towards center.
+            // Scale the star depending on how fast we are moving, what the stretchfactor is
+            // and depending on how far away it is from the center.
+            star.sprite.scale.y
+                = distanceScale * starBaseSize
+                + (distanceScale * speed * starStretch * distanceCenter) / app.renderer.screen.width;
+            star.sprite.rotation = Math.atan2(dyCenter, dxCenter) + Math.PI / 2;
+        }
+    });
+})();
+
+
+Three.js and PixiJS
+
+// Import required classes from PixiJS and Three.js
+import { Container, Graphics, Text, WebGLRenderer } from 'pixi.js';
+import * as THREE from 'three';
+
+// Self-executing async function to set up the demo
+(async () =>
+{
+    // Initialize window dimensions
+    let WIDTH = window.innerWidth;
+    let HEIGHT = window.innerHeight;
+
+    // === THREE.JS SETUP ===
+    // Create Three.js WebGL renderer with antialiasing and stencil buffer
+    const threeRenderer = new THREE.WebGLRenderer({ antialias: true, stencil: true });
+
+    // Configure Three.js renderer size and background color
+    threeRenderer.setSize(WIDTH, HEIGHT);
+    threeRenderer.setClearColor(0xdddddd, 1); // Light gray background
+    document.body.appendChild(threeRenderer.domElement);
+
+    // Create Three.js scene
+    const scene = new THREE.Scene();
+
+    // Set up perspective camera with 70° FOV
+    const threeCamera = new THREE.PerspectiveCamera(70, WIDTH / HEIGHT);
+
+    threeCamera.position.z = 50; // Move camera back to see the scene
+    scene.add(threeCamera);
+
+    // Create a simple cube mesh
+    const boxGeometry = new THREE.BoxGeometry(30, 30, 30);
+    const basicMaterial = new THREE.MeshBasicMaterial({ color: 0x0095dd }); // Blue color
+    const cube = new THREE.Mesh(boxGeometry, basicMaterial);
+
+    scene.add(cube);
+
+    // === PIXI.JS SETUP ===
+    // Create PixiJS renderer that shares the WebGL context with Three.js
+    const pixiRenderer = new WebGLRenderer();
+
+    // Initialize PixiJS renderer with shared context
+    await pixiRenderer.init({
+        context: threeRenderer.getContext(),
+        width: WIDTH,
+        height: HEIGHT,
+        clearBeforeRender: false, // Don't clear the canvas as Three.js will handle that
+    });
+
+    // Create PixiJS scene graph
+    const stage = new Container();
+
+    // Create a yellow rounded rectangle UI element
+    const uiLayer = new Graphics().roundRect(20, 80, 300, 300, 20).fill(0xffff00);
+
+    // Add text overlay
+    const text = new Text({ text: 'Pixi and Three.js', style: { fontFamily: 'Arial', fontSize: 24, fill: 'black' } });
+
+    uiLayer.addChild(text);
+    stage.addChild(uiLayer);
+
+    // Animation loop
+    function loop()
+    {
+        // Rotate cube continuously
+        cube.rotation.x += 0.01;
+        cube.rotation.y += 0.01;
+
+        // Animate UI layer position using sine wave
+        uiLayer.y = ((Math.sin(Date.now() * 0.001) + 1) * 0.5 * WIDTH) / 2;
+
+        // Render Three.js scene
+        threeRenderer.resetState();
+        threeRenderer.render(scene, threeCamera);
+
+        // Render PixiJS scene
+        pixiRenderer.resetState();
+        pixiRenderer.render({ container: stage });
+
+        // Continue animation loop
+        requestAnimationFrame(loop);
+    }
+
+    // Start animation loop
+    requestAnimationFrame(loop);
+
+    // Handle window resizing
+    window.addEventListener('resize', () =>
+    {
+        WIDTH = window.innerWidth;
+        HEIGHT = window.innerHeight;
+
+        // Update Three.js renderer
+        threeRenderer.setSize(WIDTH, HEIGHT);
+        // Update Three.js camera aspect ratio so it renders correctly
+        threeCamera.aspect = WIDTH / HEIGHT;
+        threeCamera.updateProjectionMatrix();
+
+        // Update PixiJS renderer
+        pixiRenderer.resize(WIDTH, HEIGHT);
+    });
+})();
+
+
+Mouse Trail
+
+import { Application, Assets, MeshRope, Point } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the texture for rope.
+    const trailTexture = await Assets.load('https://pixijs.com/assets/trail.png');
+
+    const historyX = [];
+    const historyY = [];
+    // historySize determines how long the trail will be.
+    const historySize = 20;
+    // ropeSize determines how smooth the trail will be.
+    const ropeSize = 100;
+    const points = [];
+
+    // Create history array.
+    for (let i = 0; i < historySize; i++)
+    {
+        historyX.push(0);
+
+        historyY.push(0);
+    }
+    // Create rope points.
+    for (let i = 0; i < ropeSize; i++)
+    {
+        points.push(new Point(0, 0));
+    }
+
+    // Create the rope
+    const rope = new MeshRope({ texture: trailTexture, points });
+
+    // Set the blendmode
+    rope.blendmode = 'add';
+
+    app.stage.addChild(rope);
+
+    let mouseposition = null;
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+    app.stage.on('mousemove', (event) =>
+    {
+        mouseposition = mouseposition || { x: 0, y: 0 };
+        mouseposition.x = event.global.x;
+        mouseposition.y = event.global.y;
+    });
+
+    // Listen for animate update
+    app.ticker.add(() =>
+    {
+        if (!mouseposition) return;
+
+        // Update the mouse values to history
+        historyX.pop();
+        historyX.unshift(mouseposition.x);
+        historyY.pop();
+        historyY.unshift(mouseposition.y);
+        // Update the points to correspond with history.
+        for (let i = 0; i < ropeSize; i++)
+        {
+            const p = points[i];
+
+            // Smooth the curve with cubic interpolation to prevent sharp edges.
+            const ix = cubicInterpolation(historyX, (i / ropeSize) * historySize);
+            const iy = cubicInterpolation(historyY, (i / ropeSize) * historySize);
+
+            p.x = ix;
+            p.y = iy;
+        }
+    });
+
+    /**
+     * Cubic interpolation based on https://github.com/osuushi/Smooth.js
+     */
+    function clipInput(k, arr)
+    {
+        if (k < 0) k = 0;
+        if (k > arr.length - 1) k = arr.length - 1;
+
+        return arr[k];
+    }
+
+    function getTangent(k, factor, array)
+    {
+        return (factor * (clipInput(k + 1, array) - clipInput(k - 1, array))) / 2;
+    }
+
+    function cubicInterpolation(array, t, tangentFactor = 1)
+    {
+        const k = Math.floor(t);
+        const m = [getTangent(k, tangentFactor, array), getTangent(k + 1, tangentFactor, array)];
+        const p = [clipInput(k, array), clipInput(k + 1, array)];
+
+        t -= k;
+        const t2 = t * t;
+        const t3 = t * t2;
+
+        return (2 * t3 - 3 * t2 + 1) * p[0] + (t3 - 2 * t2 + t) * m[0] + (-2 * t3 + 3 * t2) * p[1] + (t3 - t2) * m[1];
+    }
+})();
+
+
+Screen Shot
+
+import { Application, Assets, Container, Sprite, Text, TextStyle } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#111', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Create and add a container to the stage
+    const container = new Container();
+
+    const containerFrame = new Container();
+
+    containerFrame.addChild(container);
+
+    app.stage.addChild(containerFrame);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Create a 5x5 grid of bunnies in the container
+    for (let i = 0; i < 25; i++)
+    {
+        const bunny = new Sprite(texture);
+
+        bunny.x = (i % 5) * 40;
+        bunny.y = Math.floor(i / 5) * 40;
+        container.addChild(bunny);
+    }
+
+    // Move the container to the center
+    containerFrame.x = app.screen.width / 2;
+    containerFrame.y = app.screen.height / 2;
+
+    // Center the bunny sprites in local container coordinates
+    container.pivot.x = container.width / 2;
+    container.pivot.y = container.height / 2;
+
+    // Listen for animate update
+    app.ticker.add((time) =>
+    {
+        // Continuously rotate the container!
+        // * use delta to create frame-independent transform *
+        container.rotation -= 0.01 * time.deltaTime;
+    });
+
+    let screenshot;
+
+    // Take the screenshot and download it
+    async function takeScreenshot()
+    {
+        if (screenshot !== undefined)
+        {
+            screenshot.remove();
+        }
+
+        app.stop();
+        const url = await app.renderer.extract.base64(containerFrame);
+
+        screenshot = document.createElement('a');
+
+        document.body.append(screenshot);
+
+        screenshot.style.position = 'fixed';
+        screenshot.style.top = '20px';
+        screenshot.style.right = '20px';
+        screenshot.download = 'screenshot';
+        screenshot.href = url;
+
+        const image = new Image();
+
+        image.width = app.screen.width / 5;
+        image.src = url;
+
+        screenshot.innerHTML = image.outerHTML;
+
+        app.start();
+    }
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+    app.stage.on('pointerdown', takeScreenshot);
+
+    const style = new TextStyle({
+        fontFamily: 'Roboto',
+        fill: '#999',
+    });
+
+    const screenshotText = new Text({ text: 'Click To Take Screenshot', style });
+
+    screenshotText.x = Math.round((app.screen.width - screenshotText.width) / 2);
+    screenshotText.y = Math.round(screenshotText.height / 2);
+
+    app.stage.addChild(screenshotText);
+})();
+
+
+Collision Detection
+
+import { Application, Assets, Point, Sprite, Texture } from 'pixi.js';
+
+// Based somewhat on this article by Spicy Yoghurt
+// URL for further reading: https://spicyyoghurt.com/tutorials/html5-javascript-game-development/collision-detection-physics
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#111', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Options for how objects interact
+    // How fast the red square moves
+    const movementSpeed = 0.05;
+
+    // Strength of the impulse push between two objects
+    const impulsePower = 5;
+
+    // Test For Hit
+    // A basic AABB check between two different squares
+    function testForAABB(object1, object2)
+    {
+        const bounds1 = object1.getBounds();
+        const bounds2 = object2.getBounds();
+
+        return (
+            bounds1.x < bounds2.x + bounds2.width
+            && bounds1.x + bounds1.width > bounds2.x
+            && bounds1.y < bounds2.y + bounds2.height
+            && bounds1.y + bounds1.height > bounds2.y
+        );
+    }
+
+    // Calculates the results of a collision, allowing us to give an impulse that
+    // shoves objects apart
+    function collisionResponse(object1, object2)
+    {
+        if (!object1 || !object2)
+        {
+            return new Point(0);
+        }
+
+        const vCollision = new Point(object2.x - object1.x, object2.y - object1.y);
+
+        const distance = Math.sqrt(
+            (object2.x - object1.x) * (object2.x - object1.x) + (object2.y - object1.y) * (object2.y - object1.y),
+        );
+
+        const vCollisionNorm = new Point(vCollision.x / distance, vCollision.y / distance);
+
+        const vRelativeVelocity = new Point(
+            object1.acceleration.x - object2.acceleration.x,
+            object1.acceleration.y - object2.acceleration.y,
+        );
+
+        const speed = vRelativeVelocity.x * vCollisionNorm.x + vRelativeVelocity.y * vCollisionNorm.y;
+
+        const impulse = (impulsePower * speed) / (object1.mass + object2.mass);
+
+        return new Point(impulse * vCollisionNorm.x, impulse * vCollisionNorm.y);
+    }
+
+    // Calculate the distance between two given points
+    function distanceBetweenTwoPoints(p1, p2)
+    {
+        const a = p1.x - p2.x;
+        const b = p1.y - p2.y;
+
+        return Math.hypot(a, b);
+    }
+
+    // The green square we will knock about
+    const greenSquare = new Sprite(Texture.WHITE);
+
+    greenSquare.position.set((app.screen.width - 100) / 2, (app.screen.height - 100) / 2);
+    greenSquare.width = 100;
+    greenSquare.height = 100;
+    greenSquare.tint = 0x00ff00;
+    greenSquare.acceleration = new Point(0);
+    greenSquare.mass = 3;
+
+    // The square you move around
+    const redSquare = new Sprite(Texture.WHITE);
+
+    redSquare.position.set(0, 0);
+    redSquare.width = 100;
+    redSquare.height = 100;
+    redSquare.tint = 0xff0000;
+    redSquare.acceleration = new Point(0);
+    redSquare.mass = 1;
+
+    const mouseCoords = { x: 0, y: 0 };
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+    app.stage.on('mousemove', (event) =>
+    {
+        mouseCoords.x = event.global.x;
+        mouseCoords.y = event.global.y;
+    });
+
+    // Listen for animate update
+    app.ticker.add((time) =>
+    {
+        const delta = time.deltaTime;
+
+        // Applied deacceleration for both squares, done by reducing the
+        // acceleration by 0.01% of the acceleration every loop
+        redSquare.acceleration.set(redSquare.acceleration.x * 0.99, redSquare.acceleration.y * 0.99);
+        greenSquare.acceleration.set(greenSquare.acceleration.x * 0.99, greenSquare.acceleration.y * 0.99);
+
+        // Check whether the green square ever moves off the screen
+        // If so, reverse acceleration in that direction
+        if (greenSquare.x < 0 || greenSquare.x > app.screen.width - 100)
+        {
+            greenSquare.acceleration.x = -greenSquare.acceleration.x;
+        }
+
+        if (greenSquare.y < 0 || greenSquare.y > app.screen.height - 100)
+        {
+            greenSquare.acceleration.y = -greenSquare.acceleration.y;
+        }
+
+        // If the green square pops out of the cordon, it pops back into the
+        // middle
+        if (
+            greenSquare.x < -30
+            || greenSquare.x > app.screen.width + 30
+            || greenSquare.y < -30
+            || greenSquare.y > app.screen.height + 30
+        )
+        {
+            greenSquare.position.set((app.screen.width - 100) / 2, (app.screen.height - 100) / 2);
+        }
+
+        // If the mouse is off screen, then don't update any further
+        if (
+            app.screen.width > mouseCoords.x
+            || mouseCoords.x > 0
+            || app.screen.height > mouseCoords.y
+            || mouseCoords.y > 0
+        )
+        {
+            // Get the red square's center point
+            const redSquareCenterPosition = new Point(
+                redSquare.x + redSquare.width * 0.5,
+                redSquare.y + redSquare.height * 0.5,
+            );
+
+            // Calculate the direction vector between the mouse pointer and
+            // the red square
+            const toMouseDirection = new Point(
+                mouseCoords.x - redSquareCenterPosition.x,
+                mouseCoords.y - redSquareCenterPosition.y,
+            );
+
+            // Use the above to figure out the angle that direction has
+            const angleToMouse = Math.atan2(toMouseDirection.y, toMouseDirection.x);
+
+            // Figure out the speed the square should be travelling by, as a
+            // function of how far away from the mouse pointer the red square is
+            const distMouseRedSquare = distanceBetweenTwoPoints(mouseCoords, redSquareCenterPosition);
+            const redSpeed = distMouseRedSquare * movementSpeed;
+
+            // Calculate the acceleration of the red square
+            redSquare.acceleration.set(Math.cos(angleToMouse) * redSpeed, Math.sin(angleToMouse) * redSpeed);
+        }
+
+        // If the two squares are colliding
+        if (testForAABB(greenSquare, redSquare))
+        {
+            // Calculate the changes in acceleration that should be made between
+            // each square as a result of the collision
+            const collisionPush = collisionResponse(greenSquare, redSquare);
+            // Set the changes in acceleration for both squares
+
+            redSquare.acceleration.set(collisionPush.x * greenSquare.mass, collisionPush.y * greenSquare.mass);
+            greenSquare.acceleration.set(-(collisionPush.x * redSquare.mass), -(collisionPush.y * redSquare.mass));
+        }
+
+        greenSquare.x += greenSquare.acceleration.x * delta;
+        greenSquare.y += greenSquare.acceleration.y * delta;
+
+        redSquare.x += redSquare.acceleration.x * delta;
+        redSquare.y += redSquare.acceleration.y * delta;
+    });
+
+    // Add to stage
+    app.stage.addChild(redSquare, greenSquare);
+})();
+
+Spinners
+
+import { Application, Assets, Container, Graphics, Point, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the textures
+    await Assets.load([
+        'https://pixijs.com/assets/bg_scene_rotate.jpg',
+        'https://pixijs.com/assets/bg_rotate.jpg',
+        'https://pixijs.com/assets/circle.png',
+    ]);
+
+    /* ---------------------------------------
+    Spinner 1. Square with radial completion.
+    -------------------------------------- */
+    const generateSpinner1 = (position) =>
+    {
+        const container = new Container();
+
+        container.position = position;
+        app.stage.addChild(container);
+
+        const base = Sprite.from('https://pixijs.com/assets/bg_scene_rotate.jpg');
+        const size = 100;
+
+        base.width = size;
+        base.height = size;
+
+        const bottom = Sprite.from('https://pixijs.com/assets/bg_rotate.jpg');
+
+        bottom.width = size;
+        bottom.height = size;
+
+        const mask = new Graphics();
+
+        mask.position.set(size / 2, size / 2);
+        base.mask = mask;
+
+        container.addChild(bottom);
+        container.addChild(base);
+        container.addChild(mask);
+
+        let phase = 0;
+
+        return (delta) =>
+        {
+            // Update phase
+            phase += delta / 60;
+            phase %= Math.PI * 2;
+
+            // Calculate target point.
+            const x = Math.cos(phase - Math.PI / 2) * size;
+            const y = Math.sin(phase - Math.PI / 2) * size;
+
+            const segments = [
+                [-size / 2, -size / 2, size / 2, -size / 2], // top segment
+                [size / 2, -size / 2, size / 2, size / 2], // right
+                [-size / 2, size / 2, size / 2, size / 2], // bottom
+                [-size / 2, -size / 2, -size / 2, size / 2], // left
+            ];
+
+            // Find the intersecting segment.
+            let intersection = null;
+            let winding = 0;
+
+            for (let i = 0; i < segments.length; i++)
+            {
+                const segment = segments[i];
+                const hit = intersect(0, 0, x, y, segment[0], segment[1], segment[2], segment[3]);
+
+                if (hit)
+                {
+                    intersection = hit;
+                    if (i === 0) winding = hit.x > 0 ? 0 : 4;
+                    else winding = i;
+                    break;
+                }
+            }
+
+            const corners = [
+                size / 2,
+                -size / 2, // Top right
+                size / 2,
+                size / 2, // Bottom right
+                -size / 2,
+                size / 2, // Bottom left
+                -size / 2,
+                -size / 2, // Top left,
+                0,
+                -size / 2, // End point
+            ];
+
+            // Redraw mask
+            mask.clear()
+                .moveTo(0, -size / 2)
+                .lineTo(0, 0)
+                .lineTo(intersection.x, intersection.y);
+
+            // fill the corners
+            for (let i = winding; i < corners.length / 2; i++)
+            {
+                mask.lineTo(corners[i * 2], corners[i * 2 + 1]);
+            }
+
+            mask.fill({ color: 0xff0000 });
+        };
+    };
+
+    /* -----------------------
+    Spinner 2. Scaling balls.
+    ---------------------- */
+    const generateSpinner2 = (position) =>
+    {
+        const container = new Container();
+
+        container.position = position;
+        app.stage.addChild(container);
+
+        const size = 100;
+        const ballAmount = 7;
+        const balls = [];
+
+        for (let i = 0; i < ballAmount; i++)
+        {
+            const ball = Sprite.from('https://pixijs.com/assets/circle.png');
+
+            ball.anchor.set(0.5);
+            container.addChild(ball);
+            ball.position.set(
+                size / 2 + (Math.cos((i / ballAmount) * Math.PI * 2) * size) / 3,
+                size / 2 + (Math.sin((i / ballAmount) * Math.PI * 2) * size) / 3,
+            );
+            balls.push(ball);
+        }
+
+        let phase = 0;
+
+        return (delta) =>
+        {
+            // Update phase
+            phase += delta / 60;
+            phase %= Math.PI * 2;
+
+            // Update ball scales
+            balls.forEach((b, i) =>
+            {
+                const sin = Math.sin((i / ballAmount) * Math.PI - phase);
+                // Multiply sin with itself to get more steeper edge.
+
+                b.scale.set(Math.abs(sin * sin * sin * 0.5) + 0.5);
+            });
+        };
+    };
+
+    /* ---------------------
+    Spinner 3. Radial mask.
+    -------------------- */
+    const generateSpinner3 = (position) =>
+    {
+        const container = new Container();
+
+        container.position = position;
+        app.stage.addChild(container);
+
+        const base = Sprite.from('https://pixijs.com/assets/bg_scene_rotate.jpg');
+        const size = 100;
+
+        base.width = size;
+        base.height = size;
+
+        const mask = new Graphics();
+
+        mask.position.set(size / 2, size / 2);
+        base.mask = mask;
+
+        container.addChild(base);
+        container.addChild(mask);
+
+        let phase = 0;
+
+        return (delta) =>
+        {
+            // Update phase
+            phase += delta / 60;
+            phase %= Math.PI * 2;
+
+            const angleStart = 0 - Math.PI / 2;
+            const angle = phase + angleStart;
+            const radius = 50;
+
+            const x1 = Math.cos(angleStart) * radius;
+            const y1 = Math.sin(angleStart) * radius;
+
+            // Redraw mask
+            mask.clear()
+                .moveTo(0, 0)
+                .lineTo(x1, y1)
+                .arc(0, 0, radius, angleStart, angle, false)
+                .lineTo(0, 0)
+                .fill({ color: 0xff0000 });
+        };
+    };
+
+    /* ---------------------------------
+    Spinner 4. Rounded rectangle edges.
+    ------------------------------- */
+    const generateSpinner4 = (position) =>
+    {
+        const container = new Container();
+
+        container.position = position;
+        app.stage.addChild(container);
+
+        const size = 100;
+        const arcRadius = 15;
+
+        const base = Sprite.from('https://pixijs.com/assets/bg_scene_rotate.jpg');
+
+        base.width = size;
+        base.height = size;
+
+        // For better performance having assets prerounded would be better than masking.
+        const roundingMask = new Graphics();
+
+        roundingMask.roundRect(0, 0, size, size, arcRadius).fill({ color: 0x0 });
+        base.mask = roundingMask;
+
+        // The edge could be replaced with image as well.
+        const lineSize = 5;
+        const edge = new Graphics();
+
+        edge.roundRect(0, 0, size, size, arcRadius).stroke({ width: lineSize, color: 0xff0000 });
+
+        // Mask in this example works basically the same way as in example 1.
+        // Except it is reversed and calculates the mask in straight lines in edges.
+        const mask = new Graphics();
+
+        mask.position.set(size / 2, size / 2);
+        edge.mask = mask;
+
+        container.addChild(base);
+        container.addChild(roundingMask);
+        container.addChild(edge);
+        container.addChild(mask);
+
+        let phase = 0;
+
+        return (delta) =>
+        {
+            // Update phase
+            phase += delta / 160;
+            phase %= Math.PI * 2;
+
+            // Calculate target point.
+            const x = Math.cos(phase - Math.PI / 2) * size;
+            const y = Math.sin(phase - Math.PI / 2) * size;
+            // Line segments
+            const segments = [
+                [-size / 2 + lineSize, -size / 2 + lineSize, size / 2 - lineSize, -size / 2 + lineSize], // top segment
+                [size / 2 - lineSize, -size / 2 + lineSize, size / 2 - lineSize, size / 2 - lineSize], // right
+                [-size / 2 + lineSize, size / 2 - lineSize, size / 2 - lineSize, size / 2 - lineSize], // bottom
+                [-size / 2 + lineSize, -size / 2 + lineSize, -size / 2 + lineSize, size / 2 - lineSize], // left
+            ];
+            // To which dir should mask continue at each segment
+            let outDir = [
+                [0, -1],
+                [1, 0],
+                [0, 1],
+                [-1, 0],
+            ];
+
+            // Find the intersecting segment.
+            let intersection = null;
+            let winding = 0;
+            // What direction should the line continue after hit has been found before hitting the line size
+
+            for (let i = 0; i < segments.length; i++)
+            {
+                const segment = segments[i];
+                const hit = intersect(0, 0, x, y, segment[0], segment[1], segment[2], segment[3]);
+
+                if (hit)
+                {
+                    intersection = hit;
+                    if (i === 0) winding = hit.x < 0 ? 0 : 4;
+                    else winding = 4 - i;
+                    outDir = outDir[i];
+                    break;
+                }
+            }
+
+            const corners = [
+                -size / 2 - lineSize,
+                -size / 2 - lineSize, // Top left,
+                -size / 2 - lineSize,
+                size / 2 + lineSize, // Bottom left
+                size / 2 + lineSize,
+                size / 2 + lineSize, // Bottom right
+                size / 2 + lineSize,
+                -size / 2 - lineSize, // Top right
+            ];
+
+            // Redraw mask
+            mask.clear()
+                .moveTo(0, 0)
+                .moveTo(0, -size / 2 - lineSize);
+
+            // fill the corners
+            for (let i = 0; i < winding; i++)
+            {
+                mask.lineTo(corners[i * 2], corners[i * 2 + 1]);
+            }
+
+            mask.lineTo(intersection.x + outDir[0] * lineSize * 2, intersection.y + outDir[1] * lineSize * 2)
+                .lineTo(intersection.x, intersection.y)
+                .lineTo(0, 0)
+                .fill({ color: 0xff0000 });
+        };
+    };
+
+    /* ---------------------
+    Spinner 5. Rounded rectangle fixed length spinner by jonlepage
+    -------------------- */
+    const generateSpinner5 = (position) =>
+    {
+        const container = new Container();
+
+        container.position = position;
+        app.stage.addChild(container);
+
+        const halfCircle = new Graphics().arc(0, 0, 100, 0, Math.PI).fill({ color: 0xff0000 });
+
+        halfCircle.position.set(50, 50);
+
+        const rectangle = new Graphics().roundRect(0, 0, 100, 100, 16).stroke({ width: 2, color: 0xffffff });
+
+        rectangle.mask = halfCircle;
+
+        container.addChild(rectangle);
+        container.addChild(halfCircle);
+
+        let phase = 0;
+
+        return (delta) =>
+        {
+            // Update phase
+            phase += delta / 6;
+            phase %= Math.PI * 2;
+
+            halfCircle.rotation = phase;
+        };
+    };
+
+    const onTick = [
+        generateSpinner1(new Point(50, 50)),
+        generateSpinner2(new Point(160, 50)),
+        generateSpinner3(new Point(270, 50)),
+        generateSpinner4(new Point(380, 50)),
+        generateSpinner5(new Point(490, 50)),
+    ];
+
+    // Listen for animate update
+    app.ticker.add((time) =>
+    {
+        // Call tick handling for each spinner.
+        onTick.forEach((cb) =>
+        {
+            cb(time.deltaTime);
+        });
+    });
+
+    /**
+     * Helper functions
+
+        line intercept math by Paul Bourke http://paulbourke.net/geometry/pointlineplane/
+        Determine the intersection point of two line segments
+        Return FALSE if the lines don't intersect
+
+        Code modified from original to match pixi examples linting rules.
+    */
+    function intersect(x1, y1, x2, y2, x3, y3, x4, y4)
+    {
+        // Check if none of the lines are of length 0
+        if ((x1 === x2 && y1 === y2) || (x3 === x4 && y3 === y4))
+        {
+            return false;
+        }
+
+        const denominator = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+
+        // Lines are parallel
+        if (denominator === 0)
+        {
+            return false;
+        }
+
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator;
+
+        // is the intersection along the segments
+        if (ua < 0 || ua > 1 || ub < 0 || ub > 1)
+        {
+            return false;
+        }
+
+        // Return a object with the x and y coordinates of the intersection
+        const x = x1 + ua * (x2 - x1);
+        const y = y1 + ua * (y2 - y1);
+
+        return { x, y };
+    }
+})();
+
+import { Container, Graphics, Sprite } from 'pixi.js';
+import { intersect } from './intersect';
+
+/* ---------------------------------------
+Spinner 1. Square with radial completion.
+-------------------------------------- */
+export function generateSpinner1(app, position)
+{
+    const container = new Container();
+
+    container.position = position;
+    app.stage.addChild(container);
+
+    const base = Sprite.from('https://pixijs.com/assets/bg_scene_rotate.jpg');
+    const size = 100;
+
+    base.width = size;
+    base.height = size;
+
+    const bottom = Sprite.from('https://pixijs.com/assets/bg_rotate.jpg');
+
+    bottom.width = size;
+    bottom.height = size;
+
+    const mask = new Graphics();
+
+    mask.position.set(size / 2, size / 2);
+    base.mask = mask;
+
+    container.addChild(bottom);
+    container.addChild(base);
+    container.addChild(mask);
+
+    let phase = 0;
+
+    return (delta) =>
+    {
+        // Update phase
+        phase += delta / 60;
+        phase %= Math.PI * 2;
+
+        // Calculate target point.
+        const x = Math.cos(phase - Math.PI / 2) * size;
+        const y = Math.sin(phase - Math.PI / 2) * size;
+
+        const segments = [
+            [-size / 2, -size / 2, size / 2, -size / 2], // top segment
+            [size / 2, -size / 2, size / 2, size / 2], // right
+            [-size / 2, size / 2, size / 2, size / 2], // bottom
+            [-size / 2, -size / 2, -size / 2, size / 2], // left
+        ];
+
+        // Find the intersecting segment.
+        let intersection = null;
+        let winding = 0;
+
+        for (let i = 0; i < segments.length; i++)
+        {
+            const segment = segments[i];
+            const hit = intersect(0, 0, x, y, segment[0], segment[1], segment[2], segment[3]);
+
+            if (hit)
+            {
+                intersection = hit;
+                if (i === 0) winding = hit.x > 0 ? 0 : 4;
+                else winding = i;
+                break;
+            }
+        }
+
+        const corners = [
+            size / 2,
+            -size / 2, // Top right
+            size / 2,
+            size / 2, // Bottom right
+            -size / 2,
+            size / 2, // Bottom left
+            -size / 2,
+            -size / 2, // Top left,
+            0,
+            -size / 2, // End point
+        ];
+
+        // Redraw mask
+        mask.clear()
+            .moveTo(0, -size / 2)
+            .lineTo(0, 0)
+            .lineTo(intersection.x, intersection.y);
+
+        // fill the corners
+        for (let i = winding; i < corners.length / 2; i++)
+        {
+            mask.lineTo(corners[i * 2], corners[i * 2 + 1]);
+        }
+
+        mask.fill({ color: 0xff0000 });
+    };
+}
+
+import { Container, Sprite } from 'pixi.js';
+
+/* -----------------------
+Spinner 2. Scaling balls.
+---------------------- */
+export function generateSpinner2(app, position)
+{
+    const container = new Container();
+
+    container.position = position;
+    app.stage.addChild(container);
+
+    const size = 100;
+    const ballAmount = 7;
+    const balls = [];
+
+    for (let i = 0; i < ballAmount; i++)
+    {
+        const ball = Sprite.from('https://pixijs.com/assets/circle.png');
+
+        ball.anchor.set(0.5);
+        container.addChild(ball);
+        ball.position.set(
+            size / 2 + (Math.cos((i / ballAmount) * Math.PI * 2) * size) / 3,
+            size / 2 + (Math.sin((i / ballAmount) * Math.PI * 2) * size) / 3,
+        );
+        balls.push(ball);
+    }
+
+    let phase = 0;
+
+    return (delta) =>
+    {
+        // Update phase
+        phase += delta / 60;
+        phase %= Math.PI * 2;
+
+        // Update ball scales
+        balls.forEach((b, i) =>
+        {
+            const sin = Math.sin((i / ballAmount) * Math.PI - phase);
+            // Multiply sin with itself to get more steeper edge.
+
+            b.scale.set(Math.abs(sin * sin * sin * 0.5) + 0.5);
+        });
+    };
+}
+
+import { Container, Graphics, Sprite } from 'pixi.js';
+
+/* ---------------------
+Spinner 3. Radial mask.
+-------------------- */
+export function generateSpinner3(app, position)
+{
+    const container = new Container();
+
+    container.position = position;
+    app.stage.addChild(container);
+
+    const base = Sprite.from('https://pixijs.com/assets/bg_scene_rotate.jpg');
+    const size = 100;
+
+    base.width = size;
+    base.height = size;
+
+    const mask = new Graphics();
+
+    mask.position.set(size / 2, size / 2);
+    base.mask = mask;
+
+    container.addChild(base);
+    container.addChild(mask);
+
+    let phase = 0;
+
+    return (delta) =>
+    {
+        // Update phase
+        phase += delta / 60;
+        phase %= Math.PI * 2;
+
+        const angleStart = 0 - Math.PI / 2;
+        const angle = phase + angleStart;
+        const radius = 50;
+
+        const x1 = Math.cos(angleStart) * radius;
+        const y1 = Math.sin(angleStart) * radius;
+
+        // Redraw mask
+        mask.clear()
+            .moveTo(0, 0)
+            .lineTo(x1, y1)
+            .arc(0, 0, radius, angleStart, angle, false)
+            .lineTo(0, 0)
+            .fill({ color: 0xff0000 });
+    };
+}
+
+import { Container, Graphics, Sprite } from 'pixi.js';
+import { intersect } from './intersect';
+
+/* ---------------------------------
+Spinner 4. Rounded rectangle edges.
+------------------------------- */
+export function generateSpinner4(app, position)
+{
+    const container = new Container();
+
+    container.position = position;
+    app.stage.addChild(container);
+
+    const size = 100;
+    const arcRadius = 15;
+
+    const base = Sprite.from('https://pixijs.com/assets/bg_scene_rotate.jpg');
+
+    base.width = size;
+    base.height = size;
+
+    // For better performance having assets prerounded would be better than masking.
+    const roundingMask = new Graphics();
+
+    roundingMask.roundRect(0, 0, size, size, arcRadius).fill({ color: 0x0 });
+    base.mask = roundingMask;
+
+    // The edge could be replaced with image as well.
+    const lineSize = 5;
+    const edge = new Graphics();
+
+    edge.roundRect(0, 0, size, size, arcRadius).stroke({ width: lineSize, color: 0xff0000 });
+
+    // Mask in this example works basically the same way as in example 1.
+    // Except it is reversed and calculates the mask in straight lines in edges.
+    const mask = new Graphics();
+
+    mask.position.set(size / 2, size / 2);
+    edge.mask = mask;
+
+    container.addChild(base);
+    container.addChild(roundingMask);
+    container.addChild(edge);
+    container.addChild(mask);
+
+    let phase = 0;
+
+    return (delta) =>
+    {
+        // Update phase
+        phase += delta / 160;
+        phase %= Math.PI * 2;
+
+        // Calculate target point.
+        const x = Math.cos(phase - Math.PI / 2) * size;
+        const y = Math.sin(phase - Math.PI / 2) * size;
+        // Line segments
+        const segments = [
+            [-size / 2 + lineSize, -size / 2 + lineSize, size / 2 - lineSize, -size / 2 + lineSize], // top segment
+            [size / 2 - lineSize, -size / 2 + lineSize, size / 2 - lineSize, size / 2 - lineSize], // right
+            [-size / 2 + lineSize, size / 2 - lineSize, size / 2 - lineSize, size / 2 - lineSize], // bottom
+            [-size / 2 + lineSize, -size / 2 + lineSize, -size / 2 + lineSize, size / 2 - lineSize], // left
+        ];
+        // To which dir should mask continue at each segment
+        let outDir = [
+            [0, -1],
+            [1, 0],
+            [0, 1],
+            [-1, 0],
+        ];
+
+        // Find the intersecting segment.
+        let intersection = null;
+        let winding = 0;
+        // What direction should the line continue after hit has been found before hitting the line size
+
+        for (let i = 0; i < segments.length; i++)
+        {
+            const segment = segments[i];
+            const hit = intersect(0, 0, x, y, segment[0], segment[1], segment[2], segment[3]);
+
+            if (hit)
+            {
+                intersection = hit;
+                if (i === 0) winding = hit.x < 0 ? 0 : 4;
+                else winding = 4 - i;
+                outDir = outDir[i];
+                break;
+            }
+        }
+
+        const corners = [
+            -size / 2 - lineSize,
+            -size / 2 - lineSize, // Top left,
+            -size / 2 - lineSize,
+            size / 2 + lineSize, // Bottom left
+            size / 2 + lineSize,
+            size / 2 + lineSize, // Bottom right
+            size / 2 + lineSize,
+            -size / 2 - lineSize, // Top right
+        ];
+
+        // Redraw mask
+        mask.clear()
+            .moveTo(0, 0)
+            .moveTo(0, -size / 2 - lineSize);
+
+        // fill the corners
+        for (let i = 0; i < winding; i++)
+        {
+            mask.lineTo(corners[i * 2], corners[i * 2 + 1]);
+        }
+
+        mask.lineTo(intersection.x + outDir[0] * lineSize * 2, intersection.y + outDir[1] * lineSize * 2)
+            .lineTo(intersection.x, intersection.y)
+            .lineTo(0, 0)
+            .fill({ color: 0xff0000 });
+    };
+}
+
+import { Container, Graphics } from 'pixi.js';
+
+/* ---------------------
+Spinner 5. Rounded rectangle fixed length spinner by jonlepage
+-------------------- */
+export function generateSpinner5(app, position)
+{
+    const container = new Container();
+
+    container.position = position;
+    app.stage.addChild(container);
+
+    const halfCircle = new Graphics().arc(0, 0, 100, 0, Math.PI).fill({ color: 0xff0000 });
+
+    halfCircle.position.set(50, 50);
+
+    const rectangle = new Graphics().roundRect(0, 0, 100, 100, 16).stroke({ width: 2, color: 0xffffff });
+
+    rectangle.mask = halfCircle;
+
+    container.addChild(rectangle);
+    container.addChild(halfCircle);
+
+    let phase = 0;
+
+    return (delta) =>
+    {
+        // Update phase
+        phase += delta / 6;
+        phase %= Math.PI * 2;
+
+        halfCircle.rotation = phase;
+    };
+}
+
+/**
+ * Helper functions
+
+line intercept math by Paul Bourke http://paulbourke.net/geometry/pointlineplane/
+Determine the intersection point of two line segments
+Return FALSE if the lines don't intersect
+
+Code modified from original to match pixi examples linting rules.
+*/
+export function intersect(x1, y1, x2, y2, x3, y3, x4, y4)
+{
+    // Check if none of the lines are of length 0
+    if ((x1 === x2 && y1 === y2) || (x3 === x4 && y3 === y4))
+    {
+        return false;
+    }
+
+    const denominator = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+
+    // Lines are parallel
+    if (denominator === 0)
+    {
+        return false;
+    }
+
+    const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denominator;
+    const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denominator;
+
+    // is the intersection along the segments
+    if (ua < 0 || ua > 1 || ub < 0 || ub > 1)
+    {
+        return false;
+    }
+
+    // Return a object with the x and y coordinates of the intersection
+    const x = x1 + ua * (x2 - x1);
+    const y = y1 + ua * (y2 - y1);
+
+    return { x, y };
+}
+
+
+Sprite
+
+Basic
+
+import { Application, Assets, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Create a bunny Sprite
+    const bunny = new Sprite(texture);
+
+    // Center the sprite's anchor point
+    bunny.anchor.set(0.5);
+
+    // Move the sprite to the center of the screen
+    bunny.x = app.screen.width / 2;
+    bunny.y = app.screen.height / 2;
+
+    app.stage.addChild(bunny);
+
+    // Listen for animate update
+    app.ticker.add((time) =>
+    {
+        // Just for fun, let's rotate mr rabbit a little.
+        // * Delta is 1 if running at 100% performance *
+        // * Creates frame-independent transformation *
+        bunny.rotation += 0.1 * time.deltaTime;
+    });
+})();
+
+Gif
+
+import { Application, Assets } from 'pixi.js';
+import { GifSprite } from 'pixi.js/gif';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const source = await Assets.load('https://userland.pixijs.io/gif/examples/chew.gif');
+    const gif = new GifSprite({ source, x: window.innerWidth / 2, y: window.innerHeight / 2, anchor: 0.5 });
+
+    app.stage.addChild(gif);
+})();
+
+Texture Swap
+
+import { Application, Assets, Sprite, Texture } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the textures
+    const alien1texture = await Assets.load('https://pixijs.com/assets/flowerTop.png');
+    const alien2texture = await Assets.load('https://pixijs.com/assets/eggHead.png');
+
+    let isAlien1 = true;
+
+    // Create a new alien Sprite using the 1st texture and add it to the stage
+    const character = new Sprite(alien1texture);
+
+    // Center the sprites anchor point
+    character.anchor.set(0.5);
+
+    // Move the sprite to the center of the screen
+    character.x = app.screen.width / 2;
+    character.y = app.screen.height / 2;
+
+    app.stage.addChild(character);
+
+    // Make the sprite interactive
+    character.eventMode = 'static';
+    character.cursor = 'pointer';
+
+    character.on('pointertap', () =>
+    {
+        isAlien1 = !isAlien1;
+        // Dynamically swap the texture
+        character.texture = isAlien1 ? alien1texture : alien2texture;
+    });
+
+    app.ticker.add(() =>
+    {
+        character.rotation += 0.02;
+    });
+})();
+
+Animated Sprite Explosion
+
+import { AnimatedSprite, Application, Assets, Texture } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ autoStart: false, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the animation sprite sheet
+    const texture = await Assets.load('https://pixijs.com/assets/spritesheet/mc.json');
+
+    // Create an array to store the textures
+    const explosionTextures = [];
+    let i;
+
+    for (i = 0; i < 26; i++)
+    {
+        const texture = Texture.from(`Explosion_Sequence_A ${i + 1}.png`);
+
+        explosionTextures.push(texture);
+    }
+
+    // Create and randomly place the animated explosion sprites on the stage
+    for (i = 0; i < 50; i++)
+    {
+        // Create an explosion AnimatedSprite
+        const explosion = new AnimatedSprite(explosionTextures);
+
+        explosion.x = Math.random() * app.screen.width;
+        explosion.y = Math.random() * app.screen.height;
+        explosion.anchor.set(0.5);
+        explosion.rotation = Math.random() * Math.PI;
+        explosion.scale.set(0.75 + Math.random() * 0.5);
+        explosion.gotoAndPlay((Math.random() * 26) | 0);
+        app.stage.addChild(explosion);
+    }
+
+    // Start animating
+    app.start();
+})();
+
+
+Animated Sprite Jet
+
+import { AnimatedSprite, Application, Assets, Texture } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the animation sprite sheet
+    await Assets.load('https://pixijs.com/assets/spritesheet/fighter.json');
+
+    // Create an array of textures from the sprite sheet
+    const frames = [];
+
+    for (let i = 0; i < 30; i++)
+    {
+        const val = i < 10 ? `0${i}` : i;
+
+        // Magically works since the spritesheet was loaded with the pixi loader
+        frames.push(Texture.from(`rollSequence00${val}.png`));
+    }
+
+    // Create an AnimatedSprite (brings back memories from the days of Flash, right ?)
+    const anim = new AnimatedSprite(frames);
+
+    /*
+     * An AnimatedSprite inherits all the properties of a PIXI sprite
+     * so you can change its position, its anchor, mask it, etc
+     */
+    anim.x = app.screen.width / 2;
+    anim.y = app.screen.height / 2;
+    anim.anchor.set(0.5);
+    anim.animationSpeed = 0.5;
+    anim.play();
+
+    app.stage.addChild(anim);
+
+    // Animate the rotation
+    app.ticker.add(() =>
+    {
+        anim.rotation += 0.01;
+    });
+})();
+
+Animated Sprite Animation Speed
+
+import { AnimatedSprite, Application, Assets, Texture } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ autoStart: false, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the animation sprite sheet
+    const spritesheet = await Assets.load('https://pixijs.com/assets/spritesheet/0123456789.json');
+
+    // Create an array to store the textures
+    const textures = [];
+    let i;
+
+    for (i = 0; i < 10; i++)
+    {
+        const framekey = `0123456789 ${i}.ase`;
+        const texture = Texture.from(framekey);
+        const time = spritesheet.data.frames[framekey].duration;
+
+        textures.push({ texture, time });
+    }
+
+    const scaling = 4;
+
+    // Create a slow AnimatedSprite
+    const slow = new AnimatedSprite(textures);
+
+    slow.anchor.set(0.5);
+    slow.scale.set(scaling);
+    slow.animationSpeed = 0.5;
+    slow.x = (app.screen.width - slow.width) / 2;
+    slow.y = app.screen.height / 2;
+    slow.play();
+    app.stage.addChild(slow);
+
+    // Create a fast AnimatedSprite
+    const fast = new AnimatedSprite(textures);
+
+    fast.anchor.set(0.5);
+    fast.scale.set(scaling);
+    fast.x = (app.screen.width + fast.width) / 2;
+    fast.y = app.screen.height / 2;
+    fast.play();
+    app.stage.addChild(fast);
+
+    // Start animating
+    app.start();
+})();
+
+Tiling Sprite
+import { Application, Assets, TilingSprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the tile texture
+    const texture = await Assets.load('https://pixijs.com/assets/p2.jpeg');
+
+    /* Create a tiling sprite and add it to the stage...
+     * requires a texture, a width and a height
+     * in WebGL the image size should preferably be a power of two
+     */
+    const tilingSprite = new TilingSprite({
+        texture,
+        width: app.screen.width,
+        height: app.screen.height,
+    });
+
+    app.stage.addChild(tilingSprite);
+
+    let count = 0;
+
+    // Animate the tiling sprite
+    app.ticker.add(() =>
+    {
+        count += 0.005;
+
+        tilingSprite.tileScale.x = 2 + Math.sin(count);
+        tilingSprite.tileScale.y = 2 + Math.cos(count);
+
+        tilingSprite.tilePosition.x += 1;
+        tilingSprite.tilePosition.y += 1;
+    });
+})();
+
+Video
+
+import { Application, Assets, Graphics, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Create play button that can be used to trigger the video
+    const button = new Graphics()
+        .roundRect(0, 0, 100, 100, 10)
+        .fill(0xffffff, 0.5)
+        .beginPath()
+        .moveTo(36, 30)
+        .lineTo(36, 70)
+        .lineTo(70, 50)
+        .closePath()
+        .fill(0xffffff);
+
+    // Position the button
+    button.x = (app.screen.width - button.width) / 2;
+    button.y = (app.screen.height - button.height) / 2;
+
+    // Enable interactivity on the button
+    button.eventMode = 'static';
+    button.cursor = 'pointer';
+
+    // Add to the stage
+    app.stage.addChild(button);
+
+    // Load the video texture
+    const texture = await Assets.load('https://pixijs.com/assets/video.mp4');
+
+    // Listen for a click/tap event to start playing the video
+    // this is useful for some mobile platforms. For example:
+    // ios9 and under cannot render videos in PIXI without a
+    // polyfill - https://github.com/bfred-it/iphone-inline-video
+    // ios10 and above require a click/tap event to render videos
+    // that contain audio in PIXI. Videos with no audio track do
+    // not have this requirement
+    button.on('pointertap', () =>
+    {
+        // Don't need the button anymore
+        button.destroy();
+
+        // Create a new Sprite using the video texture (yes it's that easy)
+        const videoSprite = new Sprite(texture);
+
+        // Stretch to fill the whole screen
+        videoSprite.width = app.screen.width;
+        videoSprite.height = app.screen.height;
+
+        app.stage.addChild(videoSprite);
+    });
+})();
+
+
+TEXT
+
+Pixi Text
+
+import { Application, Color, FillGradient, Text, TextStyle } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const basicText = new Text({ text: 'Basic text in pixi' });
+
+    basicText.x = 50;
+    basicText.y = 100;
+
+    app.stage.addChild(basicText);
+
+    // Create gradient fill
+    const fill = new FillGradient(0, 0, 0, 10);
+
+    const colors = [0xffffff, 0x00ff99].map((color) => Color.shared.setValue(color).toNumber());
+
+    colors.forEach((number, index) =>
+    {
+        const ratio = index / colors.length;
+
+        fill.addColorStop(ratio, number);
+    });
+
+    const style = new TextStyle({
+        fontFamily: 'Arial',
+        fontSize: 36,
+        fontStyle: 'italic',
+        fontWeight: 'bold',
+        fill: { fill },
+        stroke: { color: '#4a1850', width: 5, join: 'round' },
+        dropShadow: {
+            color: '#000000',
+            blur: 4,
+            angle: Math.PI / 6,
+            distance: 6,
+        },
+        wordWrap: true,
+        wordWrapWidth: 440,
+    });
+
+    const richText = new Text({
+        text: 'Rich text with a lot of options and across multiple lines',
+        style,
+    });
+
+    richText.x = 50;
+    richText.y = 220;
+
+    app.stage.addChild(richText);
+
+    const skewStyle = new TextStyle({
+        fontFamily: 'Arial',
+        dropShadow: {
+            alpha: 0.8,
+            angle: 2.1,
+            blur: 4,
+            color: '0x111111',
+            distance: 10,
+        },
+        fill: '#ffffff',
+        stroke: { color: '#004620', width: 12, join: 'round' },
+        fontSize: 60,
+        fontWeight: 'lighter',
+    });
+
+    const skewText = new Text({
+        text: 'SKEW IS COOL',
+        style: skewStyle,
+    });
+
+    skewText.skew.set(0.65, -0.3);
+    skewText.anchor.set(0.5, 0.5);
+    skewText.x = 300;
+    skewText.y = 480;
+
+    app.stage.addChild(skewText);
+})();
+
+
+Bitmap Text
+
+import { Application, Assets, BitmapText } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load bitmap font
+    await Assets.load('https://pixijs.com/assets/bitmap-font/desyrel.xml');
+
+    const bitmapFontText = new BitmapText({
+        text: 'bitmap fonts are supported!\nWoo yay!',
+        style: {
+            fontFamily: 'Desyrel',
+            fontSize: 55,
+            align: 'left',
+        },
+    });
+
+    bitmapFontText.x = 50;
+    bitmapFontText.y = 200;
+
+    app.stage.addChild(bitmapFontText);
+})();
+
+From Font
+
+import { Application, Assets, Text } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Add font files to the bundle
+    Assets.addBundle('fonts', [
+        { alias: 'ChaChicle', src: 'https://pixijs.com/assets/webfont-loader/ChaChicle.ttf' },
+        { alias: 'Lineal', src: 'https://pixijs.com/assets/webfont-loader/Lineal.otf' },
+        { alias: 'Dotrice Regular', src: 'https://pixijs.com/assets/webfont-loader/Dotrice-Regular.woff' },
+        { alias: 'Crosterian', src: 'https://pixijs.com/assets/webfont-loader/Crosterian.woff2' },
+    ]);
+
+    // Load the font bundle
+    await Assets.loadBundle('fonts');
+
+    const text1 = new Text({ text: 'ChaChicle.ttf', style: { fontFamily: 'ChaChicle', fontSize: 50 } });
+    const text2 = new Text({ text: 'Lineal.otf', style: { fontFamily: 'Lineal', fontSize: 50 } });
+    const text3 = new Text({ text: 'Dotrice Regular.woff', style: { fontFamily: 'Dotrice Regular', fontSize: 50 } });
+    const text4 = new Text({ text: 'Crosterian.woff2', style: { fontFamily: 'Crosterian', fontSize: 50 } });
+
+    text2.y = 150;
+    text3.y = 300;
+    text4.y = 450;
+
+    app.stage.addChild(text1);
+    app.stage.addChild(text2);
+    app.stage.addChild(text3);
+    app.stage.addChild(text4);
+})();
+
+Web Font
+
+import { Application, Text } from 'pixi.js';
+
+// Load them google fonts before starting...
+window.WebFontConfig = {
+    google: {
+        families: ['Snippet'],
+    },
+    active()
+    {
+        init();
+    },
+};
+
+/* eslint-disable */
+// include the web-font loader script
+(function () {
+    const wf = document.createElement('script');
+    wf.src = `${
+        document.location.protocol === 'https:' ? 'https' : 'http'
+    }://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js`;
+    wf.type = 'text/javascript';
+    wf.async = 'true';
+    const s = document.getElementsByTagName('script')[0];
+    s.parentNode.insertBefore(wf, s);
+})();
+/* eslint-enabled */
+
+async function init() {
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // create some white text using the Snippet webfont
+    const textSample = new Text('PixiJS text using the\ncustom "Snippet" Webfont', {
+        fontFamily: 'Snippet',
+        fontSize: 50,
+        fill: 'white',
+        align: 'left',
+    });
+    textSample.position.set(50, 200);
+    app.stage.addChild(textSample);
+}
+
+
+GRAPHICS
+
+Simple
+
+import { Application, Graphics } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const graphics = new Graphics();
+
+    // Rectangle
+    graphics.rect(50, 50, 100, 100);
+    graphics.fill(0xde3249);
+
+    // Rectangle + line style 1
+    graphics.rect(200, 50, 100, 100);
+    graphics.fill(0x650a5a);
+    graphics.stroke({ width: 2, color: 0xfeeb77 });
+
+    // Rectangle + line style 2
+    graphics.rect(350, 50, 100, 100);
+    graphics.fill(0xc34288);
+    graphics.stroke({ width: 10, color: 0xffbd01 });
+
+    // Rectangle 2
+    graphics.rect(530, 50, 140, 100);
+    graphics.fill(0xaa4f08);
+    graphics.stroke({ width: 2, color: 0xffffff });
+
+    // Circle
+    graphics.circle(100, 250, 50);
+    graphics.fill(0xde3249, 1);
+
+    // Circle + line style 1
+    graphics.circle(250, 250, 50);
+    graphics.fill(0x650a5a, 1);
+    graphics.stroke({ width: 2, color: 0xfeeb77 });
+
+    // Circle + line style 2
+    graphics.circle(400, 250, 50);
+    graphics.fill(0xc34288, 1);
+    graphics.stroke({ width: 10, color: 0xffbd01 });
+
+    // Ellipse + line style 2
+    graphics.ellipse(600, 250, 80, 50);
+    graphics.fill(0xaa4f08, 1);
+    graphics.stroke({ width: 2, color: 0xffffff });
+
+    // Draw a shape
+    graphics.moveTo(50, 350);
+    graphics.lineTo(250, 350);
+    graphics.lineTo(100, 400);
+    graphics.lineTo(50, 350);
+    graphics.fill(0xff3300);
+    graphics.stroke({ width: 4, color: 0xffd900 });
+
+    // Draw a rounded rectangle
+    graphics.roundRect(50, 440, 100, 100, 16);
+    graphics.fill(0x650a5a, 0.25);
+    graphics.stroke({ width: 2, color: 0xff00ff });
+
+    // Draw star
+    graphics.star(360, 370, 5, 50);
+    graphics.fill(0x35cc5a);
+    graphics.stroke({ width: 2, color: 0xffffff });
+
+    // Draw star 2
+    graphics.star(280, 510, 7, 50);
+    graphics.fill(0xffcc5a);
+    graphics.stroke({ width: 2, color: 0xfffffd });
+
+    // Draw star 3
+    graphics.star(470, 450, 4, 50);
+    graphics.fill(0x55335a);
+    graphics.stroke(4, 0xffffff);
+
+    // Draw polygon
+    const path = [600, 370, 700, 460, 780, 420, 730, 570, 590, 520];
+
+    graphics.poly(path);
+    graphics.fill(0x3500fa);
+
+    app.stage.addChild(graphics);
+})();
+
+
+Advanced
+
+import { Application, Assets, Graphics, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load texture
+    const texture = await Assets.load('https://pixijs.com/assets/bg_rotate.jpg');
+
+    const sprite = new Sprite(texture);
+
+    // // BEZIER CURVE ////
+    // information: https://en.wikipedia.org/wiki/Bézier_curve
+
+    const realPath = new Graphics();
+
+    realPath.moveTo(0, 0);
+    realPath.lineTo(100, 200);
+    realPath.lineTo(200, 200);
+    realPath.lineTo(240, 100);
+    realPath.stroke({ width: 2, color: 0xffffff });
+
+    realPath.position.x = 50;
+    realPath.position.y = 50;
+
+    app.stage.addChild(realPath);
+
+    const bezier = new Graphics();
+
+    bezier.bezierCurveTo(100, 200, 200, 200, 240, 100);
+    bezier.stroke({ width: 5, color: 0xaa0000 });
+
+    bezier.position.x = 50;
+    bezier.position.y = 50;
+
+    app.stage.addChild(bezier);
+
+    // // BEZIER CURVE 2 ////
+    const realPath2 = new Graphics();
+
+    realPath2.moveTo(0, 0);
+    realPath2.lineTo(0, -100);
+    realPath2.lineTo(150, 150);
+    realPath2.lineTo(240, 100);
+    realPath2.stroke({ width: 2, color: 0xffffff });
+
+    realPath2.position.x = 320;
+    realPath2.position.y = 150;
+
+    app.stage.addChild(realPath2);
+
+    const bezier2 = new Graphics();
+
+    bezier2.bezierCurveTo(0, -100, 150, 150, 240, 100);
+    bezier2.stroke({ width: 10, texture: sprite.texture });
+
+    bezier2.position.x = 320;
+    bezier2.position.y = 150;
+
+    app.stage.addChild(bezier2);
+
+    // // ARC ////
+    const arc = new Graphics();
+
+    arc.arc(600, 100, 50, Math.PI, 2 * Math.PI);
+    arc.stroke({ width: 5, color: 0xaa00bb });
+
+    app.stage.addChild(arc);
+
+    // // ARC 2 ////
+    const arc2 = new Graphics();
+
+    arc2.arc(650, 270, 60, 2 * Math.PI, (3 * Math.PI) / 2);
+    arc2.stroke({ width: 6, color: 0x3333dd });
+
+    app.stage.addChild(arc2);
+
+    // // ARC 3 ////
+    const arc3 = new Graphics();
+
+    arc3.arc(650, 420, 60, 2 * Math.PI, (2.5 * Math.PI) / 2);
+    arc3.stroke({ width: 20, texture: sprite.texture });
+
+    app.stage.addChild(arc3);
+
+    // / Hole ////
+    const rectAndHole = new Graphics();
+
+    rectAndHole.rect(350, 350, 150, 150);
+    rectAndHole.fill(0x00ff00);
+    rectAndHole.circle(375, 375, 25);
+    rectAndHole.circle(425, 425, 25);
+    rectAndHole.circle(475, 475, 25);
+    rectAndHole.cut();
+
+    app.stage.addChild(rectAndHole);
+
+    // // Line Texture Style ////
+    const beatifulRect = new Graphics();
+
+    beatifulRect.rect(80, 350, 150, 150);
+    beatifulRect.fill(0xff0000);
+    beatifulRect.stroke({ width: 20, texture: sprite.texture });
+
+    app.stage.addChild(beatifulRect);
+})();
+
+
+Dynamic
+import { Application, Graphics } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+
+    const graphics = new Graphics();
+
+    // Draw a shape
+    graphics
+        .moveTo(50, 50)
+        .lineTo(250, 50)
+        .lineTo(100, 100)
+        .lineTo(250, 220)
+        .lineTo(50, 220)
+        .lineTo(50, 50)
+        .fill({ color: 0xff3300 })
+        .stroke({ width: 10, color: 0xffd900 });
+
+    // Draw a second shape
+    graphics
+        .moveTo(210, 300)
+        .lineTo(450, 320)
+        .lineTo(570, 350)
+        .quadraticCurveTo(600, 0, 480, 100)
+        .lineTo(330, 120)
+        .lineTo(410, 200)
+        .lineTo(210, 300)
+        .fill({ color: 0xff700b })
+        .stroke({ width: 10, color: 0xff0000, alpha: 0.8 });
+
+    // Draw a rectangle
+    graphics.rect(50, 250, 100, 100);
+    graphics.stroke({ width: 2, color: 0x0000ff });
+
+    // Draw a circle
+    graphics.circle(470, 200, 100);
+    graphics.fill({ color: 0xffff0b, alpha: 0.5 });
+
+    graphics.moveTo(30, 30);
+    graphics.lineTo(600, 300);
+    graphics.stroke({ width: 20, color: 0x33ff00 });
+
+    app.stage.addChild(graphics);
+
+    // Let's create a moving shape
+    const thing = new Graphics();
+
+    app.stage.addChild(thing);
+    thing.x = 800 / 2;
+    thing.y = 600 / 2;
+
+    let count = 0;
+
+    // Just click on the stage to draw random lines
+    window.app = app;
+    app.stage.on('pointerdown', () =>
+    {
+        graphics.moveTo(Math.random() * 800, Math.random() * 600);
+        graphics.bezierCurveTo(
+            Math.random() * 800,
+            Math.random() * 600,
+            Math.random() * 800,
+            Math.random() * 600,
+            Math.random() * 800,
+            Math.random() * 600,
+        );
+        graphics.stroke({ width: Math.random() * 30, color: Math.random() * 0xffffff });
+    });
+
+    // Animate the moving shape
+    app.ticker.add(() =>
+    {
+        count += 0.1;
+
+        thing.clear();
+
+        thing
+            .moveTo(-120 + Math.sin(count) * 20, -100 + Math.cos(count) * 20)
+            .lineTo(120 + Math.cos(count) * 20, -100 + Math.sin(count) * 20)
+            .lineTo(120 + Math.sin(count) * 20, 100 + Math.cos(count) * 20)
+            .lineTo(-120 + Math.cos(count) * 20, 100 + Math.sin(count) * 20)
+            .lineTo(-120 + Math.sin(count) * 20, -100 + Math.cos(count) * 20)
+            .fill({ color: 0xffff00, alpha: 0.5 })
+            .stroke({ width: 10, color: 0xff0000 });
+
+        thing.rotation = count * 0.1;
+    });
+})();
+
+import { Application, Assets, Graphics, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const tigerTexture = await Assets.load({
+        src: 'https://pixijs.com/assets/tiger.svg',
+        data: {
+            resolution: 4
+        }
+    });
+
+    const sprite = new Sprite(tigerTexture);
+
+    // line it up as this svg is not centered
+    const bounds = sprite.getLocalBounds();
+
+    sprite.pivot.set((bounds.x + bounds.width) / 2, (bounds.y + bounds.height) / 2);
+
+    sprite.position.set(app.screen.width / 2, app.screen.height / 2);
+
+    app.stage.addChild(sprite);
+
+    app.ticker.add((time) =>
+    {
+        sprite.rotation += 0.01;
+        sprite.scale.set(2 + Math.sin(sprite.rotation));
+    });
+})();
+
+
+import { Application, Assets, Graphics, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const tigerTexture = await Assets.load({
+        src: 'https://pixijs.com/assets/tiger.svg'
+    });
+
+    const sprite = new Sprite(tigerTexture);
+
+    // line it up as this svg is not centered
+    const bounds = sprite.getLocalBounds();
+
+    sprite.pivot.set((bounds.x + bounds.width) / 2, (bounds.y + bounds.height) / 2);
+
+    sprite.position.set(app.screen.width / 2, app.screen.height / 2);
+
+    app.stage.addChild(sprite);
+
+    app.ticker.add((time) =>
+    {
+        sprite.rotation += 0.01;
+        sprite.scale.set(2 + Math.sin(sprite.rotation));
+    });
+})();
+
+
+import { Application, Assets, Graphics } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        antialias: true,
+        backgroundColor: 'white',
+        resizeTo: window,
+    });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const graphics = new Graphics().svg(`
+            <svg height="400" width="450" xmlns="http://www.w3.org/2000/svg">
+                <!-- Draw the paths -->
+                <path id="lineAB" d="M 100 350 l 150 -300" stroke="red" stroke-width="4"/>
+                <path id="lineBC" d="M 250 50 l 150 300" stroke="red" stroke-width="4"/>
+                <path id="lineMID" d="M 175 200 l 150 0" stroke="green" stroke-width="4"/>
+                <path id="lineAC" d="M 100 350 q 150 -300 300 0" stroke="blue" fill="none" stroke-width="4"/>
+
+                <!-- Mark relevant points -->
+                <g stroke="black" stroke-width="3" fill="black">
+                    <circle id="pointA" cx="100" cy="350" r="4" />
+                    <circle id="pointB" cx="250" cy="50" r="4" />
+                    <circle id="pointC" cx="400" cy="350" r="4" />
+                </g>
+            </svg>
+        `);
+
+    app.stage.addChild(graphics);
+})();
+
+
+Svg Load
+
+import { Application, Assets, Graphics } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const tigerSvg = await Assets.load({
+        src: 'https://pixijs.com/assets/tiger.svg',
+        data: {
+            parseAsGraphicsContext: true,
+        },
+    });
+
+    const graphics = new Graphics(tigerSvg);
+
+    // line it up as this svg is not centered
+    const bounds = graphics.getLocalBounds();
+
+    graphics.pivot.set((bounds.x + bounds.width) / 2, (bounds.y + bounds.height) / 2);
+
+    graphics.position.set(app.screen.width / 2, app.screen.height / 2);
+
+    app.stage.addChild(graphics);
+
+    app.ticker.add((time) =>
+    {
+        graphics.rotation += 0.01;
+        graphics.scale.set(2 + Math.sin(graphics.rotation));
+    });
+})();
+
+
+Texture
+
+import { Application, Assets, Graphics, GraphicsContext } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        antialias: true,
+        backgroundColor: 'white',
+        resizeTo: window,
+    });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const pandaTexture = await Assets.load(`https://pixijs.com/assets/panda.png`);
+
+    const pandasContext = new GraphicsContext()
+        .circle(0, 0, 120)
+        .fill('green')
+        .texture(pandaTexture, 0xffffff, -pandaTexture.width / 2, -pandaTexture.height / 2)
+        // add a baby purple panda
+        .translate(100, 100)
+        .scale(0.4)
+        .texture(pandaTexture, 'yellow');
+
+    const graphics = new Graphics(pandasContext);
+
+    const graphics2 = new Graphics(pandasContext);
+
+    app.stage.addChild(graphics, graphics2);
+
+    graphics.x = app.screen.width / 2;
+    graphics.y = app.screen.height / 2;
+
+    graphics2.x = app.screen.width / 2 - 200;
+    graphics2.y = app.screen.height / 2 - 200;
+    graphics2.rotation = 0.5;
+})();
+
+
+Fill Gradient
+
+import { Application, FillGradient, Graphics } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Create a color array for the linear gradient
+    const colorStops = [0xffffff, 0xff0000, 0x00ff00, 0x0000ff, 0x000000];
+
+    // Create a fill gradient
+    const gradientFill = new FillGradient(0, 0, 1, 1);
+
+    // Add the color stops to the fill gradient
+    colorStops.forEach((number, index) =>
+    {
+        const ratio = index / colorStops.length;
+
+        gradientFill.addColorStop(ratio, number);
+    });
+
+    // Create a fill graphic
+    const graphic1 = new Graphics().roundRect(0, 0, 150, 150, 50).fill(gradientFill);
+
+    // Create a stroke graphic
+    const graphic2 = new Graphics().roundRect(0, 0, 150, 150, 50).stroke({ width: 20, fill: gradientFill });
+
+    graphic1.pivot.set(75, 75);
+    graphic1.x = 150;
+    graphic1.y = 200;
+
+    graphic2.x = 350;
+    graphic2.y = 125;
+
+    app.stage.addChild(graphic1);
+    app.stage.addChild(graphic2);
+
+    let tick = 0;
+
+    // Animate the graphics
+    app.ticker.add(() =>
+    {
+        tick += 0.025;
+        graphic1.rotation += 0.01;
+        graphic2
+            .clear()
+            .roundRect(0, 0, 150, 150, 50)
+            .stroke({ width: Math.sin(tick) * 100, fill: gradientFill });
+    });
+})();
+
+Mesh From Path
+
+
+import { Application, buildGeometryFromPath, Graphics, GraphicsPath, Mesh, Texture } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        backgroundColor: 'brown',
+        resizeTo: window,
+        antialias: true,
+    });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const path = new GraphicsPath()
+        .rect(-50, -50, 100, 100)
+        .circle(80, 80, 50)
+        .circle(80, -80, 50)
+        .circle(-80, 80, 50)
+        .circle(-80, -80, 50);
+
+    const geometry = buildGeometryFromPath({
+        path,
+    });
+
+    const meshes = [];
+
+    for (let i = 0; i < 200; i++)
+    {
+        const x = Math.random() * app.screen.width;
+        const y = Math.random() * app.screen.height;
+
+        const mesh = new Mesh({
+            geometry,
+            texture: Texture.WHITE,
+            x,
+            y,
+            tint: Math.random() * 0xffffff,
+        });
+
+        app.stage.addChild(mesh);
+
+        meshes.push(mesh);
+    }
+
+    app.ticker.add(() =>
+    {
+        meshes.forEach((mesh) =>
+        {
+            mesh.rotation += 0.01;
+        });
+    });
+})();
+
+
+Pixel Line
+
+import { Application, Container, Graphics, Text } from 'pixi.js';
+
+/**
+ * Creates a grid pattern using Graphics lines
+ * @param graphics - The Graphics object to draw on
+ * @returns The Graphics object with the grid drawn
+ */
+function buildGrid(graphics)
+{
+    // Draw 10 vertical lines spaced 10 pixels apart
+    for (let i = 0; i < 11; i++)
+    {
+        // Move to top of each line (x = i*10, y = 0)
+        graphics
+            .moveTo(i * 10, 0)
+            // Draw down to bottom (x = i*10, y = 100)
+            .lineTo(i * 10, 100);
+    }
+
+    // Draw 10 horizontal lines spaced 10 pixels apart
+    for (let i = 0; i < 11; i++)
+    {
+        // Move to start of each line (x = 0, y = i*10)
+        graphics
+            .moveTo(0, i * 10)
+            // Draw across to end (x = 100, y = i*10)
+            .lineTo(100, i * 10);
+    }
+
+    return graphics;
+}
+
+(async () =>
+{
+    // Create and initialize a new PixiJS application
+    const app = new Application();
+
+    await app.init({ antialias: true, resizeTo: window });
+    document.body.appendChild(app.canvas);
+
+    // Create two grids - one with pixel-perfect lines and one without
+    const gridPixel = buildGrid(new Graphics()).stroke({ color: 0xffffff, pixelLine: true, width: 1 });
+
+    const grid = buildGrid(new Graphics()).stroke({ color: 0xffffff, pixelLine: false });
+
+    // Position the grids side by side
+    grid.x = -100;
+    grid.y = -50;
+    gridPixel.y = -50;
+
+    // Create a container to hold both grids
+    const container = new Container();
+
+    container.addChild(grid, gridPixel);
+
+    // Center the container on screen
+    container.x = app.screen.width / 2;
+    container.y = app.screen.height / 2;
+    app.stage.addChild(container);
+
+    // Animation variables
+    let count = 0;
+
+    // Add animation to scale the grids over time
+    app.ticker.add(() =>
+    {
+        count += 0.01;
+        container.scale = 1 + (Math.sin(count) + 1) * 2;
+    });
+
+    // Add descriptive label
+    const label = new Text({
+        text: 'Grid Comparison: Standard Lines (Left) vs Pixel-Perfect Lines (Right)',
+        style: { fill: 0xffffff },
+    });
+
+    // Position label in top-left corner
+    label.position.set(20, 20);
+    label.width = app.screen.width - 40;
+    label.scale.y = label.scale.x;
+    app.stage.addChild(label);
+})();
+
+
+Render Layer
+
+import { Application, Assets, Container, DisplacementFilter, RenderLayer, Sprite, TilingSprite } from 'pixi.js';
+import { Fish } from './Fish';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ width: 630, height: 410, antialias: true });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+    // move the canvas to the center of the screen
+    app.canvas.style.position = 'absolute';
+    app.canvas.style.top = `${window.innerHeight / 2 - app.canvas.height / 2}px`;
+    app.canvas.style.left = `${window.innerWidth / 2 - app.canvas.width / 2}px`;
+
+    // Load textures
+    await Assets.load([
+        `https://pixijs.com/assets/pond/displacement_BG.jpg`,
+        `https://pixijs.com/assets/pond/overlay.png`,
+        `https://pixijs.com/assets/pond/displacement_map.png`,
+        `https://pixijs.com/assets/pond/displacement_fish1.png`,
+        `https://pixijs.com/assets/pond/displacement_fish2.png`,
+    ]);
+
+    const background = Sprite.from('https://pixijs.com/assets/pond/displacement_BG.jpg');
+
+    const pondContainer = new Container();
+
+    pondContainer.addChild(background);
+
+    app.stage.addChild(pondContainer);
+
+    const displacementMap = Assets.get('https://pixijs.com/assets/pond/displacement_map.png');
+
+    displacementMap.source.wrapMode = 'repeat';
+
+    const displacementSprite = Sprite.from(displacementMap);
+    const displacementFilter = new DisplacementFilter(displacementSprite, 40);
+
+    pondContainer.addChild(displacementSprite);
+    pondContainer.filters = [displacementFilter];
+
+    const uiLayer = new RenderLayer();
+
+    const fishes = [];
+
+    const names = ['Alice', 'Bob', 'Caroline', 'David', 'Ellie', 'Frank', 'Gloria', 'Henry', 'Isabel', 'Jack'];
+    const textures = [
+        Assets.get('https://pixijs.com/assets/pond/displacement_fish1.png'),
+        Assets.get('https://pixijs.com/assets/pond/displacement_fish2.png')
+    ];
+
+    for (let i = 0; i < 10; i++)
+    {
+        const fish = new Fish(names[i % names.length], textures[i % textures.length]);
+
+        fishes.push(fish);
+        pondContainer.addChild(fish);
+
+        fish.x = Math.random() * 630;
+        fish.y = Math.random() * 410;
+
+        uiLayer.attach(fish.ui);
+    }
+
+    const waterOverlay = TilingSprite.from(Assets.get('https://pixijs.com/assets/pond/overlay.png'));
+
+    waterOverlay.width = 630;
+    waterOverlay.height = 410;
+
+    pondContainer.addChild(waterOverlay);
+
+    app.stage.addChild(uiLayer);
+
+    // Animate the mask
+    app.ticker.add(() =>
+    {
+        waterOverlay.tilePosition.x += 0.5;
+        waterOverlay.tilePosition.y += 0.5;
+
+        displacementSprite.x += 0.5;
+        displacementSprite.y += 0.5;
+
+        fishes.forEach((fish) => fish.update());
+    });
+})();
+
+
+EVENTS
+
+Click
+
+import { Application, Assets, SCALE_MODES, settings, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Set the texture's scale mode to nearest to preserve pixelation
+    texture.baseTexture.scaleMode = SCALE_MODES.NEAREST;
+
+    // Create the bunny sprite
+    const sprite = Sprite.from(texture);
+
+    // Set the initial position
+    sprite.anchor.set(0.5);
+    sprite.x = app.screen.width / 2;
+    sprite.y = app.screen.height / 2;
+
+    // Opt-in to interactivity
+    sprite.eventMode = 'static';
+
+    // Shows hand cursor
+    sprite.cursor = 'pointer';
+
+    // Pointers normalize touch and mouse (good for mobile and desktop)
+    sprite.on('pointerdown', onClick);
+
+    // Alternatively, use the mouse & touch events:
+    // sprite.on('click', onClick); // mouse-only
+    // sprite.on('tap', onClick); // touch-only
+
+    app.stage.addChild(sprite);
+
+    function onClick()
+    {
+        sprite.scale.x *= 1.25;
+        sprite.scale.y *= 1.25;
+    }
+})();
+
+
+Interactivity
+
+
+import { Application, Assets, Sprite, Texture } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load textures
+    await Assets.load([
+        'https://pixijs.com/assets/bg_button.jpg',
+        'https://pixijs.com/assets/button.png',
+        'https://pixijs.com/assets/button_down.png',
+        'https://pixijs.com/assets/button_over.png',
+    ]);
+
+    // Create a background...
+    const background = Sprite.from('https://pixijs.com/assets/bg_button.jpg');
+
+    background.width = app.screen.width;
+    background.height = app.screen.height;
+
+    // Add background to stage...
+    app.stage.addChild(background);
+
+    // Create some textures from an image path
+    const textureButton = Texture.from('https://pixijs.com/assets/button.png');
+    const textureButtonDown = Texture.from('https://pixijs.com/assets/button_down.png');
+    const textureButtonOver = Texture.from('https://pixijs.com/assets/button_over.png');
+
+    const buttons = [];
+
+    const buttonPositions = [175, 75, 655, 75, 410, 325, 150, 465, 685, 445];
+
+    for (let i = 0; i < 5; i++)
+    {
+        const button = new Sprite(textureButton);
+
+        button.anchor.set(0.5);
+        button.x = buttonPositions[i * 2];
+        button.y = buttonPositions[i * 2 + 1];
+
+        // Make the button interactive...
+        button.eventMode = 'static';
+        button.cursor = 'pointer';
+
+        button
+            // Mouse & touch events are normalized into
+            // the pointer* events for handling different
+            // button events.
+            .on('pointerdown', onButtonDown)
+            .on('pointerup', onButtonUp)
+            .on('pointerupoutside', onButtonUp)
+            .on('pointerover', onButtonOver)
+            .on('pointerout', onButtonOut);
+
+        // Use mouse-only events
+        // .on('mousedown', onButtonDown)
+        // .on('mouseup', onButtonUp)
+        // .on('mouseupoutside', onButtonUp)
+        // .on('mouseover', onButtonOver)
+        // .on('mouseout', onButtonOut)
+
+        // Use touch-only events
+        // .on('touchstart', onButtonDown)
+        // .on('touchend', onButtonUp)
+        // .on('touchendoutside', onButtonUp)
+
+        // Add it to the stage
+        app.stage.addChild(button);
+
+        // Add button to array
+        buttons.push(button);
+    }
+
+    // Set some silly values...
+    buttons[0].scale.set(1.2);
+    buttons[2].rotation = Math.PI / 10;
+    buttons[3].scale.set(0.8);
+    buttons[4].scale.set(0.8, 1.2);
+    buttons[4].rotation = Math.PI;
+
+    function onButtonDown()
+    {
+        this.isdown = true;
+        this.texture = textureButtonDown;
+        this.alpha = 1;
+    }
+
+    function onButtonUp()
+    {
+        this.isdown = false;
+        if (this.isOver)
+        {
+            this.texture = textureButtonOver;
+        }
+        else
+        {
+            this.texture = textureButton;
+        }
+    }
+
+    function onButtonOver()
+    {
+        this.isOver = true;
+        if (this.isdown)
+        {
+            return;
+        }
+        this.texture = textureButtonOver;
+    }
+
+    function onButtonOut()
+    {
+        this.isOver = false;
+        if (this.isdown)
+        {
+            return;
+        }
+        this.texture = textureButton;
+    }
+})();
+
+
+Dragging
+
+import { Application, Assets, SCALE_MODES, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Set the texture's scale mode to nearest to preserve pixelation
+    texture.baseTexture.scaleMode = SCALE_MODES.NEAREST;
+
+    for (let i = 0; i < 10; i++)
+    {
+        createBunny(Math.floor(Math.random() * app.screen.width), Math.floor(Math.random() * app.screen.height));
+    }
+
+    function createBunny(x, y)
+    {
+        // Create our little bunny friend..
+        const bunny = new Sprite(texture);
+
+        // Enable the bunny to be interactive... this will allow it to respond to mouse and touch events
+        bunny.eventMode = 'static';
+
+        // This button mode will mean the hand cursor appears when you roll over the bunny with your mouse
+        bunny.cursor = 'pointer';
+
+        // Center the bunny's anchor point
+        bunny.anchor.set(0.5);
+
+        // Make it a bit bigger, so it's easier to grab
+        bunny.scale.set(3);
+
+        // Setup events for mouse + touch using the pointer events
+        bunny.on('pointerdown', onDragStart, bunny);
+
+        // Move the sprite to its designated position
+        bunny.x = x;
+        bunny.y = y;
+
+        // Add it to the stage
+        app.stage.addChild(bunny);
+    }
+
+    let dragTarget = null;
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+    app.stage.on('pointerup', onDragEnd);
+    app.stage.on('pointerupoutside', onDragEnd);
+
+    function onDragMove(event)
+    {
+        if (dragTarget)
+        {
+            dragTarget.parent.toLocal(event.global, null, dragTarget.position);
+        }
+    }
+
+    function onDragStart()
+    {
+        // Store a reference to the data
+        // * The reason for this is because of multitouch *
+        // * We want to track the movement of this particular touch *
+        this.alpha = 0.5;
+        dragTarget = this;
+        app.stage.on('pointermove', onDragMove);
+    }
+
+    function onDragEnd()
+    {
+        if (dragTarget)
+        {
+            app.stage.off('pointermove', onDragMove);
+            dragTarget.alpha = 1;
+            dragTarget = null;
+        }
+    }
+})();
+
+
+Custom Mouse Icon
+
+import { Application, Assets, Sprite, Texture } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // CSS style for icons
+    const defaultIcon = 'url(\'https://pixijs.com/assets/bunny.png\'),auto';
+    const hoverIcon = 'url(\'https://pixijs.com/assets/bunny_saturated.png\'),auto';
+
+    // Load textures
+    await Assets.load([
+        'https://pixijs.com/assets/bg_button.jpg',
+        'https://pixijs.com/assets/button.png',
+        'https://pixijs.com/assets/button_down.png',
+        'https://pixijs.com/assets/button_over.png',
+    ]);
+
+    // Add custom cursor styles
+    app.renderer.events.cursorStyles.default = defaultIcon;
+    app.renderer.events.cursorStyles.hover = hoverIcon;
+
+    // Create a background...
+    const background = Sprite.from('https://pixijs.com/assets/bg_button.jpg');
+
+    background.width = app.screen.width;
+    background.height = app.screen.height;
+
+    // Add background to stage...
+    app.stage.addChild(background);
+
+    // Create some textures from an image path
+    const textureButton = Texture.from('https://pixijs.com/assets/button.png');
+    const textureButtonDown = Texture.from('https://pixijs.com/assets/button_down.png');
+    const textureButtonOver = Texture.from('https://pixijs.com/assets/button_over.png');
+
+    const buttons = [];
+
+    const buttonPositions = [175, 75, 655, 75, 410, 325, 150, 465, 685, 445];
+
+    for (let i = 0; i < 5; i++)
+    {
+        const button = new Sprite(textureButton);
+
+        button.cursor = 'hover';
+
+        button.anchor.set(0.5);
+        button.x = buttonPositions[i * 2];
+        button.y = buttonPositions[i * 2 + 1];
+
+        // Make the button interactive...
+        button.eventMode = 'static';
+
+        button
+            .on('pointerdown', onButtonDown)
+            .on('pointerup', onButtonUp)
+            .on('pointerupoutside', onButtonUp)
+            .on('pointerover', onButtonOver)
+            .on('pointerout', onButtonOut);
+
+        // Add it to the stage
+        app.stage.addChild(button);
+
+        // Add button to array
+        buttons.push(button);
+    }
+
+    // Set some silly values...
+    buttons[0].scale.set(1.2);
+    buttons[2].rotation = Math.PI / 10;
+    buttons[3].scale.set(0.8);
+    buttons[4].scale.set(0.8, 1.2);
+    buttons[4].rotation = Math.PI;
+
+    function onButtonDown()
+    {
+        this.isdown = true;
+        this.texture = textureButtonDown;
+        this.alpha = 1;
+    }
+
+    function onButtonUp()
+    {
+        this.isdown = false;
+        if (this.isOver)
+        {
+            this.texture = textureButtonOver;
+        }
+        else
+        {
+            this.texture = textureButton;
+        }
+    }
+
+    function onButtonOver()
+    {
+        this.isOver = true;
+        if (this.isdown)
+        {
+            return;
+        }
+        this.texture = textureButtonOver;
+    }
+
+    function onButtonOut()
+    {
+        this.isOver = false;
+        if (this.isdown)
+        {
+            return;
+        }
+        this.texture = textureButton;
+    }
+})();
+
+
+Custom Hitarea
+
+import { Application, Assets, Graphics, Polygon, Sprite, Text, TextStyle } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the star texture
+    const starTexture = await Assets.load('https://pixijs.com/assets/yellowstar.png');
+
+    // Standard Sprite Button
+    const starButton1 = new Sprite(starTexture);
+
+    starButton1.position.set(50, 200);
+    starButton1.cursor = 'pointer';
+    starButton1.eventMode = 'static';
+
+    starButton1
+        .on('pointerdown', onClick, starButton1)
+        .on('pointerover', onPointerOver, starButton1)
+        .on('pointerout', onPointerOut, starButton1);
+
+    // Custom Hitarea Button
+    const starButton2 = new Sprite(starTexture);
+
+    starButton2.position.set(250, 200);
+
+    // Create a hitarea that matches the sprite, which will be used for point intersection
+    starButton2.hitArea = new Polygon([80, 0, 100, 50, 160, 55, 115, 95, 130, 150, 80, 120, 30, 150, 45, 95, 0, 55, 60, 50]);
+    starButton2.cursor = 'pointer';
+    starButton2.eventMode = 'static';
+
+    starButton2
+        .on('pointerdown', onClick, starButton2)
+        .on('pointerover', onPointerOver, starButton2)
+        .on('pointerout', onPointerOut, starButton2);
+
+    // With Mask, No Hit Area
+    const starButton3 = new Sprite(starTexture);
+
+    starButton3.position.set(450, 200);
+    starButton3.cursor = 'pointer';
+    starButton3.eventMode = 'static';
+
+    const squareMask = new Graphics().rect(starButton3.x, starButton3.y, 75, 200).fill({ color: 0xffffff });
+
+    starButton3.mask = squareMask;
+
+    starButton3
+        .on('pointerdown', onClick, starButton3)
+        .on('pointerover', onPointerOver, starButton3)
+        .on('pointerout', onPointerOut, starButton3);
+
+    // With a Mask and Hit Area
+    // Hitareas ignore masks. You can still click on a button made in this way,
+    // even from areas covered by a mask
+    const starButton4 = new Sprite(starTexture);
+
+    starButton4.position.set(600, 200);
+
+    const squareMask2 = new Graphics().rect(starButton4.x, starButton4.y, 75, 200).fill({ color: 0xffffff });
+
+    starButton4.mask = squareMask2;
+
+    // Again, hitarea for intersection checks
+    starButton4.hitArea = new Polygon([80, 0, 100, 50, 160, 55, 115, 95, 130, 150, 80, 120, 30, 150, 45, 95, 0, 55, 60, 50]);
+    starButton4.cursor = 'pointer';
+    starButton4.eventMode = 'static';
+
+    starButton4
+        .on('pointerdown', onClick, starButton4)
+        .on('pointerover', onPointerOver, starButton4)
+        .on('pointerout', onPointerOut, starButton4);
+
+    const style = new TextStyle({ fill: '#ffffff' });
+
+    const text1 = new Text({ text: 'Standard', style });
+
+    text1.x = starButton1.x + 25;
+    text1.y = starButton1.y + 170;
+
+    const text2 = new Text({ text: 'Hit Area', style });
+
+    text2.x = starButton2.x + 35;
+    text2.y = starButton2.y + 170;
+
+    const text3 = new Text({ text: 'Mask', style });
+
+    text3.x = starButton3.x + 10;
+    text3.y = starButton3.y + 170;
+
+    const text4 = new Text({ text: 'Mask + Hit Area', style });
+
+    text4.x = starButton4.x - 10;
+    text4.y = starButton4.y + 170;
+
+    // Add to stage
+    app.stage.addChild(
+        starButton2,
+        starButton1,
+        starButton3,
+        starButton4,
+        squareMask,
+        squareMask2,
+        text1,
+        text2,
+        text3,
+        text4,
+    );
+
+    function onClick()
+    {
+        this.tint = 0x333333;
+    }
+
+    function onPointerOver()
+    {
+        this.tint = 0x666666;
+    }
+
+    function onPointerOut()
+    {
+        this.tint = 0xffffff;
+    }
+})();
+
+
+Logger
+
+import { Application, Assets, Graphics, Text } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const title = app.stage.addChild(
+        new Text({
+            text: `Move your mouse slowly over the boxes to
+        see the order of pointerenter, pointerleave,
+        pointerover, pointerout events on each target!`,
+            style: {
+                fontSize: 16,
+            },
+        }),
+    );
+
+    title.x = 2;
+
+    const logs = [];
+    const logText = app.stage.addChild(
+        new Text({
+            text: '',
+            style: {
+                fontSize: 14,
+            },
+        }),
+    );
+
+    logText.y = 80;
+    logText.x = 2;
+
+    app.stage.name = 'stage';
+
+    // Mount outer black box
+    const blackBox = app.stage.addChild(new Graphics().rect(0, 0, 400, 400).fill({ color: 0 }));
+
+    blackBox.name = 'black box';
+    blackBox.x = 400;
+
+    // Mount white box inside the white one
+    const whiteBox = blackBox.addChild(new Graphics().rect(100, 100, 200, 200).fill({ color: 0xffffff }));
+
+    whiteBox.name = 'white box';
+
+    // Enable interactivity everywhere!
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+    whiteBox.eventMode = 'static';
+    blackBox.eventMode = 'static';
+
+    function onEvent(e)
+    {
+        const type = e.type;
+        const targetName = e.target.name;
+        const currentTargetName = e.currentTarget.name;
+
+        // Add event to top of logs
+        logs.push(`${currentTargetName} received ${type} event (target is ${targetName})`);
+
+        if (currentTargetName === 'stage' || type === 'pointerenter' || type === 'pointerleave')
+        {
+            logs.push('-----------------------------------------', '');
+        }
+
+        // Prevent logs from growing too long
+        if (logs.length > 30)
+        {
+            while (logs.length > 30)
+            {
+                logs.shift();
+            }
+        }
+
+        // Update logText
+        logText.text = logs.join('\n');
+    }
+
+    [app.stage, whiteBox, blackBox].forEach((object) =>
+    {
+        object.addEventListener('pointerenter', onEvent);
+        object.addEventListener('pointerleave', onEvent);
+        object.addEventListener('pointerover', onEvent);
+        object.addEventListener('pointerout', onEvent);
+    });
+})();
+
+
+Pointer Tracker
+
+import { Application, Graphics } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Create the circle
+    const circle = app.stage.addChild(
+        new Graphics().circle(0, 0, 8).fill({ color: 0xffffff }).stroke({ color: 0x111111, alpha: 0.87, width: 1 }),
+    );
+
+    circle.position.set(app.screen.width / 2, app.screen.height / 2);
+
+    // Enable interactivity!
+    app.stage.eventMode = 'static';
+
+    // Make sure the whole canvas area is interactive, not just the circle.
+    app.stage.hitArea = app.screen;
+
+    // Follow the pointer
+    app.stage.addEventListener('pointermove', (e) =>
+    {
+        circle.position.copyFrom(e.global);
+    });
+})();
+
+
+Slider
+
+import { Application, Assets, Graphics, SCALE_MODES, Sprite, Text } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const stageHeight = app.screen.height;
+    const stageWidth = app.screen.width;
+
+    // Make sure stage covers the whole scene
+    app.stage.hitArea = app.screen;
+
+    // Make the slider
+    const sliderWidth = 320;
+    const slider = new Graphics().rect(0, 0, sliderWidth, 4).fill({ color: 0x272d37 });
+
+    slider.x = (stageWidth - sliderWidth) / 2;
+    slider.y = stageHeight * 0.75;
+
+    // Draw the handle
+    const handle = new Graphics().circle(0, 0, 8).fill({ color: 0xffffff });
+
+    handle.y = slider.height / 2;
+    handle.x = sliderWidth / 2;
+    handle.eventMode = 'static';
+    handle.cursor = 'pointer';
+
+    handle.on('pointerdown', onDragStart).on('pointerup', onDragEnd).on('pointerupoutside', onDragEnd);
+
+    app.stage.addChild(slider);
+    slider.addChild(handle);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Add bunny whose scale can be changed by user using slider
+    const bunny = app.stage.addChild(Sprite.from(texture));
+
+    bunny.texture.baseTexture.scaleMode = SCALE_MODES.NEAREST;
+    bunny.scale.set(3);
+    bunny.anchor.set(0.5);
+    bunny.x = stageWidth / 2;
+    bunny.y = stageHeight / 2;
+
+    // Add title
+    const title = new Text({
+        text: 'Drag the handle to change the scale of bunny.',
+        style: {
+            fill: '#272d37',
+            fontFamily: 'Roboto',
+            fontSize: 20,
+            align: 'center',
+        },
+    });
+
+    title.roundPixels = true;
+    title.x = stageWidth / 2;
+    title.y = 40;
+    title.anchor.set(0.5, 0);
+    app.stage.addChild(title);
+
+    // Listen to pointermove on stage once handle is pressed.
+    function onDragStart()
+    {
+        app.stage.eventMode = 'static';
+        app.stage.addEventListener('pointermove', onDrag);
+    }
+
+    // Stop dragging feedback once the handle is released.
+    function onDragEnd(e)
+    {
+        app.stage.eventMode = 'auto';
+        app.stage.removeEventListener('pointermove', onDrag);
+    }
+
+    // Update the handle's position & bunny's scale when the handle is moved.
+    function onDrag(e)
+    {
+        const halfHandleWidth = handle.width / 2;
+        // Set handle y-position to match pointer, clamped to (4, screen.height - 4).
+
+        handle.x = Math.max(halfHandleWidth, Math.min(slider.toLocal(e.global).x, sliderWidth - halfHandleWidth));
+        // Normalize handle position between -1 and 1.
+        const t = 2 * (handle.x / sliderWidth - 0.5);
+
+        bunny.scale.set(3 * (1.1 + t));
+    }
+})();
+
+
+MASKS
+
+Graphics
+
+import { Application, Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ antialias: true, resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    app.stage.eventMode = 'static';
+
+    // Load textures
+    await Assets.load([
+        'https://pixijs.com/assets/bg_rotate.jpg',
+        'https://pixijs.com/assets/bg_scene_rotate.jpg',
+        'https://pixijs.com/assets/light_rotate_2.png',
+        'https://pixijs.com/assets/light_rotate_1.png',
+        'https://pixijs.com/assets/panda.png',
+    ]);
+
+    const bg = Sprite.from('https://pixijs.com/assets/bg_rotate.jpg');
+
+    bg.anchor.set(0.5);
+
+    bg.x = app.screen.width / 2;
+    bg.y = app.screen.height / 2;
+
+    app.stage.addChild(bg);
+
+    const container = new Container();
+
+    container.x = app.screen.width / 2;
+    container.y = app.screen.height / 2;
+
+    // Add a bunch of sprites
+    const bgFront = Sprite.from('https://pixijs.com/assets/bg_scene_rotate.jpg');
+
+    bgFront.anchor.set(0.5);
+
+    const light2 = Sprite.from('https://pixijs.com/assets/light_rotate_2.png');
+
+    light2.anchor.set(0.5);
+
+    const light1 = Sprite.from('https://pixijs.com/assets/light_rotate_1.png');
+
+    light1.anchor.set(0.5);
+
+    const panda = Sprite.from('https://pixijs.com/assets/panda.png');
+
+    panda.anchor.set(0.5);
+
+    container.addChild(bgFront, light2, light1, panda);
+
+    app.stage.addChild(container);
+
+    // Let's create a moving shape mask
+    const thing = new Graphics();
+
+    app.stage.addChild(thing);
+    thing.x = app.screen.width / 2;
+    thing.y = app.screen.height / 2;
+
+    container.mask = thing;
+
+    let count = 0;
+
+    app.stage.on('pointertap', () =>
+    {
+        if (!container.mask)
+        {
+            container.mask = thing;
+        }
+        else
+        {
+            container.mask = null;
+        }
+    });
+
+    const help = new Text({
+        text: 'Click or tap to turn masking on / off.',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: 12,
+            fontWeight: 'bold',
+            fill: 'white',
+        },
+    });
+
+    help.y = app.screen.height - 26;
+    help.x = 10;
+    app.stage.addChild(help);
+
+    // Animate the mask
+    app.ticker.add(() =>
+    {
+        bg.rotation += 0.01;
+        bgFront.rotation -= 0.01;
+
+        light1.rotation += 0.02;
+        light2.rotation += 0.01;
+
+        panda.scale.x = 1 + Math.sin(count) * 0.04;
+        panda.scale.y = 1 + Math.cos(count) * 0.04;
+
+        count += 0.1;
+
+        thing.clear();
+        thing.moveTo(-120 + Math.sin(count) * 20, -100 + Math.cos(count) * 20);
+        thing.lineTo(120 + Math.cos(count) * 20, -100 + Math.sin(count) * 20);
+        thing.lineTo(120 + Math.sin(count) * 20, 100 + Math.cos(count) * 20);
+        thing.lineTo(-120 + Math.cos(count) * 20, 100 + Math.sin(count) * 20);
+        thing.fill({ color: 0x8bc5ff, alpha: 0.4 });
+        thing.rotation = count * 0.1;
+    });
+})();
+
+
+Sprite
+
+import { Application, Assets, Point, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load textures
+    await Assets.load([
+        'https://pixijs.com/assets/bg_plane.jpg',
+        'https://pixijs.com/assets/cells.png',
+        'https://pixijs.com/assets/flowerTop.png',
+    ]);
+
+    app.stage.eventMode = 'static';
+
+    const bg = Sprite.from('https://pixijs.com/assets/bg_plane.jpg');
+
+    app.stage.addChild(bg);
+
+    const cells = Sprite.from('https://pixijs.com/assets/cells.png');
+
+    cells.scale.set(1.5);
+
+    const mask = Sprite.from('https://pixijs.com/assets/flowerTop.png');
+
+    mask.anchor.set(0.5);
+    mask.x = 310;
+    mask.y = 190;
+
+    cells.mask = mask;
+
+    app.stage.addChild(mask, cells);
+
+    const target = new Point();
+
+    reset();
+
+    function reset()
+    {
+        target.x = Math.floor(Math.random() * 550);
+        target.y = Math.floor(Math.random() * 300);
+    }
+
+    // Animate the mask
+    app.ticker.add(() =>
+    {
+        mask.x += (target.x - mask.x) * 0.1;
+        mask.y += (target.y - mask.y) * 0.1;
+
+        if (Math.abs(mask.x - target.x) < 1)
+        {
+            reset();
+        }
+    });
+})();
+
+
+Filter
+
+import { Application, Assets, BlurFilter, Graphics, Rectangle, SCALE_MODES, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Inner radius of the circle
+    const radius = 100;
+
+    // The blur amount
+    const blurSize = 32;
+
+    // Load the grass texture
+    const grassTexture = await Assets.load('https://pixijs.com/assets/bg_grass.jpg');
+
+    // Create the grass background
+    const background = new Sprite(grassTexture);
+
+    app.stage.addChild(background);
+    background.width = app.screen.width;
+    background.height = app.screen.height;
+
+    const circle = new Graphics().circle(radius + blurSize, radius + blurSize, radius).fill({ color: 0xff0000 });
+
+    circle.filters = [new BlurFilter(blurSize)];
+
+    const bounds = new Rectangle(0, 0, (radius + blurSize) * 2, (radius + blurSize) * 2);
+    const texture = app.renderer.generateTexture({
+        target: circle,
+        style: { scaleMode: SCALE_MODES.NEAREST },
+        resolution: 1,
+        frame: bounds,
+    });
+    const focus = new Sprite(texture);
+
+    app.stage.addChild(focus);
+
+    background.mask = focus;
+
+    app.stage.eventMode = 'static';
+    app.stage.hitArea = app.screen;
+    app.stage.on('pointermove', (event) =>
+    {
+        focus.position.x = event.global.x - focus.width / 2;
+        focus.position.y = event.global.y - focus.height / 2;
+    });
+})();
+
+
+Inverse Mask
+
+import { Application, Graphics } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const rect = new Graphics().rect(0, 0, 400, 400).fill('red');
+    const masky = new Graphics().star(160, 160, 5, 100).fill('yellow');
+
+    masky.width = 240;
+    masky.height = 240;
+
+    rect.setMask({
+        mask: masky,
+        inverse: true,
+    });
+
+    app.stage.addChild(rect, masky);
+    app.stage.position.set(window.innerWidth / 2 - 200, window.innerHeight / 2 - 200);
+})();
+
+
+FILTER BASIC
+
+import { Application, Assets, BlurFilter, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the textures
+    await Assets.load([
+        'https://pixijs.com/assets/pixi-filters/bg_depth_blur.jpg',
+        'https://pixijs.com/assets/pixi-filters/depth_blur_dudes.jpg',
+        'https://pixijs.com/assets/pixi-filters/depth_blur_moby.jpg',
+    ]);
+
+    const bg = Sprite.from('https://pixijs.com/assets/pixi-filters/bg_depth_blur.jpg');
+
+    bg.width = app.screen.width;
+    bg.height = app.screen.height;
+    app.stage.addChild(bg);
+
+    const littleDudes = Sprite.from('https://pixijs.com/assets/pixi-filters/depth_blur_dudes.jpg');
+
+    littleDudes.x = app.screen.width / 2 - 315;
+    littleDudes.y = 200;
+    app.stage.addChild(littleDudes);
+
+    const littleRobot = Sprite.from('https://pixijs.com/assets/pixi-filters/depth_blur_moby.jpg');
+
+    littleRobot.x = app.screen.width / 2 - 200;
+    littleRobot.y = 100;
+    app.stage.addChild(littleRobot);
+
+    // Create the blur filters
+    const blurFilter1 = new BlurFilter();
+    const blurFilter2 = new BlurFilter();
+
+    // Apply the filters to the sprites
+    littleDudes.filters = [blurFilter1];
+    littleRobot.filters = [blurFilter2];
+
+    let count = 0;
+
+    // Animate the blur filters
+    app.ticker.add(() =>
+    {
+        count += 0.005;
+
+        const blurAmount = Math.cos(count);
+        const blurAmount2 = Math.sin(count);
+
+        blurFilter1.blur = 20 * blurAmount;
+        blurFilter2.blur = 20 * blurAmount2;
+    });
+})();
+
+
+Color Matrix
+
+import { Application, Assets, ColorMatrixFilter, Container, Sprite, Text } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the textures
+    await Assets.load([
+        'https://pixijs.com/assets/bg_rotate.jpg',
+        'https://pixijs.com/assets/bg_scene_rotate.jpg',
+        'https://pixijs.com/assets/light_rotate_2.png',
+        'https://pixijs.com/assets/light_rotate_1.png',
+        'https://pixijs.com/assets/panda.png',
+    ]);
+
+    app.stage.eventMode = 'static';
+
+    const bg = Sprite.from('https://pixijs.com/assets/bg_rotate.jpg');
+
+    bg.anchor.set(0.5);
+
+    bg.x = app.screen.width / 2;
+    bg.y = app.screen.height / 2;
+
+    const container = new Container();
+
+    container.x = app.screen.width / 2;
+    container.y = app.screen.height / 2;
+
+    const bgFront = Sprite.from('https://pixijs.com/assets/bg_scene_rotate.jpg');
+
+    bgFront.anchor.set(0.5);
+
+    container.addChild(bgFront);
+
+    const light2 = Sprite.from('https://pixijs.com/assets/light_rotate_2.png');
+
+    light2.anchor.set(0.5);
+    container.addChild(light2);
+
+    const light1 = Sprite.from('https://pixijs.com/assets/light_rotate_1.png');
+
+    light1.anchor.set(0.5);
+    container.addChild(light1);
+
+    const panda = Sprite.from('https://pixijs.com/assets/panda.png');
+
+    panda.anchor.set(0.5);
+
+    container.addChild(panda);
+
+    app.stage.addChild(container);
+
+    // Create a color matrix filter
+    const filter = new ColorMatrixFilter();
+
+    // Apply the Filter
+    container.filters = [filter];
+
+    let count = 0;
+    let enabled = true;
+
+    app.stage.on('pointertap', () =>
+    {
+        enabled = !enabled;
+        container.filters = enabled ? [filter] : null;
+    });
+
+    const help = new Text({
+        text: 'Click or tap to turn filters on / off.',
+        style: {
+            fontFamily: 'Arial',
+            fontSize: 12,
+            fontWeight: 'bold',
+            fill: 'white',
+        },
+    });
+
+    help.y = app.screen.height - 25;
+    help.x = 10;
+
+    app.stage.addChild(help);
+
+    app.ticker.add(() =>
+    {
+        bg.rotation += 0.01;
+        bgFront.rotation -= 0.01;
+        light1.rotation += 0.02;
+        light2.rotation += 0.01;
+
+        panda.scale.x = 1 + Math.sin(count) * 0.04;
+        panda.scale.y = 1 + Math.cos(count) * 0.04;
+
+        count += 0.1;
+
+        // Animate the filter
+        const { matrix } = filter;
+
+        matrix[1] = Math.sin(count) * 3;
+        matrix[2] = Math.cos(count);
+        matrix[3] = Math.cos(count) * 1.5;
+        matrix[4] = Math.sin(count / 3) * 2;
+        matrix[5] = Math.sin(count / 2);
+        matrix[6] = Math.sin(count / 4);
+    });
+})();
+
+
+Displacement Map Crawlies
+
+import { Application, Assets, Container, DisplacementFilter, Point, Rectangle, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the textures
+    await Assets.load([
+        'https://pixijs.com/assets/maggot.png',
+        'https://pixijs.com/assets/pixi-filters/displace.png',
+        'https://pixijs.com/assets/pixi-filters/ring.png',
+        'https://pixijs.com/assets/bg_grass.jpg',
+    ]);
+
+    app.stage.eventMode = 'static';
+
+    const container = new Container();
+
+    app.stage.addChild(container);
+
+    const padding = 100;
+    const bounds = new Rectangle(-padding, -padding, app.screen.width + padding * 2, app.screen.height + padding * 2);
+    const maggots = [];
+
+    for (let i = 0; i < 20; i++)
+    {
+        const maggot = Sprite.from('https://pixijs.com/assets/maggot.png');
+
+        maggot.anchor.set(0.5);
+        container.addChild(maggot);
+
+        maggot.direction = Math.random() * Math.PI * 2;
+        maggot.speed = 1;
+        maggot.turnSpeed = Math.random() - 0.8;
+
+        maggot.x = Math.random() * bounds.width;
+        maggot.y = Math.random() * bounds.height;
+
+        maggot.scale.set(1 + Math.random() * 0.3);
+        maggot.original = new Point();
+        maggot.original.copyFrom(maggot.scale);
+        maggots.push(maggot);
+    }
+
+    const displacementSprite = Sprite.from('https://pixijs.com/assets/pixi-filters/displace.png');
+
+    // Create a displacement filter
+    const displacementFilter = new DisplacementFilter({ sprite: displacementSprite, scale: 150 });
+
+    app.stage.addChild(displacementSprite);
+
+    // Apply the filter
+    container.filters = [displacementFilter];
+
+    displacementSprite.anchor.set(0.5);
+
+    const ring = Sprite.from('https://pixijs.com/assets/pixi-filters/ring.png');
+
+    ring.anchor.set(0.5);
+
+    ring.visible = false;
+
+    app.stage.addChild(ring);
+
+    const bg = Sprite.from('https://pixijs.com/assets/bg_grass.jpg');
+
+    bg.width = app.screen.width;
+    bg.height = app.screen.height;
+
+    bg.alpha = 0.4;
+
+    container.addChild(bg);
+
+    app.stage.on('mousemove', onPointerMove).on('touchmove', onPointerMove);
+
+    function onPointerMove(eventData)
+    {
+        ring.visible = true;
+
+        displacementSprite.position.set(eventData.data.global.x - 25, eventData.data.global.y);
+        ring.position.copyFrom(displacementSprite.position);
+    }
+
+    let count = 0;
+
+    // Animate the maggots
+    app.ticker.add(() =>
+    {
+        count += 0.05;
+
+        for (let i = 0; i < maggots.length; i++)
+        {
+            const maggot = maggots[i];
+
+            maggot.direction += maggot.turnSpeed * 0.01;
+            maggot.x += Math.sin(maggot.direction) * maggot.speed;
+            maggot.y += Math.cos(maggot.direction) * maggot.speed;
+
+            maggot.rotation = -maggot.direction - Math.PI / 2;
+            maggot.scale.x = maggot.original.x + Math.sin(count) * 0.2;
+
+            // wrap the maggots around as the crawl
+            if (maggot.x < bounds.x)
+            {
+                maggot.x += bounds.width;
+            }
+            else if (maggot.x > bounds.x + bounds.width)
+            {
+                maggot.x -= bounds.width;
+            }
+
+            if (maggot.y < bounds.y)
+            {
+                maggot.y += bounds.height;
+            }
+            else if (maggot.y > bounds.y + bounds.height)
+            {
+                maggot.y -= bounds.height;
+            }
+        }
+    });
+})();
+
+Displacement Map Flag
+
+import { Application, Assets, Container, DisplacementFilter, Sprite, WRAP_MODES } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the textures
+    await Assets.load([
+        'https://pixijs.com/assets/pixi-filters/flag.png',
+        'https://pixijs.com/assets/pixi-filters/displacement_map_repeat.jpg',
+    ]);
+
+    app.stage.eventMode = 'static';
+
+    const container = new Container();
+
+    app.stage.addChild(container);
+
+    const flag = Sprite.from('https://pixijs.com/assets/pixi-filters/flag.png');
+
+    container.addChild(flag);
+    flag.x = 100;
+    flag.y = 100;
+
+    const displacementSprite = Sprite.from('https://pixijs.com/assets/pixi-filters/displacement_map_repeat.jpg');
+
+    // Make sure the sprite is wrapping.
+    displacementSprite.texture.baseTexture.wrapMode = WRAP_MODES.REPEAT;
+
+    // Create a displacement filter
+    const displacementFilter = new DisplacementFilter({ sprite: displacementSprite, scale: { x: 60, y: 120 } });
+
+    displacementFilter.padding = 10;
+
+    displacementSprite.position = flag.position;
+
+    app.stage.addChild(displacementSprite);
+
+    // Apply the filter
+    flag.filters = [displacementFilter];
+
+    app.ticker.add(() =>
+    {
+        // Offset the sprite position to make vFilterCoord update to larger value.
+        // Repeat wrapping makes sure there's still pixels on the coordinates.
+        displacementSprite.x++;
+        // Reset x to 0 when it's over width to keep values from going to very huge numbers.
+        if (displacementSprite.x > displacementSprite.width)
+        {
+            displacementSprite.x = 0;
+        }
+    });
+})();
+
+FILTER ADVANCED
+
+Mouse Blending
+
+import { Application, Assets, Container, Filter, GlProgram, Point, Rectangle, Sprite } from 'pixi.js';
+import fragment from './mouseBlending.frag';
+import vertex from './mouseBlending.vert';
+
+/**
+ * https://github.com/pixijs/pixi.js/wiki/v5-Creating-Filters
+ */
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ preference: 'webgl', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the grass texture
+    const texture = await Assets.load('https://pixijs.com/assets/bg_grass.jpg');
+
+    // Create background image
+    const background = new Sprite(texture);
+
+    background.width = app.screen.width;
+    background.height = app.screen.height;
+    app.stage.addChild(background);
+
+    // NOTE: this shader wont work on old devices where mediump precision is forced in fragment shader
+    // because v5 default vertex shader uses `inputSize` in it. Same uniform in fragment and vertex shader
+    // cant have different precision :(
+
+    const container = new Container();
+
+    container.filterArea = new Rectangle(100, 100, app.screen.width - 200, app.screen.height - 200);
+    app.stage.addChild(container);
+
+    const filter = new Filter({
+        glProgram: new GlProgram({ vertex, fragment }),
+        resources: {
+            localUniforms: {
+                uMouse: { value: new Point(), type: 'vec2<f32>' },
+            },
+        },
+    });
+
+    container.filters = [filter];
+
+    app.stage.hitArea = app.screen;
+    app.stage.eventMode = 'static';
+    app.stage.on('pointermove', (event) =>
+    {
+        filter.resources.localUniforms.uniforms.uMouse.copyFrom(event.global);
+    });
+})();
+
+
+Custom
+
+import { Application, Assets, Filter, GlProgram, Sprite } from 'pixi.js';
+import fragment from './custom.frag';
+import vertex from './custom.vert';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        resizeTo: window,
+        hello: true,
+        preference: 'webgl',
+    });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the texture
+    const texture = await Assets.load('https://pixijs.com/assets/bg_grass.jpg');
+
+    // Create background image
+    const background = Sprite.from(texture);
+
+    background.width = app.screen.width;
+    background.height = app.screen.height;
+    app.stage.addChild(background);
+
+    // Create the new filter, arguments: (vertexShader, framentSource)
+    const filter = new Filter({
+        glProgram: new GlProgram({
+            fragment,
+            vertex,
+        }),
+        resources: {
+            timeUniforms: {
+                uTime: { value: 0.0, type: 'f32' },
+            },
+        },
+    });
+
+    // === WARNING ===
+    // specify uniforms in filter constructor
+    // or set them BEFORE first use
+    // filter.uniforms.customUniform = 0.0
+
+    // Add the filter
+    background.filters = [filter];
+
+    // Animate the filter
+    app.ticker.add((ticker) =>
+    {
+        filter.resources.timeUniforms.uniforms.uTime += 0.04 * ticker.deltaTime;
+    });
+})();
+
+
+MESH AND SHADERS
+
+Perspective Mesh
+
+import { Application, Assets, PerspectiveMesh } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const texture = await Assets.load({
+        src: 'https://pixijs.com/assets/eggHead.png',
+    });
+
+    const points = [
+        { x: 0, y: 0 },
+        { x: texture.width, y: 0 },
+        { x: texture.width, y: texture.height },
+        { x: 0, y: texture.height },
+    ];
+
+    const outPoints = points.map((p) => ({ ...p }));
+
+    const mesh = app.stage.addChild(
+        new PerspectiveMesh({
+            texture,
+            pivot: {
+                x: texture.width / 2,
+                y: texture.height / 2,
+            },
+            x: app.screen.width / 2,
+            y: app.screen.height / 2,
+            width: texture.width,
+            height: texture.height,
+        }),
+    );
+
+    mesh.scale = 2;
+
+    let angleX = 0;
+    let angleY = 0;
+
+    // Function to apply 3D rotation to the points
+    function rotate3D(points, outPoints, angleX, angleY, perspective)
+    {
+        const radX = (angleX * Math.PI) / 180;
+        const radY = (angleY * Math.PI) / 180;
+        const cosX = Math.cos(radX);
+        const sinX = Math.sin(radX);
+        const cosY = Math.cos(radY);
+        const sinY = Math.sin(radY);
+
+        for (let i = 0; i < points.length; i++)
+        {
+            const src = points[i];
+            const out = outPoints[i];
+            const x = src.x - texture.width / 2;
+            const y = src.y - texture.height / 2;
+            let z = 0; // Assume initial z is 0 for this 2D plane
+
+            // Rotate around Y axis
+            const xY = cosY * x - sinY * z;
+
+            z = sinY * x + cosY * z;
+
+            // Rotate around X axis
+            const yX = cosX * y - sinX * z;
+
+            z = sinX * y + cosX * z;
+
+            // Apply perspective projection
+            const scale = perspective / (perspective - z);
+
+            out.x = xY * scale + texture.width / 2;
+            out.y = yX * scale + texture.height / 2;
+        }
+    }
+
+    app.ticker.add(() =>
+    {
+        rotate3D(points, outPoints, angleX, angleY, 300);
+        mesh.setCorners(
+            outPoints[0].x,
+            outPoints[0].y,
+            outPoints[1].x,
+            outPoints[1].y,
+            outPoints[2].x,
+            outPoints[2].y,
+            outPoints[3].x,
+            outPoints[3].y,
+        );
+    });
+
+    app.stage.hitArea = app.screen;
+    app.stage.eventMode = 'static';
+    app.stage.on('pointermove', (e) =>
+    {
+        const { x, y } = e.global;
+
+        angleY = -(x - mesh.x) / 10;
+        angleX = -(y - mesh.y) / 10;
+    });
+})();
+
+
+Textured Mesh Basic
+
+import { Application, Assets, Container, MeshRope, Point } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the snake texture
+    const texture = await Assets.load('https://pixijs.com/assets/snake.png');
+
+    let count = 0;
+
+    // Build a rope from points!
+    const ropeLength = 918 / 20;
+    const points = [];
+
+    for (let i = 0; i < 20; i++)
+    {
+        points.push(new Point(i * ropeLength, 0));
+    }
+
+    // Create the snake MeshRope
+    const strip = new MeshRope({ texture, points });
+
+    strip.x = -459;
+
+    const snakeContainer = new Container();
+
+    snakeContainer.x = 400;
+    snakeContainer.y = 300;
+
+    snakeContainer.scale.set(800 / 1100);
+    app.stage.addChild(snakeContainer);
+
+    snakeContainer.addChild(strip);
+
+    // Animate the rope points
+    app.ticker.add(() =>
+    {
+        count += 0.1;
+
+        // make the snake
+        for (let i = 0; i < points.length; i++)
+        {
+            points[i].y = Math.sin(i * 0.5 + count) * 30;
+            points[i].x = i * ropeLength + Math.cos(i * 0.3 + count) * 20;
+        }
+    });
+})();
+
+
+Textured Mesh Advanced
+import { Application, Assets, Graphics, MeshRope, Point } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the snake texture
+    const texture = await Assets.load('https://pixijs.com/assets/snake.png');
+
+    let count = 0;
+
+    // Build a rope from points!
+    const ropeLength = 45;
+
+    const points = [];
+
+    for (let i = 0; i < 25; i++)
+    {
+        points.push(new Point(i * ropeLength, 0));
+    }
+
+    // Create the snake MeshRope
+    const strip = new MeshRope({ texture, points });
+
+    strip.x = -40;
+    strip.y = 300;
+
+    app.stage.addChild(strip);
+
+    const g = new Graphics();
+
+    g.x = strip.x;
+    g.y = strip.y;
+    app.stage.addChild(g);
+
+    // Start animating
+    app.ticker.add(() =>
+    {
+        count += 0.1;
+
+        // Make the snake
+        for (let i = 0; i < points.length; i++)
+        {
+            points[i].y = Math.sin(i * 0.5 + count) * 30;
+            points[i].x = i * ropeLength + Math.cos(i * 0.3 + count) * 20;
+        }
+        renderPoints();
+    });
+
+    function renderPoints()
+    {
+        g.clear();
+        g.moveTo(points[0].x, points[0].y);
+
+        for (let i = 1; i < points.length; i++)
+        {
+            g.lineTo(points[i].x, points[i].y);
+            g.stroke({ width: 2, color: 0xffc2c2 });
+        }
+
+        for (let i = 1; i < points.length; i++)
+        {
+            g.drawCircle(points[i].x, points[i].y, 10);
+            g.fill({ color: 0xff0022 });
+            g.stroke({ width: 2, color: 0xffc2c2 });
+        }
+    }
+})();
+
+
+Triangle
+
+import { Application, Geometry, Mesh, Shader } from 'pixi.js';
+import fragment from './triangle.frag';
+import vertex from './triangle.vert';
+import source from './triangle.wgsl';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        resizeTo: window,
+        preference: 'webgl',
+    });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const geometry = new Geometry({
+        attributes: {
+            aPosition: [-100, -50, 100, -50, 0, 100],
+        },
+    });
+
+    // Webgl vertex and fragment shader source
+    const gl = { vertex, fragment };
+
+    // WebGPU vertex and fragment shader source
+    // Here vertex and fragment shader sources are inferred from the same WGSL source
+    const gpu = {
+        vertex: {
+            entryPoint: 'main',
+            source,
+        },
+        fragment: {
+            entryPoint: 'main',
+            source,
+        },
+    };
+
+    const shader = Shader.from({
+        gl,
+        gpu,
+    });
+
+    const triangle = new Mesh({
+        geometry,
+        shader,
+    });
+
+    triangle.position.set(400, 300);
+
+    app.stage.addChild(triangle);
+
+    app.ticker.add(() =>
+    {
+        triangle.rotation += 0.01;
+    });
+})();
+
+
+in vec2 aPosition;
+
+uniform mat3 uProjectionMatrix;
+uniform mat3 uWorldTransformMatrix;
+
+uniform mat3 uTransformMatrix;
+
+
+void main() {
+
+    mat3 mvp = uProjectionMatrix * uWorldTransformMatrix * uTransformMatrix;
+    gl_Position = vec4((mvp * vec3(aPosition, 1.0)).xy, 0.0, 1.0);
+}
+
+void main() {
+    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+}
+
+struct GlobalUniforms {
+    projectionMatrix:mat3x3<f32>,
+    worldTransformMatrix:mat3x3<f32>,
+    worldColorAlpha: vec4<f32>,
+    uResolution: vec2<f32>,
+}
+
+struct LocalUniforms {
+    uTransformMatrix:mat3x3<f32>,
+    uColor:vec4<f32>,
+    uRound:f32,
+}
+
+@group(0) @binding(0) var<uniform> globalUniforms : GlobalUniforms;
+@group(1) @binding(0) var<uniform> localUniforms : LocalUniforms;
+
+@vertex
+fn main(
+    @location(0) aPosition : vec2<f32>,
+) -> @builtin(position) vec4<f32> {     
+    var mvp = globalUniforms.projectionMatrix 
+        * globalUniforms.worldTransformMatrix 
+        * localUniforms.uTransformMatrix;
+    return vec4<f32>(mvp * vec3<f32>(aPosition, 1.0), 1.0);
+};
+
+@fragment
+fn main() -> @location(0) vec4<f32> {
+    return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+}
+
+Shared Geometry
+
+
+import { Application, Assets, Geometry, GlProgram, Mesh, Shader } from 'pixi.js';
+import fragment from './sharedGeometry.frag';
+import vertex from './sharedGeometry.vert';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        resizeTo: window,
+        preference: 'webgl',
+    });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const geometry = new Geometry({
+        attributes: {
+            aPosition: [
+                -100,
+                -100, // x, y
+                100,
+                -100, // x, y
+                100,
+                100, // x, y,
+            ],
+            aUV: [0, 0, 1, 0, 1, 1],
+        },
+    });
+
+    const glProgram = GlProgram.from({
+        vertex,
+        fragment,
+    });
+
+    const triangle = new Mesh({
+        geometry,
+        shader: new Shader({
+            glProgram,
+            resources: {
+                uTexture: (await Assets.load('https://pixijs.com/assets/bg_scene_rotate.jpg')).source,
+            },
+        }),
+    });
+
+    const triangle2 = new Mesh({
+        geometry,
+        shader: new Shader({
+            glProgram,
+            resources: {
+                uTexture: (await Assets.load('https://pixijs.com/assets/bg_rotate.jpg')).source,
+            },
+        }),
+    });
+
+    const triangle3 = new Mesh({
+        geometry,
+        shader: new Shader({
+            glProgram,
+            resources: {
+                uTexture: (await Assets.load('https://pixijs.com/assets/bg_displacement.jpg')).source,
+            },
+        }),
+    });
+
+    triangle.position.set(400, 300);
+    triangle.scale.set(2);
+
+    triangle2.position.set(200, 100);
+
+    triangle3.position.set(500, 400);
+    triangle3.scale.set(3);
+
+    app.stage.addChild(triangle3, triangle2, triangle);
+
+    app.ticker.add(() =>
+    {
+        triangle.rotation += 0.01;
+        triangle2.rotation -= 0.01;
+        triangle3.rotation -= 0.005;
+    });
+})();
+
+
+import { Application, Geometry, Mesh, Shader } from 'pixi.js';
+import fragment from './shaderToy.frag';
+import vertex from './shaderToy.vert';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({
+        resizeTo: window,
+        preference: 'webgl',
+    });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const quadGeometry = new Geometry({
+        attributes: {
+            aPosition: [
+                -100,
+                -100, // x, y
+                100,
+                -100, // x, y
+                100,
+                100, // x, y,
+                -100,
+                100, // x, y,
+            ],
+            aUV: [0, 0, 1, 0, 1, 1, 0, 1],
+        },
+        indexBuffer: [0, 1, 2, 0, 2, 3],
+    });
+
+    const shader = Shader.from({
+        gl: {
+            vertex,
+            fragment,
+        },
+        resources: {
+            shaderToyUniforms: {
+                iResolution: { value: [640, 360, 1], type: 'vec3<f32>' },
+                iTime: { value: 0, type: 'f32' },
+            },
+        },
+    });
+
+    const quad = new Mesh({
+        geometry: quadGeometry,
+        shader,
+    });
+
+    quad.width = app.screen.width;
+    quad.height = app.screen.height;
+    quad.x = app.screen.width / 2;
+    quad.y = app.screen.height / 2;
+
+    app.stage.addChild(quad);
+
+    app.ticker.add(() =>
+    {
+        shader.resources.shaderToyUniforms.uniforms.iTime += app.ticker.elapsedMS / 1000;
+    });
+})();
+
+import { Application, Assets, Container, Geometry, Mesh, RenderTexture, Shader } from 'pixi.js';
+import combineFragment from './combine.frag';
+import gridFragment from './grid.frag';
+import vertex from './multipassMesh.vert';
+import noiseFragment from './noise.frag';
+import rippleFragment from './ripple.frag';
+import waveFragment from './wave.frag';
+
+(async () =>
+{
+    const app = new Application();
+
+    await app.init({ height: 640, resizeTo: window, preference: 'webgl' });
+
+    document.body.appendChild(app.view);
+
+    // Build geometry.
+    const geometry = new Geometry({
+        attributes: {
+            aPosition: [
+                0,
+                0, // x, y
+                200,
+                0, // x, y
+                200,
+                200, // x, y,
+                0,
+                200, // x, y,
+            ],
+            aUV: [0, 0, 1, 0, 1, 1, 0, 1],
+        },
+        indexBuffer: [0, 1, 2, 0, 2, 3],
+    });
+
+    // Load a perlinnoise texture for one of the shaders.
+    const perlinTexture = await Assets.load('https://pixijs.com/assets/perlin.jpg');
+
+    const gridShader = Shader.from({
+        gl: {
+            // Vertex shader. Use same shader for all passes.
+            vertex,
+            // First pass, generates a grid.
+            fragment: gridFragment,
+        },
+        resources: {
+            gridUniforms: {
+                zoom: { type: 'f32', value: 10 },
+            },
+        },
+    });
+
+    // Sharing textures and meshes is possible.
+    // But for simplicity each pass has its own output texture and mesh in this example.
+    const gridTexture = RenderTexture.create({ width: 200, height: 200 });
+    const gridQuad = new Mesh({ geometry, shader: gridShader });
+    const gridContainer = new Container();
+
+    gridContainer.addChild(gridQuad);
+
+    const rippleShader = Shader.from({
+        gl: {
+            vertex,
+            // Second pass. Takes grid as input and makes it ripple.
+            fragment: rippleFragment,
+        },
+        resources: {
+            rippleUniforms: {
+                amount: { type: 'f32', value: 0.5 },
+                phase: { type: 'f32', value: 0 },
+            },
+            texIn: gridTexture.source,
+        },
+    });
+
+    const rippleTexture = RenderTexture.create({ width: 200, height: 200 });
+    const rippleQuad = new Mesh({ geometry, shader: rippleShader });
+    const rippleContainer = new Container();
+
+    rippleContainer.addChild(rippleQuad);
+
+    const noiseShader = Shader.from({
+        gl: {
+            vertex,
+            // Second effect. Generates a filtered noise.
+            fragment: noiseFragment,
+        },
+        resources: {
+            noiseUniforms: {
+                limit: { type: 'f32', value: 0.5 },
+            },
+            noise: perlinTexture.source,
+        },
+    });
+
+    const noiseTexture = RenderTexture.create({ width: 200, height: 200 });
+    const noiseQuad = new Mesh({ geometry, shader: noiseShader });
+    const noiseContainer = new Container();
+
+    noiseContainer.addChild(noiseQuad);
+
+    const waveShader = Shader.from({
+        gl: {
+            vertex,
+            // Third effect
+            fragment: waveFragment,
+        },
+        resources: {
+            waveUniforms: {
+                amplitude: { type: 'f32', value: 0.75 },
+                time: { type: 'f32', value: 0 },
+            },
+        },
+    });
+
+    const waveTexture = RenderTexture.create({ width: 200, height: 200 });
+    const waveQuad = new Mesh(geometry, waveShader);
+    const waveContainer = new Container();
+
+    waveContainer.addChild(waveQuad);
+
+    const combineShader = Shader.from({
+        gl: {
+            vertex,
+            // Final combination pass
+            fragment: combineFragment,
+        },
+        resources: {
+            texRipple: rippleTexture.source,
+            texNoise: noiseTexture.source,
+            texWave: waveTexture.source,
+        },
+    });
+
+    const combineQuad = new Mesh(geometry, combineShader);
+
+    gridContainer.position.set(10, 10);
+    rippleContainer.position.set(220, 10);
+    noiseContainer.position.set(10, 220);
+    waveContainer.position.set(10, 430);
+    combineQuad.position.set(430, 220);
+
+    // Add all phases to stage so all the phases can be seen separately.
+    app.stage.addChild(gridContainer);
+    app.stage.addChild(rippleContainer);
+    app.stage.addChild(noiseContainer);
+    app.stage.addChild(waveContainer);
+    app.stage.addChild(combineQuad);
+
+    // start the animation..
+    let time = 0;
+
+    app.ticker.add(() =>
+    {
+        time += 1 / 60;
+        gridQuad.shader.resources.gridUniforms.uniforms.zoom = Math.sin(time) * 5 + 10;
+        rippleQuad.shader.resources.rippleUniforms.phase = -time;
+        waveQuad.shader.resources.waveUniforms.uniforms.time = time;
+        noiseQuad.shader.resources.noiseUniforms.uniforms.limit = Math.sin(time * 0.5) * 0.35 + 0.5;
+
+        // Render the passes to get textures.
+        app.renderer.render({
+            container: gridQuad,
+            target: gridTexture,
+        });
+
+        app.renderer.render({
+            container: rippleQuad,
+            target: rippleTexture,
+        });
+
+        app.renderer.render({
+            container: noiseQuad,
+            target: noiseTexture,
+        });
+
+        app.renderer.render({
+            container: waveQuad,
+            target: waveTexture,
+        });
+    });
+})();
+
+
+Texture Rotate
+
+import { Application, Assets, groupD8, Rectangle, Sprite, Text, Texture } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Load the texture
+    const texture = await Assets.load('https://pixijs.com/assets/flowerTop.png');
+
+    // Create rotated textures
+    const textures = [texture];
+    const D8 = groupD8;
+
+    for (let rotate = 1; rotate < 16; rotate++)
+    {
+        const h = D8.isVertical(rotate) ? texture.frame.width : texture.frame.height;
+        const w = D8.isVertical(rotate) ? texture.frame.height : texture.frame.width;
+
+        const { frame } = texture;
+        const crop = new Rectangle(texture.frame.x, texture.frame.y, w, h);
+        const trim = crop;
+        let rotatedTexture;
+
+        if (rotate % 2 === 0)
+        {
+            rotatedTexture = new Texture({
+                source: texture.baseTexture,
+                frame,
+                orig: crop,
+                trim,
+                rotate,
+            });
+        }
+        else
+        {
+            rotatedTexture = new Texture({
+                source: texture.baseTexture,
+                frame,
+                orig: crop,
+                trim,
+                rotate,
+            });
+        }
+        textures.push(rotatedTexture);
+    }
+
+    const offsetX = (app.screen.width / 16) | 0;
+    const offsetY = (app.screen.height / 8) | 0;
+    const gridW = (app.screen.width / 4) | 0;
+    const gridH = (app.screen.height / 5) | 0;
+
+    // Normal rotations and mirrors
+    for (let i = 0; i < 16; i++)
+    {
+        // Create a new Sprite using rotated texture
+        const dude = new Sprite(textures[i < 8 ? i * 2 : (i - 8) * 2 + 1]);
+
+        dude.scale.x = 0.5;
+        dude.scale.y = 0.5;
+        // Show it in grid
+        dude.x = offsetX + gridW * (i % 4);
+        dude.y = offsetY + gridH * ((i / 4) | 0);
+        app.stage.addChild(dude);
+        const text = new Text({
+            text: `rotate = ${dude.texture.rotate}`,
+            style: {
+                fontFamily: 'Courier New',
+                fontSize: '12px',
+                fill: 'white',
+                align: 'left',
+            },
+        });
+
+        text.x = dude.x;
+        text.y = dude.y - 20;
+        app.stage.addChild(text);
+    }
+})();
+
+Render Texture Basic
+
+import { Application, Assets, Container, RenderTexture, SCALE_MODES, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const container = new Container();
+
+    app.stage.addChild(container);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    for (let i = 0; i < 25; i++)
+    {
+        const bunny = new Sprite(texture);
+
+        bunny.x = (i % 5) * 30;
+        bunny.y = Math.floor(i / 5) * 30;
+        bunny.rotation = Math.random() * (Math.PI * 2);
+        container.addChild(bunny);
+    }
+
+    const rt = RenderTexture.create({
+        width: 300,
+        height: 300,
+        scaleMode: SCALE_MODES.LINEAR,
+        resolution: 1,
+    });
+
+    const sprite = new Sprite(rt);
+
+    sprite.x = 450;
+    sprite.y = 60;
+    app.stage.addChild(sprite);
+
+    /*
+     * All the bunnies are added to the container with the addChild method
+     * when you do this, all the bunnies become children of the container, and when a container moves,
+     * so do all its children.
+     * This gives you a lot of flexibility and makes it easier to position elements on the screen
+     */
+    container.x = 100;
+    container.y = 60;
+
+    app.ticker.add(() =>
+    {
+        app.renderer.render(container, { renderTexture: rt });
+    });
+})();
+
+
+Render Texture Advanced
+
+import { Application, Assets, Container, RenderTexture, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const stageSize = {
+        width: app.screen.width,
+        height: app.screen.height,
+    };
+
+    // Create two render textures... these dynamic textures will be used to draw the scene into itself
+    let renderTexture = RenderTexture.create(stageSize);
+    let renderTexture2 = RenderTexture.create(stageSize);
+    const currentTexture = renderTexture;
+
+    // Create a new sprite that uses the render texture we created above
+    const outputSprite = new Sprite(currentTexture);
+
+    // Align the sprite
+    outputSprite.x = 400;
+    outputSprite.y = 300;
+    outputSprite.anchor.set(0.5);
+
+    // Add to stage
+    app.stage.addChild(outputSprite);
+
+    const stuffContainer = new Container();
+
+    stuffContainer.x = 400;
+    stuffContainer.y = 300;
+
+    app.stage.addChild(stuffContainer);
+
+    // Create an array of image ids..
+    const fruits = [
+        'https://pixijs.com/assets/rt_object_01.png',
+        'https://pixijs.com/assets/rt_object_02.png',
+        'https://pixijs.com/assets/rt_object_03.png',
+        'https://pixijs.com/assets/rt_object_04.png',
+        'https://pixijs.com/assets/rt_object_05.png',
+        'https://pixijs.com/assets/rt_object_06.png',
+        'https://pixijs.com/assets/rt_object_07.png',
+        'https://pixijs.com/assets/rt_object_08.png',
+    ];
+
+    // Load the textures
+    await Assets.load(fruits);
+
+    // Create an array of items
+    const items = [];
+
+    // Now create some items and randomly position them in the stuff container
+    for (let i = 0; i < 20; i++)
+    {
+        const item = Sprite.from(fruits[i % fruits.length]);
+
+        item.x = Math.random() * 400 - 200;
+        item.y = Math.random() * 400 - 200;
+        item.anchor.set(0.5);
+        stuffContainer.addChild(item);
+        items.push(item);
+    }
+
+    // Used for spinning!
+    let count = 0;
+
+    app.ticker.add(() =>
+    {
+        for (let i = 0; i < items.length; i++)
+        {
+            // rotate each item
+            const item = items[i];
+
+            item.rotation += 0.1;
+        }
+
+        count += 0.01;
+
+        // Swap the buffers ...
+        const temp = renderTexture;
+
+        renderTexture = renderTexture2;
+        renderTexture2 = temp;
+
+        // Set the new texture
+        outputSprite.texture = renderTexture;
+
+        // Twist this up!
+        stuffContainer.rotation -= 0.01;
+        outputSprite.scale.set(1 + Math.sin(count) * 0.2);
+
+        // Render the stage to the texture
+        // * The 'true' clears the texture before the content is rendered *
+        app.renderer.render({
+            container: app.stage,
+            target: renderTexture2,
+            clear: false,
+        });
+    });
+})();
+
+
+Promise
+
+import { Application, Assets, Sprite } from 'pixi.js';
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Start loading right away and create a promise
+    const texturePromise = Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // When the promise resolves, we have the texture!
+    texturePromise.then((resolvedTexture) =>
+    {
+        // create a new Sprite from the resolved loaded Texture
+        const bunny = Sprite.from(resolvedTexture);
+
+        // center the sprite's anchor point
+        bunny.anchor.set(0.5);
+
+        // move the sprite to the center of the screen
+        bunny.x = app.screen.width / 2;
+        bunny.y = app.screen.height / 2;
+
+        app.stage.addChild(bunny);
+    });
+})();
+
+Async
+
+import { Application, Assets, Sprite } from 'pixi.js';
+
+// Await can only be used inside an async function
+async function init()
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Create a new Sprite from the awaited loaded Texture
+    const bunny = Sprite.from(texture);
+
+    // Center the sprite's anchor point
+    bunny.anchor.set(0.5);
+
+    // Move the sprite to the center of the screen
+    bunny.x = app.screen.width / 2;
+    bunny.y = app.screen.height / 2;
+
+    app.stage.addChild(bunny);
+}
+
+// Call that async function
+init();
+
+Multiple
+
+import { Application, Assets, Sprite } from 'pixi.js';
+
+// Create a new application
+const app = new Application();
+
+// Initialize the application
+app.init({ background: '#1099bb', resizeTo: window }).then(() =>
+{
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Add the assets to load
+    Assets.add({ alias: 'flowerTop', src: 'https://pixijs.com/assets/flowerTop.png' });
+    Assets.add({ alias: 'eggHead', src: 'https://pixijs.com/assets/eggHead.png' });
+
+    // Load the assets and get a resolved promise once both are loaded
+    const texturesPromise = Assets.load(['flowerTop', 'eggHead']); // => Promise<{flowerTop: Texture, eggHead: Texture}>
+
+    // When the promise resolves, we have the texture!
+    texturesPromise.then((textures) =>
+    {
+        // Create a new Sprite from the resolved loaded Textures
+        const flower = Sprite.from(textures.flowerTop);
+
+        flower.anchor.set(0.5);
+        flower.x = app.screen.width * 0.25;
+        flower.y = app.screen.height / 2;
+        app.stage.addChild(flower);
+
+        const egg = Sprite.from(textures.eggHead);
+
+        egg.anchor.set(0.5);
+        egg.x = app.screen.width * 0.75;
+        egg.y = app.screen.height / 2;
+        app.stage.addChild(egg);
+    });
+});
+
+Background
+
+import { Application, Assets, Sprite } from 'pixi.js';
+
+// Create a new application
+const app = new Application();
+
+// Initialize the application
+app.init({ background: '#1099bb', resizeTo: window }).then(() =>
+{
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Add the assets to load
+    Assets.add({ alias: 'flowerTop', src: 'https://pixijs.com/assets/flowerTop.png' });
+    Assets.add({ alias: 'eggHead', src: 'https://pixijs.com/assets/eggHead.png' });
+
+    // Allow the assets to load in the background
+    Assets.backgroundLoad(['flowerTop', 'eggHead']);
+
+    // If the background load hasn't loaded this asset yet, calling load forces this asset to load now.
+    Assets.load('eggHead').then((texture) =>
+    {
+        // Auxiliar flag for toggling the texture
+        let isEggHead = true;
+
+        // Create a new Sprite from the resolved loaded texture
+        const character = new Sprite(texture);
+
+        character.anchor.set(0.5);
+        character.x = app.screen.width / 2;
+        character.y = app.screen.height / 2;
+        character.eventMode = 'static';
+        character.cursor = 'pointer';
+
+        app.stage.addChild(character);
+
+        character.on('pointertap', async () =>
+        {
+            isEggHead = !isEggHead;
+            // These promise are already resolved in the cache.
+            character.texture = await Assets.load(isEggHead ? 'eggHead' : 'flowerTop');
+        });
+    });
+});
+
+Bundle
+
+
+import { Application, Assets, Sprite } from 'pixi.js';
+
+// Create a new application
+const app = new Application();
+
+async function init()
+{
+    // Initialize the application
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(app.canvas);
+
+    // Manifest example
+    const manifestExample = {
+        bundles: [
+            {
+                name: 'load-screen',
+                assets: [
+                    {
+                        alias: 'flowerTop',
+                        src: 'https://pixijs.com/assets/flowerTop.png',
+                    },
+                ],
+            },
+            {
+                name: 'game-screen',
+                assets: [
+                    {
+                        alias: 'eggHead',
+                        src: 'https://pixijs.com/assets/eggHead.png',
+                    },
+                ],
+            },
+        ],
+    };
+
+    await Assets.init({ manifest: manifestExample });
+
+    // Bundles can be loaded in the background too!
+    Assets.backgroundLoadBundle(['load-screen', 'game-screen']);
+
+    makeLoadScreen();
+}
+
+async function makeLoadScreen()
+{
+    // Get the assets from the load screen bundle.
+    // If the bundle was already downloaded the promise resolves instantly!
+    const loadScreenAssets = await Assets.loadBundle('load-screen');
+
+    // Create a new Sprite from the resolved loaded texture
+    const goNext = new Sprite(loadScreenAssets.flowerTop);
+
+    goNext.anchor.set(0.5);
+    goNext.x = app.screen.width / 2;
+    goNext.y = app.screen.height / 2;
+    app.stage.addChild(goNext);
+
+    goNext.eventMode = 'static';
+    goNext.cursor = 'pointer';
+
+    goNext.on('pointertap', async () =>
+    {
+        goNext.destroy();
+        makeGameScreen();
+    });
+}
+
+async function makeGameScreen()
+{
+    // Wait here until you get the assets
+    // If the user spends enough time in the load screen by the time they reach the game screen
+    // the assets are completely loaded and the promise resolves instantly!
+    const loadScreenAssets = await Assets.loadBundle('game-screen');
+
+    // Create a new Sprite from the resolved loaded texture
+    const goBack = new Sprite(loadScreenAssets.eggHead);
+
+    goBack.anchor.set(0.5);
+    goBack.x = app.screen.width / 2;
+    goBack.y = app.screen.height / 2;
+    app.stage.addChild(goBack);
+
+    goBack.eventMode = 'static';
+    goBack.cursor = 'pointer';
+
+    goBack.on('pointertap', async () =>
+    {
+        goBack.destroy();
+        // The user can go back and the files are already downloaded
+        makeLoadScreen();
+    });
+}
+
+init();
+
+
+OFFSCRENE CANVAS
+
+Basic
+
+import { Application, Assets, Container, Sprite } from 'pixi.js';
+
+// This example is the based on basic/container, but using OffscreenCanvas.
+
+const canvas = document.createElement('canvas');
+const view = canvas.transferControlToOffscreen();
+
+(async () =>
+{
+    // Create a new application
+    const app = new Application();
+
+    // Initialize the application
+    await app.init({ view, background: '#1099bb', resizeTo: window });
+
+    // Append the application canvas to the document body
+    document.body.appendChild(canvas);
+
+    const container = new Container();
+
+    app.stage.addChild(container);
+
+    // Load the bunny texture
+    const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+
+    // Create a 5x5 grid of bunnies
+    for (let i = 0; i < 25; i++)
+    {
+        const bunny = new Sprite(texture);
+
+        bunny.anchor.set(0.5);
+        bunny.x = (i % 5) * 40;
+        bunny.y = Math.floor(i / 5) * 40;
+        container.addChild(bunny);
+    }
+
+    // Move container to the center
+    container.x = app.screen.width / 2;
+    container.y = app.screen.height / 2;
+
+    // Center bunny sprite in local container coordinates
+    container.pivot.x = container.width / 2;
+    container.pivot.y = container.height / 2;
+
+    // Listen for animate update
+    app.ticker.add((time) =>
+    {
+        // Rotate the container!
+        // * use delta to create frame-independent transform *
+        container.rotation -= 0.01 * time.deltaTime;
+    });
+})();
+
+

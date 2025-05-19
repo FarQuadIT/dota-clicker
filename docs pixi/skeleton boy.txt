@@ -1,0 +1,375 @@
+ПРИМЕР ПРОЕКТА С БЕГУЩИМ МАЛЬЧИКОМ
+
+import { Application, Assets } from 'pixi.js';
+import '@esotericsoftware/spine-pixi-v8';
+import { Controller } from './Controller';
+import { Scene } from './Scene';
+import { SpineBoy } from './SpineBoy';
+
+// Asynchronous IIFE
+(async () =>
+{
+    // Create a PixiJS application.
+    const app = new Application();
+
+    // Intialize the application.
+    await app.init({ background: '#1099bb', resizeTo: window });
+
+    // Then adding the application's canvas to the DOM body.
+    document.body.appendChild(app.canvas);
+
+    // Load the assets.
+    await Assets.load([
+        {
+            alias: 'spineSkeleton',
+            src: 'https://raw.githubusercontent.com/pixijs/spine-v8/main/examples/assets/spineboy-pro.skel',
+        },
+        {
+            alias: 'spineAtlas',
+            src: 'https://raw.githubusercontent.com/pixijs/spine-v8/main/examples/assets/spineboy-pma.atlas',
+        },
+        {
+            alias: 'sky',
+            src: 'https://pixijs.com/assets/tutorials/spineboy-adventure/sky.png',
+        },
+        {
+            alias: 'background',
+            src: 'https://pixijs.com/assets/tutorials/spineboy-adventure/background.png',
+        },
+        {
+            alias: 'midground',
+            src: 'https://pixijs.com/assets/tutorials/spineboy-adventure/midground.png',
+        },
+        {
+            alias: 'platform',
+            src: 'https://pixijs.com/assets/tutorials/spineboy-adventure/platform.png',
+        },
+    ]);
+
+    // Create a controller that handles keyboard inputs.
+    const controller = new Controller();
+
+    // Create a scene that holds the environment.
+    const scene = new Scene(app.screen.width, app.screen.height);
+
+    // Create our character
+    const spineBoy = new SpineBoy();
+
+    // Adjust views' transformation.
+    scene.view.y = app.screen.height;
+    spineBoy.view.x = app.screen.width / 2;
+    spineBoy.view.y = app.screen.height - scene.floorHeight;
+    spineBoy.spine.scale.set(scene.scale * 0.32);
+
+    // Add scene and character to the stage.
+    app.stage.addChild(scene.view, spineBoy.view);
+
+    // Trigger character's spawn animation.
+    spineBoy.spawn();
+
+    // Animate the scene and the character based on the controller's input.
+    app.ticker.add(() =>
+    {
+        // Ignore the update loops while the character is doing the spawn animation.
+        if (spineBoy.isSpawning()) return;
+
+        // Update character's state based on the controller's input.
+        spineBoy.state.walk = controller.keys.left.pressed || controller.keys.right.pressed;
+        if (spineBoy.state.run && spineBoy.state.walk) spineBoy.state.run = true;
+        else spineBoy.state.run = controller.keys.left.doubleTap || controller.keys.right.doubleTap;
+        spineBoy.state.hover = controller.keys.down.pressed;
+        if (controller.keys.left.pressed) spineBoy.direction = -1;
+        else if (controller.keys.right.pressed) spineBoy.direction = 1;
+        spineBoy.state.jump = controller.keys.space.pressed;
+
+        // Update character's animation based on the latest state.
+        spineBoy.update();
+
+        // Determine the scene's horizontal scrolling speed based on the character's state.
+        let speed = 1.25;
+
+        if (spineBoy.state.hover) speed = 7.5;
+        else if (spineBoy.state.run) speed = 3.75;
+
+        // Shift the scene's position based on the character's facing direction, if in a movement state.
+        if (spineBoy.state.walk) scene.positionX -= speed * scene.scale * spineBoy.direction;
+    });
+})();
+
+
+import { Container } from 'pixi.js';
+import { Spine } from '@esotericsoftware/spine-pixi-v8';
+
+// Define the Spine animation map for the character.
+// name: animation track key.
+// loop: do the animation once or infinitely.
+const animationMap = {
+    idle: {
+        name: 'idle',
+        loop: true,
+    },
+    walk: {
+        name: 'walk',
+        loop: true,
+    },
+    run: {
+        name: 'run',
+        loop: true,
+    },
+    jump: {
+        name: 'jump',
+        timeScale: 1.5,
+    },
+    hover: {
+        name: 'hoverboard',
+        loop: true,
+    },
+    spawn: {
+        name: 'portal',
+    },
+};
+
+// Class for handling the character Spine and its animations.
+export class SpineBoy
+{
+    constructor()
+    {
+        // The character's state.
+        this.state = {
+            walk: false,
+            run: false,
+            hover: false,
+            jump: false,
+        };
+
+        // Create the main view and a nested view for directional scaling.
+        this.view = new Container();
+        this.directionalView = new Container();
+
+        // Create the Spine instance using the preloaded Spine asset aliases.
+        this.spine = Spine.from({
+            skeleton: 'spineSkeleton',
+            atlas: 'spineAtlas',
+        });
+
+        // Add the Spine instance to the directional view.
+        this.directionalView.addChild(this.spine);
+
+        // Add the directional view to the main view.
+        this.view.addChild(this.directionalView);
+
+        // Set the default mix duration for all animations.
+        // This is the duration to blend from the previous animation to the next.
+        this.spine.state.data.defaultMix = 0.2;
+    }
+
+    // Play the portal-in spawn animation.
+    spawn()
+    {
+        this.spine.state.setAnimation(0, animationMap.spawn.name);
+    }
+
+    // Play the spine animation.
+    playAnimation({ name, loop = false, timeScale = 1 })
+    {
+        // Skip if the animation is already playing.
+        if (this.currentAnimationName === name) return;
+
+        // Play the animation on main track instantly.
+        const trackEntry = this.spine.state.setAnimation(0, name, loop);
+
+        // Apply the animation's time scale (speed).
+        trackEntry.timeScale = timeScale;
+    }
+
+    update()
+    {
+        // Play the jump animation if not already playing.
+        if (this.state.jump) this.playAnimation(animationMap.jump);
+
+        // Skip the rest of the animation updates during the jump animation.
+        if (this.isAnimationPlaying(animationMap.jump)) return;
+
+        // Handle the character animation based on the latest state and in the priority order.
+        if (this.state.hover) this.playAnimation(animationMap.hover);
+        else if (this.state.run) this.playAnimation(animationMap.run);
+        else if (this.state.walk) this.playAnimation(animationMap.walk);
+        else this.playAnimation(animationMap.idle);
+    }
+
+    isSpawning()
+    {
+        return this.isAnimationPlaying(animationMap.spawn);
+    }
+
+    isAnimationPlaying({ name })
+    {
+        // Check if the current animation on main track equals to the queried.
+        // Also check if the animation is still ongoing.
+        return this.currentAnimationName === name && !this.spine.state.getCurrent(0).isComplete();
+    }
+
+    // Return the name of the current animation on main track.
+    get currentAnimationName()
+    {
+        return this.spine.state.getCurrent(0)?.animation.name;
+    }
+
+    // Return character's facing direction.
+    get direction()
+    {
+        return this.directionalView.scale.x > 0 ? 1 : -1;
+    }
+
+    // Set character's facing direction.
+    set direction(value)
+    {
+        this.directionalView.scale.x = value;
+    }
+}
+
+
+// Map keyboard key codes to controller's state keys
+const keyMap = {
+    Space: 'space',
+    KeyW: 'up',
+    ArrowUp: 'up',
+    KeyA: 'left',
+    ArrowLeft: 'left',
+    KeyS: 'down',
+    ArrowDown: 'down',
+    KeyD: 'right',
+    ArrowRight: 'right',
+};
+
+// Class for handling keyboard inputs.
+export class Controller
+{
+    constructor()
+    {
+        // The controller's state.
+        this.keys = {
+            up: { pressed: false, doubleTap: false, timestamp: 0 },
+            left: { pressed: false, doubleTap: false, timestamp: 0 },
+            down: { pressed: false, doubleTap: false, timestamp: 0 },
+            right: { pressed: false, doubleTap: false, timestamp: 0 },
+            space: { pressed: false, doubleTap: false, timestamp: 0 },
+        };
+
+        // Register event listeners for keydown and keyup events.
+        window.addEventListener('keydown', (event) => this.keydownHandler(event));
+        window.addEventListener('keyup', (event) => this.keyupHandler(event));
+    }
+
+    keydownHandler(event)
+    {
+        const key = keyMap[event.code];
+
+        if (!key) return;
+
+        const now = Date.now();
+
+        // If not already in the double-tap state, toggle the double tap state if the key was pressed twice within 300ms.
+        this.keys[key].doubleTap = this.keys[key].doubleTap || now - this.keys[key].timestamp < 300;
+
+        // Toggle on the key pressed state.
+        this.keys[key].pressed = true;
+    }
+
+    keyupHandler(event)
+    {
+        const key = keyMap[event.code];
+
+        if (!key) return;
+
+        const now = Date.now();
+
+        // Reset the key pressed state.
+        this.keys[key].pressed = false;
+
+        // Reset double tap only if the key is in the double-tap state.
+        if (this.keys[key].doubleTap) this.keys[key].doubleTap = false;
+        // Otherwise, update the timestamp to track the time difference till the next potential key down.
+        else this.keys[key].timestamp = now;
+    }
+}
+
+
+import { Container, Sprite, Texture, TilingSprite } from 'pixi.js';
+
+// Class for handling the environment.
+export class Scene
+{
+    constructor(width, height)
+    {
+        // Create a main view that holds all layers.
+        this.view = new Container();
+
+        // Create the stationary sky that fills the entire screen.
+        this.sky = Sprite.from('sky');
+        this.sky.anchor.set(0, 1);
+        this.sky.width = width;
+        this.sky.height = height;
+
+        // Create textures for the background, mid-ground, and platform.
+        const backgroundTexture = Texture.from('background');
+        const midgroundTexture = Texture.from('midground');
+        const platformTexture = Texture.from('platform');
+
+        // Calculate the ideal platform height depending on the passed-in screen height.
+        const maxPlatformHeight = platformTexture.height;
+        const platformHeight = Math.min(maxPlatformHeight, height * 0.4);
+
+        // Calculate the scale to be apply to all tiling textures for consistency.
+        const scale = (this.scale = platformHeight / maxPlatformHeight);
+
+        const baseOptions = {
+            tileScale: { x: scale, y: scale },
+            anchor: { x: 0, y: 1 },
+            applyAnchorToTexture: true,
+        };
+
+        // Create the tiling sprite layers.
+        this.background = new TilingSprite({
+            texture: backgroundTexture,
+            width,
+            height: backgroundTexture.height * scale,
+            ...baseOptions,
+        });
+        this.midground = new TilingSprite({
+            texture: midgroundTexture,
+            width,
+            height: midgroundTexture.height * scale,
+            ...baseOptions,
+        });
+        this.platform = new TilingSprite({
+            texture: platformTexture,
+            width,
+            height: platformHeight,
+            ...baseOptions,
+        });
+
+        // Calculate the floor height for external referencing.
+        this.floorHeight = platformHeight * 0.43;
+
+        // Position the backdrop layers.
+        this.background.y = this.midground.y = -this.floorHeight;
+
+        // Add all layers to the main view.
+        this.view.addChild(this.sky, this.background, this.midground, this.platform);
+    }
+
+    // Use the platform's horizontal position as the key position for the scene.
+    get positionX()
+    {
+        return this.platform.tilePosition.x;
+    }
+
+    // Set the horizontal position of the platform layer while applying parallax scrolling to the backdrop layers.
+    set positionX(value)
+    {
+        this.background.tilePosition.x = value * 0.1;
+        this.midground.tilePosition.x = value * 0.25;
+        this.platform.tilePosition.x = value;
+    }
+}

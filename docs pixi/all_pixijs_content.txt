@@ -1,0 +1,2946 @@
+=== The HTML5 Creation Engine ===
+
+A mature solution for hundreds of global brands
+
+--------------------------------------------------------------------------------
+
+=== Welcome ===
+
+PixiJS is an open source, web-based rendering system that provides blazing fast performance for games, data visualization, and other graphics intensive projects. These guides are designed to be a companion to theAPI documentation, providing a structured introduction to using the API to solve problems and build projects.
+
+If you're new to PixiJS, we suggest you start with the Basics and read through them in order (a good place to start isGetting Started).  While PixiJS has a mature API and solid documentation, the guides go over many common issues and questions that developers new to the system encounter.
+
+As you explore the guides, you may find these resources valuable:
+
+--------------------------------------------------------------------------------
+
+=== Getting Started ===
+
+In this section we're going to build the simplest possible PixiJS application.  In doing so, we'll walk through the basics of how to build and serve the code.
+
+A quick note before we start: this guide is aimed at beginning PixiJS developers who have minimal
+experience developing JavaScript-based applications.  If you are a coding veteran, you may find that
+the level of detail here is not helpful. If that's the case, you may want to skim this guide, then
+jump intohow to work with PixiJS and packerslike webpack and npm.
+
+One final note.  The JavaScript universe is currently in transition from old-school JavaScript (ES5) to the newer ES6 flavor:
+
+// ES5varx=5;setTimeout(function(){alert(x);},1000);// ES6constx=5;setTimeout(()=>alert(x),1000);
+
+ES6 brings a number of major advantages in terms of clearer syntax, better variable scoping, native class support, etc.  By now, all major browsers support it.  Given this, our examples in these guides will use ES6.  This doesn't mean you can't use PixiJS with ES5 programs!  Just mentally substitute "var" for "let/const", expand the shorter function-passing syntax, and everything will run just fine.
+
+OK!  With those notes out of the way, let's get started.  There are only a few steps required to write a PixiJS application:
+
+Let's walk through them together.
+
+PixiJS is a JavaScript library that runs in a web page.  So the first thing we're going to need is some HTML in a file.  In a real PixiJS application, you might want to embed your display within a complex existing page, or you might want your display area to fill the whole page.  For this demo, we'll build an empty page to start:
+
+<!doctypehtml><html><head></head><body><h1>Hello PixiJS</h1></body></html>
+
+Create a new folder namedpixi-test, then copy and paste this HTML into a new file in thepixi-testfolder namedindex.html.
+
+You will need to run a web server to develop locally with PixiJS.  Web browsers prevent loading local files (such as images and audio files) on locally loaded web pages.  If you just double-click your new HTML file, you'll get an error when you try to add a sprite to the PixiJS stage.
+
+Running a web server sounds complex and difficult, but it turns out there are a number of simple web servers that will serve this purpose.  For this guide, we're going to be working withMongoose, but you could just as easily useXAMPPor thehttp-server Node.js packageto serve your files.
+
+To start serving your page with Mongoose, go tothe Mongoose download pageand download the free server for your operating system.   Mongoose defaults to serving the files in the folder it's run in, so copy the downloaded executable into the folder you created in the prior step (pixi-test).  Double-click the executable, tell your operating system that you trust the file to run, and you'll have a running web server, serving your new folder.
+
+Test that everything is working by opening your browser of choice and enteringhttp://127.0.0.1:8080in the location bar.  (Mongoose by default serves files on port 8080.)  You should see "Hello PixiJS" and nothing else.  If you get an error at this step, it means you didn't name your fileindex.htmlor you mis-configured your web server.
+
+OK, so we have a web page, and we're serving it.  But it's empty.  The next step is to actually load the PixiJS library.  If we were building a real application, we'd want to download a target version of PixiJS from thePixi Github reposo that our version wouldn't change on us.  But for this sample application, we'll just use the CDN version of PixiJS.  Add this line to the<head>section of yourindex.htmlfile:
+
+<scriptsrc="https://pixijs.download/release/pixi.js"></script>
+
+This will include anon-minifiedversion of the latest version of PixiJS when your page loads, ready to be used.  We use the non-minified version because we're in development.  In production, you'd want to usepixi.min.jsinstead, which is compressed for faster download and excludes assertions and deprecation warnings that can help when building your project, but take longer to download and run.
+
+Loading the library doesn't do much good if we don'tuseit, so the next step is to start up PixiJS.  Start by replacing the line<h1>Hello PixiJS</h1>with a script tag like so:
+
+<scripttype="module">constapp=newPIXI.Application();awaitapp.init({width:640,height:360});</script>
+
+What we're doing here is adding a JavaScript code block, and in that block creating a new PIXI.Application instance.Applicationis a helper class that simplifies working with PixiJS.  It creates the renderer, creates the stage, and starts a ticker for updating.  In production, you'll almost certainly want to do these steps yourself for added customization and control - we'll cover doing so in a later guide.  For now, the Application class is a perfect way to start playing with PixiJS without worrying about the details. TheApplicationclass also has a methodinitthat will initialize the application with the given options. This method is asynchronous, so we use theawaitkeyword to start our logic after the promise has completed. This is because PixiJS uses WebGPU or WebGL under the hood, and the former API asynchronous.
+
+When the PIXI.Application class creates the renderer, it builds a Canvas element that it will renderto.  In order to see what we draw with PixiJS, we need to add this Canvas element to the web page's DOM.  Append the following line to your page's script block:
+
+document.body.appendChild(app.canvas);
+
+This takes the canvas created by the application (the Canvas element) and adds it to the body of your page.
+
+So far all we've been doing is prep work.  We haven't actually told PixiJS to draw anything.  Let's fix that by adding an image to be displayed.
+
+There are a number of ways to draw images in PixiJS, but the simplest is by using aSprite.  We'll get into the details of how the scene graph works in a later guide, but for now all you need to know is that PixiJS renders a hierarchy ofContainers.  A Sprite is a type of Container that wraps a loaded image resource to allow drawing it, scaling it, rotating it, and so forth.
+
+Before PixiJS can render an image, it needs to be loaded.  Just like in any web page, image loading happens asynchronously.  We'll talk a lot more about resource loading in later guides.  For now, we can use a helper method on the PIXI.Sprite class to handle the image loading for us:
+
+// load the PNG asynchronouslyawaitPIXI.Assets.load('sample.png');letsprite=PIXI.Sprite.from('sample.png');
+
+Download the sample PNG here, and save it into yourpixi-testdirectory next to yourindex.html.
+
+Finally, we need to add our new sprite to the stage.  The stage is simply aContainerthat is the root of the scene graph.  Every child of the stage container will be rendered every frame.  By adding our sprite to the stage, we tell PixiJS's renderer we want to draw it.
+
+app.stage.addChild(sprite);
+
+While youcanuse PixiJS for static content, for most projects you'll want to add animation.  Our sample app is actually cranking away, rendering the same sprite in the same place multiple times a second.  All we have to do to make the image move is to update its attributes once per frame.  To do this, we want to hook into the application'sticker.  A ticker is a PixiJS object that runs one or more callbacks each frame.  Doing so is surprisingly easy.  Add the following to the end of your script block:
+
+// Add a variable to count up the seconds our demo has been runningletelapsed=0.0;// Tell our application's ticker to run a new callback every frame, passing// in the amount of time that has passed since the last tickapp.ticker.add((ticker)=>{// Add the time to our total elapsed timeelapsed+=ticker.deltaTime;// Update the sprite's X position based on the cosine of our elapsed time.  We divide// by 50 to slow the animation down a bit...sprite.x=100.0+Math.cos(elapsed/50.0)*100.0;});
+
+All you need to do is to callapp.ticker.add(...), pass it a callback function, and then update your scene in that function.  It will get called every frame, and you can move, rotate etc. whatever you'd like to drive your project's animations.
+
+That's it!  The simplest PixiJS project!
+
+Here's the whole thing in one place.  Check your file and make sure it matches if you're getting errors.
+
+<!doctypehtml><html><head><scriptsrc="https://pixijs.download/release/pixi.min.js"></script></head><body><scripttype="module">// Create the application helper and add its render target to the pageconstapp=newPIXI.Application();awaitapp.init({width:640,height:360})document.body.appendChild(app.canvas);// Create the sprite and add it to the stageawaitPIXI.Assets.load('sample.png');letsprite=PIXI.Sprite.from('sample.png');app.stage.addChild(sprite);// Add a ticker callback to move the sprite back and forthletelapsed=0.0;app.ticker.add((ticker)=>{elapsed+=ticker.deltaTime;sprite.x=100.0+Math.cos(elapsed/50.0)*100.0;});</script></body></html>
+
+Once you have things working, the next thing to do is to read through the rest of the Basics guides to dig into how all this works in much greater depth.
+
+--------------------------------------------------------------------------------
+
+=== What PixiJS Is ===
+
+So what exactlyisPixiJS?  At its heart, PixiJS is a rendering system that uses WebGL (or optionally Canvas) to display images and other 2D visual content.  It provides a full scene graph (a hierarchy of objects to render), and provides interaction support to enable handling click and touch events.  It is a natural replacement for Flash in the modern HTML5 world, but provides better performance and pixel-level effects that go beyond what Flash could achieve.  It is perfect for online games, educational content, interactive ads, data visualization... any web-based application where complex graphics are important.  And coupled with technology such as Cordova and Electron, PixiJS apps can be distributed beyond the browser as mobile and desktop applications.
+
+Here's what else you get with PixiJS:
+
+One of the major features that distinguishes PixiJS from other web-based rendering solutions isspeed.  From the ground up, the render pipeline has been built to get the most performance possible out of your users' browsers.  Automatic sprite and geometry batching, careful use of GPU resources, a tight scene graph - no matter your application, speed is valuable, and PixiJS has it to spare.
+
+Drawing images on a page can be handled with HTML5 and the DOM, so why use PixiJS?  Beyond performance, the answer is that PixiJS goes well beyond simple images.  Draw trails and tracks withMeshRope.  Draw polygons, lines, circles and other primitives withGraphics.Textprovides full text rendering support that's just as performant as sprites.  And even when drawing simple images, PixiJS natively supports spritesheets for efficient loading and ease of development.
+
+JavaScript has two APIs for handling hardware acceleration for graphical rendering: WebGL and the more modern WebGPU. Both essentially offer a JavaScript API for accessing users' GPUs for fast rendering and advanced effects. PixiJS leverages them to efficiently display thousands of moving sprites, even on mobile devices. However, using WebGL and WebGPU offers more than just speed.  By using theFilterclass, you can write shader programs (or use pre-built ones!) to achieve displacement maps, blurring, and other advanced visual effects that cannot be accomplished with just the DOM or Canvas APIs.
+
+Want to understand how the engine works?  Trying to track down a bug?  Been burned by closed-source projects going dark?  With PixiJS, you get a mature project with full source code access.  We're MIT licensed for compatibility, andhosted on GitHubfor issue tracking and ease of access.
+
+Open source helps.  So does being based on JavaScript.  But the real reason PixiJS is easy to extend is the clean internal API that underlies every part of the system.  After years of development and 5 major releases, PixiJS is ready to make your project a success, no matter what your needs.
+
+Flash required the player.  Unity requires an installer or app store.  PixiJS requires... a browser.  Deploying PixiJS on the web is exactly like deploying a web site.  That's all it is - JavaScript + images + audio, like you've done a hundred times.  Your users simply visit a URL, and your game or other content is ready to run.  But it doesn't stop at the web.  If you want to deploy a mobile app, wrap your PixiJS code in Cordova.  Want to deploy a standalone desktop program?  Build an Electron wrapper, and you're ready to rock.
+
+--------------------------------------------------------------------------------
+
+=== Render Groups ===
+
+As you delve deeper into PixiJS, especially with version 8, you'll encounter a powerful feature known as RenderGroups. Think of RenderGroups as specialized containers within your scene graph that act like mini scene graphs themselves. Here's what you need to know to effectively use Render Groups in your projects:
+
+Render Groups are essentially containers that PixiJS treats as self-contained scene graphs. When you assign parts of your scene to a Render Group, you're telling PixiJS to manage these objects together as a unit. This management includes monitoring for changes and preparing a set of render instructions specifically for the group. This is a powerful tool for optimizing your rendering process.
+
+The main advantage of using Render Groups lies in their optimization capabilities. They allow for certain calculations, like transformations (position, scale, rotation), tint, and alpha adjustments, to be offloaded to the GPU. This means that operations like moving or adjusting the Render Group can be done with minimal CPU impact, making your application more performance-efficient.
+
+In practice, you're utilizing Render Groups even without explicit awareness. The root element you pass to the render function in PixiJS is automatically converted into a RenderGroup as this is where its render instructions will be stored. Though you also have the option to explicitly create additional RenderGroups as needed to further optimize your project.
+
+This feature is particularly beneficial for:
+
+constmyGameWorld=newContainer({isRenderGroup:true})constmyHud=newContainer({isRenderGroup:true})scene.addChild(myGameWorld,myHud)renderer.render(scene)// this action will actually convert the scene to a render group under the hood
+
+Check out thecontainer example.
+
+By understanding and utilizing Render Groups, you can take full advantage of PixiJS's rendering capabilities, making your applications smoother and more efficient. This feature represents a powerful tool in the optimization toolkit offered by PixiJS, enabling developers to create rich, interactive scenes that run smoothly across different devices.
+
+--------------------------------------------------------------------------------
+
+=== Assets ===
+
+The Assets package is a modern replacement for the oldLoaderclass. It is a promise-based resource management solution that will download, cache and parse your assets into something you can use. The downloads can be simultaneous and in the background, meaning faster startup times for your app, the cache ensures that you never download the same asset twice and the extensible parser system allows you to easily extend and customize the process to your needs.
+
+Assetsrelies heavily on JavaScript Promises that all modern browsers support, however, if your target browserdoesn't support promisesyou should look intopolyfilling them.
+
+To quickly use theAssetsinstance, you just need to callAssets.loadand pass in an asset. This will return a promise that when resolved will yield the value you seek.
+In this example, we will load a texture and then turn it into a sprite.
+
+import{Application,Assets,Sprite}from'pixi.js';// Create a new applicationconstapp=newApplication();// Initialize the applicationawaitapp.init({background:'#1099bb',resizeTo:window});// Append the application canvas to the document bodydocument.body.appendChild(app.canvas);// Start loading right away and create a promiseconsttexturePromise=Assets.load('https://pixijs.com/assets/bunny.png');// When the promise resolves, we have the texture!texturePromise.then((resolvedTexture)=>{// create a new Sprite from the resolved loaded Textureconstbunny=Sprite.from(resolvedTexture);// center the sprite's anchor pointbunny.anchor.set(0.5);// move the sprite to the center of the screenbunny.x=app.screen.width/2;bunny.y=app.screen.height/2;app.stage.addChild(bunny);});
+
+One very important thing to keep in mind while usingAssetsis that all requests are cached and if the URL is the same, the promise returned will also be the same.
+To show it in code:
+
+promise1=Assets.load('bunny.png')promise2=Assets.load('bunny.png')// promise1 === promise2
+
+Out of the box, the following assets types can be loaded without the need for external plugins:
+
+More types can be added fairly easily by creating additional loader parsers.
+
+With the basic syntax, asset types are recognized by their file extension - for instancehttps://pixijs.com/assets/bunny.pngends with.pngsoAssets.loadcan figure it should use the texture loader.
+
+In some cases you may not have control over the URLs and you have to work with ambiguous URLs without recognizable extensions. In this situation, you can specify an explicit loader:
+
+promise=Assets.load({src:'https://example.com/ambiguous-file-name',loadParser:'loadTextures'})
+
+Here are some of theloadervalues you can use:
+
+When an asset is downloaded, it is cached as a promise inside theAssetsinstance and if you try to download it again you will get a reference to the already resolved promise.
+However promise handlers.then(...)/.catch(...)/.finally(...)are always asynchronous, this means that even if a promise was already resolved the code below the.then(...)/.catch(...)/.finally(...)will execute before the code inside them.
+See this example:
+
+console.log(1);alreadyResolvedPromise.then(()=>console.log(2));console.log(3);// Console output:// 1// 3// 2
+
+To learn more about why this happens you will need to learn aboutMicrotasks, however, using async functions should mitigate this problem.
+
+There is a way to work with promises that is more intuitive and easier to read:async/await.
+
+To use it we first need to create a function/method and mark it asasync.
+
+asyncfunctiontest(){// ...}
+
+This function now wraps the return value in a promise and allows us to use theawaitkeyword before a promise to halt the execution of the code until it is resolved and gives us the value.
+
+See this example:
+
+// Create a new applicationconstapp=newApplication();// Initialize the applicationawaitapp.init({background:'#1099bb',resizeTo:window});// Append the application canvas to the document bodydocument.body.appendChild(app.canvas);consttexture=awaitAssets.load('https://pixijs.com/assets/bunny.png');// Create a new Sprite from the awaited loaded Textureconstbunny=Sprite.from(texture);// Center the sprite's anchor pointbunny.anchor.set(0.5);// Move the sprite to the center of the screenbunny.x=app.screen.width/2;bunny.y=app.screen.height/2;app.stage.addChild(bunny);
+
+Thetexturevariable now is not a promise but the resolved texture that resulted after waiting for this promise to resolve.
+
+consttexture=awaitAssets.load('examples/assets/bunny.png');
+
+This allows us to write more readable code without falling into callback hell and to better think when our program halts and yields.
+
+We can add assets to the cache and then load them all simultaneously by usingAssets.add(...)and then callingAssets.load(...)with all the keys you want to have loaded.
+See the following example:
+
+// Append the application canvas to the document bodydocument.body.appendChild(app.canvas);// Add the assets to loadAssets.add({alias:'flowerTop',src:'https://pixijs.com/assets/flowerTop.png'});Assets.add({alias:'eggHead',src:'https://pixijs.com/assets/eggHead.png'});// Load the assets and get a resolved promise once both are loadedconsttexturesPromise=Assets.load(['flowerTop','eggHead']);// => Promise<{flowerTop: Texture, eggHead: Texture}>// When the promise resolves, we have the texture!texturesPromise.then((textures)=>{// Create a new Sprite from the resolved loaded Texturesconstflower=Sprite.from(textures.flowerTop);flower.anchor.set(0.5);flower.x=app.screen.width*0.25;flower.y=app.screen.height/2;app.stage.addChild(flower);constegg=Sprite.from(textures.eggHead);egg.anchor.set(0.5);egg.x=app.screen.width*0.75;egg.y=app.screen.height/2;app.stage.addChild(egg);});
+
+However, if you want to take full advantage of@pixi/Assetsyou should use bundles.
+Bundles are just a way to group assets together and can be added manually by callingAssets.addBundle(...)/Assets.loadBundle(...).
+
+Assets.addBundle('animals',{bunny:'bunny.png',chicken:'chicken.png',thumper:'thumper.png',});constassets=awaitAssets.loadBundle('animals');
+
+However, the best way to handle bundles is to use a manifest and callAssets.init({manifest})with said manifest (or even better, an URL pointing to it).
+Splitting our assets into bundles that correspond to screens or stages of our app will come in handy for loading in the background while the user is using the app instead of locking them in a single monolithic loading screen.
+
+{"bundles":[{"name":"load-screen","assets":[{"alias":"background","src":"sunset.png"},{"alias":"bar","src":"load-bar.{png,webp}"}]},{"name":"game-screen","assets":[{"alias":"character","src":"robot.png"},{"alias":"enemy","src":"bad-guy.png"}]}]}
+
+Assets.init({manifest:"path/manifest.json"});
+
+Beware thatyou can only callinitonce.
+
+Remember there is no downside in repeating URLs since they will all be cached, so if you need the same asset in two bundles you can duplicate the request without any extra cost!
+
+The old approach to loading was to useLoaderto load all your assets at the beginning of your app, but users are less patient now and want content to be instantly available so the practices are moving towards loading the bare minimum needed to show the user some content and, while they are interacting with that, we keep loading the following content in the background.
+
+Luckily,Assetshas us covered with a system that allows us to load everything in the background and in case we need some assets right now, bump them to the top of the queue so we can minimize loading times.
+
+To achieve this, we have the methodsAssets.backgroundLoad(...)andAssets.backgroundLoadBundle(...)that will passively begin to load these assets in the background. So when you finally come to loading them you will get a promise that resolves to the loaded assets immediately.
+
+When you finally need the assets to show, you call the usualAssets.load(...)orAssets.loadBundle(...)and you will get the corresponding promise.
+
+The best way to do this is using bundles, see the following example:
+
+import{Application,Assets,Sprite}from'pixi.js';// Create a new applicationconstapp=newApplication();asyncfunctioninit(){// Initialize the applicationawaitapp.init({background:'#1099bb',resizeTo:window});// Append the application canvas to the document bodydocument.body.appendChild(app.canvas);// Manifest exampleconstmanifestExample={bundles:[{name:'load-screen',assets:[{alias:'flowerTop',src:'https://pixijs.com/assets/flowerTop.png',},],},{name:'game-screen',assets:[{alias:'eggHead',src:'https://pixijs.com/assets/eggHead.png',},],},],};awaitAssets.init({manifest:manifestExample});// Bundles can be loaded in the background too!Assets.backgroundLoadBundle(['load-screen','game-screen']);}init();
+
+We create one bundle for each screen our game will have and set them all to start downloading at the beginning of our app. If the user progresses slowly enough in our app then they should never get to see a loading screen after the first one!
+
+--------------------------------------------------------------------------------
+
+=== Interaction ===
+
+PixiJS is primarily a rendering system, but it also includes support for interactivity. Adding support for mouse and touch events to your project is simple and consistent.
+
+Prior to v7, interaction was defined and managed by theInteractionpackage and itsInteractionManager.
+Beginning with v7, however, a new event-based system has replaced the previousInteractionpackage, and
+expanded the definition of what it means for aContainerto be interactive.
+
+With this, we have introducedeventModewhich allows you to control how an object responds to interaction events.
+If you're familiar with the formerInteractionsystem, theeventModeis similar to theinteractiveproperty, but with more options.
+
+PixiJS supports the following event types:
+
+AnyContainer-derived object (Sprite,Container, etc.) can become interactive simply by setting itseventModeproperty to any of the eventModes listed above. Doing so will cause the object to emit interaction events that can be responded to in order to drive your project's behavior.
+
+Check out theclick interactivity example code.
+
+To respond to clicks and taps, bind to the events fired on the object, like so:
+
+letsprite=Sprite.from('/some/texture.png');sprite.on('pointerdown',(event)=>{alert('clicked!');});sprite.eventMode='static';
+
+Check out theContainerfor the list of interaction events supported.
+
+You can check if an object is interactive by calling theisInteractiveproperty. This will return true ifeventModeis set tostaticordynamic.
+
+if(sprite.isInteractive()){// sprite is interactive}
+
+PixiJS supports three types of interaction events: mouse, touch, and pointer.
+
+What this means is that, in many cases, you can write your project to use pointer events and it will just work when used witheithermouse or touch input.
+
+Given that, the only reason to use non-pointer events is to support different modes of operation based on input type or to support multi-touch interaction. In all other cases, prefer pointer events.
+
+Hit testing requires walking the full object tree, which in complex projects can become an optimization bottleneck.
+
+To mitigate this issue, PixiJSContainer-derived objects have a property namedinteractiveChildren. If you haveContainers or other objects with complex child trees that you know willneverbe interactive,
+you can set this property tofalse, and the hit-testing algorithm will skip those children when checking for hover and click events.
+
+As an example, if you were building a side-scrolling game, you would probably want to setbackground.interactiveChildren = falsefor your background layer with rocks, clouds, flowers, etc. Doing so would substantially speed up hit-testing due to the number of unclickable child objects the background layer would contain.
+
+TheEventSystemcan also be customised to be more performant:
+
+constapp=newApplication({eventMode:'passive',eventFeatures:{move:true,/** disables the global move events which can be very expensive in large scenes */globalMove:false,click:true,wheel:true,}});
+
+--------------------------------------------------------------------------------
+
+=== Sprites ===
+
+Sprites are the simplest and most common renderable object in PixiJS.  They represent a single image to be displayed on the screen.  EachSpritecontains aTextureto be drawn, along with all the transformation and display state required to function in the scene graph.
+
+To create a Sprite, all you need is a Texture (check out the Texture guide).  Load a PNG's URL using theAssetsclass, then callSprite.from(url)and you're all set. Unlike v7 you now must load your texture before using it, this is to ensure best practices.
+
+Check out thesprite example code.
+
+In ourContainer guide, we learned about the Container class and the various properties it defines.  Since Sprite objects are also containers, you can move a sprite, rotate it, and update any other display property.
+
+Alpha is a standard display object property.  You can use it to fade sprites into the scene by animating each sprite's alpha from 0.0 to 1.0 over a period of time.
+
+Tinting allows you to multiply the color value of every pixel by a single color.  For example, if you had a dungeon game, you might show a character's poison status by settingobj.tint = 0x00FF00, which would give a green tint to the character.
+
+Blend modes change how pixel colors are added to the screen when rendering.  The three main modes areadd, which adds each pixel's RGB channels to whatever is under your sprite (useful for glows and lighting),multiplywhich works liketint, but on a per-pixel basis, andscreen, which overlays the pixels, brightening whatever is underneath them.
+
+One common area of confusion when working with sprites lies in scaling and dimensions.  The Container class allows you to set the x and y scale for any object.  Sprites, being Containers, also support scaling.  In addition, however, Sprites support explicitwidthandheightattributes that can be used to achieve the same effect, but are in pixels instead of a percentage.  This works because a Sprite object owns a Texture, which has an explicit width and height.  When you set a Sprite's width, internally PixiJS converts that width into a percentage of the underlying texture's width and updates the object's x-scale.  So width and height are really just convenience methods for changing scale, based on pixel dimensions rather than percentages.
+
+If you add a sprite to your stage and rotate it, it will by default rotate around the top-left corner of the image.  In some cases, this is what you want.  In many cases, however, what you want is for the sprite to rotate around the center of the image it contains, or around an arbitrary point.
+
+There are two ways to achieve this:pivotsandanchors
+
+An object'spivotis an offset, expressed in pixels, from the top-left corner of the Sprite.  It defaults to (0, 0).  If you have a Sprite whose texture is 100px x 50px, and want to set the pivot point to the center of the image, you'd set your pivot to (50, 25) - half the width, and half the height.  Note that pivots can be setoutsideof the image, meaning the pivot may be less than zero or greater than the width/height.  This can be useful in setting up complex animation hierarchies, for example.  Every Container has a pivot.
+
+Ananchor, in contrast, is only available for Sprites.  Anchors are specified in percentages, from 0.0 to 1.0, in each dimension.  To rotate around the center point of a texture using anchors, you'd set your Sprite's anchor to (0.5, 0.5) - 50% in width and height.  While less common, anchors can also be outside the standard 0.0 - 1.0 range.
+
+The nice thing about anchors is that they are resolution and dimension agnostic.  If you set your Sprite to be anchored in the middle then later change the size of the texture, your object will still rotate correctly.  If you had instead set a pivot using pixel-based calculations, changing the texture size would require changing your pivot point.
+
+So, generally speaking, you'll want to use anchors when working with Sprites.
+
+One final note: unlike CSS, where setting the transform-origin of the image doesn't move it, in PixiJS setting an anchor or pivotwillmove your object on the screen.  In other words, setting an anchor or pivot affects not just the rotation origin, but also the position of the sprite relative to its parent.
+
+--------------------------------------------------------------------------------
+
+=== Textures ===
+
+We're slowly working our way down from the high level to the low.  We've talked about the scene graph, and in general about display objects that live in it.  We're about to get to sprites and other simple display objects.  But before we do, we need to talk about textures.
+
+In PixiJS, textures are one of the core resources used by display objects.  A texture, broadly speaking, represents a source of pixels to be used to fill in an area on the screen.  The simplest example is a sprite - a rectangle that is completely filled with a single texture.  But things can get much more complex.
+
+Let's examine how textures really work, by following the path your image data travels on its way to the screen.
+
+Here's the flow we're going to follow:  Source Image > Loader > BaseTexture > Texture
+
+To start with, you have the image you want to display.  The first step is to make it available on your server.  This may seem obvious, but if you're coming to PixiJS from other game development systems, it's worth remembering that everything has to be loaded over the network.  If you're developing locally, please be aware that youmustuse a webserver to test, or your images won't load due to how browsers treat local file security.
+
+To work with the image, the first step is to pull the image file from your webserver into the user's web browser.  To do this, we can useAssets.load('myTexture.png').Assetswraps and deals with telling the browser to fetch the image, convert it and then let you know when that has been completed.  This process isasynchronous- you request the load, then time passes, then a promise completes to let you know the load is completed.  We'll go into the loader in a lot more depth in a later guide.
+
+consttexture=awaitAssets.load('myTexture.png');// pass a texture explicitlyconstsprite=newSprite(texture);// as optionsconstsprite2=newSprite({texture});// from the cache as the texture is loadedconstsprite3=Sprite.from('myTexture.png')
+
+Once the texture has loaded, the loaded<IMG>element contains the pixel data we need.  But to use it to render something, PixiJS has to take that raw image file and upload it to the GPU.  This brings us to the real workhorse of the texture system - theTextureSourceclass.  Each TextureSource manages a single pixel source - usually an image, but can also be a Canvas or Video element.  TextureSources allow PixiJS to convert the image to pixels and use those pixels in rendering.  In addition, it also contains settings that control how the texture data is rendered, such as the wrap mode (for UV coordinates outside the 0.0-1.0 range) and scale mode (used when scaling a texture).
+
+TextureSource are automatically cached, so that callingTexture.from()repeatedly for the same URL returns the same TextureSource each time.  Destroying a TextureSource frees the image data associated with it.
+
+So finally, we get to theTextureclass itself!  At this point, you may be wondering what theTextureobjectdoes.  After all, the BaseTexture manages the pixels and render settings.  And the answer is, it doesn't do very much.  Textures are light-weight views on an underlying BaseTexture.  Their main attribute is the source rectangle within the TextureSource from which to pull.
+
+If all PixiJS drew were sprites, that would be pretty redundant.  But considerSpriteSheets.  A SpriteSheet is a single image that contains multiple sprite images arranged within.  In aSpritesheetobject, a single TextureSource is referenced by a set of Textures, one for each source image in the original sprite sheet.  By sharing a single TextureSource, the browser only downloads one file, and our batching renderer can blaze through drawing sprites since they all share the same underlying pixel data.  The SpriteSheet's Textures pull out just the rectangle of pixels needed by each sprite.
+
+That is why we have both Textures and TextureSource - to allow sprite sheets, animations, button states, etc to be loaded as a single image, while only displaying the part of the master image that is needed.
+
+We will discuss resource loading in a later guide, but one of the most common issues new users face when building a PixiJS project is how best to load their textures.
+
+here's a quick cheat sheet of one good solution:
+
+Using this workflow ensures that your textures are pre-loaded, to prevent pop-in, and is relatively easy to code.
+
+Regarding preparing textures: Even after you've loaded your textures, the images still need to be pushed to the GPU and decoded.  Doing this for a large number of source images can be slow and cause lag spikes when your project first loads.  To solve this, you can use thePrepareplugin, which allows you to pre-load textures in a final step before displaying your project.
+
+Once you're done with a Texture, you may wish to free up the memory (both WebGL-managed buffers and browser-based) that it uses.  To do so, you should calldestroy()on the BaseTexture that owns the data.  Remember that Textures don't manage pixel data!
+
+This is a particularly good idea for short-lived imagery like cut-scenes that are large and will only be used once. If a texture is destroyed that was loaded viaAssetsthen the assets class will automatically remove it from the cache for you.
+
+As we alluded to above, you can make a Texture out of more than just images:
+
+Video: Pass an HTML5<VIDEO>element toTextureSource.from()to allow you to display video in your project.  Since it's a texture, you can tint it, add filters, or even apply it to custom geometry.
+
+Canvas: Similarly, you can wrap an HTML5<CANVAS>element in a BaseTexture to let you use canvas's drawing methods to dynamically create a texture.
+
+SVG: Pass in an<SVG>element or load a .svg URL, and PixiJS will attempt to rasterize it.  For highly network-constrained projects, this can allow for beautiful graphics with minimal network load times.
+
+RenderTexture: A more advanced (but very powerful!) feature is to build a Texture from aRenderTexture.  This can allow for building complex geometry using aGeometryobject, then baking that geometry down to a simple texture.
+
+Each of these texture sources has caveats and nuances that we can't cover in this guide, but they should give you a feeling for the power of PixiJS's texture system.
+
+Check out therender texture example code.
+
+--------------------------------------------------------------------------------
+
+=== v8 Migration Guide ===
+
+Welcome to the PixiJS v8 Migration Guide! This document is designed to help you smoothly transition your projects from PixiJS v7 to the latest and greatest PixiJS v8. Please follow these steps to ensure a successful migration.
+
+PixiJS v8 introduces several exciting changes and improvements that dramatically enhance the performance of the renderer. While we've made efforts to keep the migration process as smooth as possible, some breaking changes are inevitable. This guide will walk you through the necessary steps to migrate your PixiJS v7 project to PixiJS v8.
+
+Before diving into the migration process, let's review the breaking changes introduced in PixiJS v8. Make sure to pay close attention to these changes as they may impact your existing codebase.
+
+Generally, the answer is yes! But currently, there may be reasons that suggest it's best not to upgrade just yet. Ask yourself the following question:
+
+Migrated
+
+Migrating Right Now:
+
+To Be Migrated:
+
+Since version 5, PixiJS has utilized individual sub-packages to organize its codebase into smaller units. However, this approach led to issues, such as conflicting installations of different PixiJS versions, causing complications with internal caches.
+
+In v8, PixiJS has reverted to a single-package structure. While you can still import specific parts of PixiJS, you only need to install the main package.
+
+Old:
+
+import{Application}from'@pixi/app';import{Sprite}from'@pixi/sprite';
+
+New:
+
+import{Application,Sprite}from'pixi.js';
+
+PixiJS uses an "extensions" system to add renderer functionality. By default, PixiJS includes many extensions for a comprehensive out-of-the-box experience. However, for full control over features and bundle size, you can manually import specific PixiJS components.
+
+// imported by defaultimport'pixi.js/accessibility';import'pixi.js/app';import'pixi.js/events';import'pixi.js/filters';import'pixi.js/sprite-tiling';import'pixi.js/text';import'pixi.js/text-bitmap';import'pixi.js/text-html';import'pixi.js/graphics';import'pixi.js/mesh';import'pixi.js/sprite-nine-slice';// not added by default, everyone needs to import these manuallyimport'pixi.js/advanced-blend-modes';import'pixi.js/unsafe-eval';import'pixi.js/prepare';import'pixi.js/math-extras';import'pixi.js/dds';import'pixi.js/ktx';import'pixi.js/ktx2';import'pixi.js/basis';import{Application}from'pixi.js';constapp=newApplication();awaitapp.init({manageImports:false,// disable importing the above extensions});
+
+When initializing the application, you can disable the auto-import feature, preventing PixiJS from importing any extensions automatically. You'll need to import them manually, as demonstrated above.
+
+It should also be noted that thepixi.js/text-bitmap, also addAssetsloading functionality.
+Therefore if you want to load bitmap fontsBEFOREinitialising the renderer, you will need to import this extension.
+
+import'pixi.js/text-bitmap';import{Assets,Application}from'pixi.js';awaitAssets.load('my-font.fnt');// If 'pixi.js/text-bitmap' is not imported, this will not loadawaitnewApplication().init();
+
+PixiJS will now need to be initialised asynchronously. With the introduction of the WebGPU renderer PixiJS will now need to be awaited before being used
+
+Old:
+
+import{Application}from'pixi.js';constapp=newApplication();// do pixi things
+
+New:
+
+import{Application}from'pixi.js'constapp=newApplication();(async()=>{awaitapp.init({// application options});// do pixi things})()
+
+With this change it also means that theApplicationOptionsobject can now be passed into theinitfunction instead of the constructor.
+
+Textures structures have been modified to simplify what was becoming quite a mess behind the scenes in v7.
+Textures no longer know or manage loading of resources. This needs to be done upfront by you or the assets manager. Textures expect full loaded resources only. This makes things so much easier to manage as the validation of a texture can essentially be done at construction time and left at that!
+BaseTexture no longer exists. In stead we now have a variety of TextureSources available. A texture source combines the settings of a texture with how to upload and use that texture. In v8 there are the following texture sources:
+
+TextureSource - a vanilla texture that you can render too or upload however you wish. (used mainly by render textures)
+ImageSource - a texture source that contains an image resource of some kind (eg ImageBitmap or html image)
+CanvasSource - a canvas source that contains a canvas. Used mainly for rendering canvases or rendering to a canvas (webGPU)
+VideoSource - a texture source that contains a video. Takes care of updating the texture on the GPU to ensure that they stay in sync.
+BufferSource - a texture source that contains a buffer. What ever you want really! make sure your buffer type and format are compatible!
+CompressedSource - a texture source that handles compressed textures. Used by the GPU compressed texture formats.
+
+Whilst the majority of the timeAssetswill return Textures you may want to make you own! More power to ya!
+
+To create a texture source the signature differs from baseTexture. example:
+
+const image = new Image();image.onload = function(){// create a texture sourceconst source = new ImageSource({resource: image,});// create a textureconst texture = new Texture({source});}image.src = 'myImage.png';
+
+There are a few key changes to the Graphics API. In fact this is probably the most changed part of v8. We have added deprecations where possible but below is the rundown of changes:
+
+Old:
+
+// red rectconstgraphics=newGraphics().beginFill(0xFF0000).drawRect(50,50,100,100).endFill();// blue rect with strokeconstgraphics2=newGraphics().lineStyle(2,'white').beginFill('blue').circle(530,50,140,100).endFill();
+
+New:
+
+// red rectconstgraphics=newGraphics().rect(50,50,100,100).fill(0xFF0000);// blue rect with strokeconstgraphics2=newGraphics().rect(50,50,100,100).fill('blue').stroke({width:2,color:'white'});
+
+Old:
+
+constrect=newGraphics().beginTextureFill({texture:Texture.WHITE,alpha:0.5,color:0xFF0000}).drawRect(0,0,100,100).endFill().beginFill(0xFFFF00,0.5).drawRect(100,0,100,100).endFill();
+
+New:
+
+constrect=newGraphics().rect(0,0,100,100).fill({texture:Texture.WHITE,alpha:0.5,color:0xFF0000}).rect(100,0,100,100).fill({color:0xFFFF00,alpha:0.5});
+
+constrect=newGraphics().lineTextureStyle({texture:Texture.WHITE,width:10,color:0xFF0000}).drawRect(0,0,100,100).endFill().lineStyle(2,0xFEEB77);.drawRect(100,0,100,100).endFill();
+
+New:
+
+constrect=newGraphics().rect(0,0,100,100).stroke({texture:Texture.WHITE,width:10,color:0xFF0000}).rect(100,0,100,100).stroke({color:0xFEEB77,width:2});
+
+constrectAndHole=newGraphics().beginFill(0x00FF00).drawRect(0,0,100,100).beginHole().drawCircle(50,50,20).endHole().endFill();
+
+New:
+
+constrectAndHole=newGraphics().rect(0,0,100,100).fill(0x00FF00).circle(50,50,20).cut();
+
+Old:
+
+constrect=newGraphics().beginFill(0xFF0000).drawRect(50,50,100,100).endFill();constgeometry=rect.geometry;constsecondRect=newGraphics(geometry);
+
+New:
+
+constcontext=newGraphicsContext().rect(50,50,100,100).fill(0xFF0000);constrect=newGraphics(context);constsecondRect=newGraphics(context);
+
+As we now need to accommodate both WebGL and WebGPU shaders, the way they are constructed has been tweaked to take this into account. The main differences you will notice (this is for shaders in general) is that Textures are no longer considered uniforms (as in they cannot be included in a uniform group). Instead we have the concept of resources. A resource can be a few things including:
+
+creating a webgl only shader now looks like this:
+
+old
+
+constshader=PIXI.Shader.from(vertex,fragment,uniforms);
+
+new
+
+just WebGL
+
+constshader=Shader.from({gl:{vertex,fragment},resources,// resource used from above including uniform groups});
+
+WebGL and WebGPU
+
+constshader=Shader.from({gl:{vertex,fragment},gpu:{vertex:{entryPoint:'mainVert',source,},fragment:{entryPoint:'mainFrag',source,},},resources,// resource used from above including uniform groups});
+
+Uniforms are also constructed in a slightly different way. When creating them, you now provide the type of variable you want it to be.
+
+old
+
+constuniformGroup=newUniformGroup({uTime:1,});uniformGroup.uniforms.uTime=100;
+
+new
+
+constuniformGroup=newUniformGroup({uTime:{value:1,type:'f32',});uniformGroup.uniforms.uTime=100;// still accessed the same!
+
+The best way to play and fully and get to know this new setup please check out the Mesh and Shader examples:
+
+old:v7 examplenew:v8 example
+
+Filters work almost exactly the same, unless you are constructing a custom one. If this is the case, the shader changes mentioned above need to taken into account.
+
+old
+
+constfilter=newFilter(vertex,fragment,{uTime:0.0,});
+
+new
+
+constfilter=newFilter({glProgram:GlProgram.from({fragment,vertex,}),resources:{timeUniforms:{uTime:{value:0.0,type:'f32'},},},});
+
+old:v7 examplenew:v8 example
+
+If you're using thecommunity filters, note that the@pixi/filter-*packages are no-longer maintained for v8, however, you can import directly from thepixi-filterspackage as sub-modules.
+
+*old
+
+import{AdjustmentFilter}from'@pixi/filter-adjustment';
+
+*new
+
+import{AdjustmentFilter}from'pixi-filters/adjustment';
+
+ParticleContainerhas been reworked in v8 to allow for far more particles than before. There are a few key changes you should be aware of:
+
+AParticleContainerno longer accepts sprites as its children. Instead, it requires aParticleclass (or an object that implements theIParticleinterface), which follows this interface:
+
+export interface IParticle{x: number;y: number;scaleX: number;scaleY: number;anchorX: number;anchorY: number;rotation: number;color: number;texture: Texture;}
+
+The reason for this change is that sprites come with many extra properties and events that are generally unnecessary when dealing with large numbers of particles. This approach explicitly removes any ambiguity we had in v7, such as "Why doesn't my sprite work with filters?" or "Why can't I nest children in my sprites?" It’s a bit more predictable. Additionally, due to the lightweight nature of particles, this means we can render far more of them!
+
+So, no functionality is lost—just an API tweak with a massive performance boost!
+
+Particles are also not stored in thechildrenarray of theParticleContainer, as particles are not technically part of the scene graph (for performance reasons). Instead, they are stored in a flat list calledparticleChildren, which is part of theParticleContainerclass. You can modify this array directly for extra speed, or you can use theaddParticleandremoveParticlemethods to manage your particles.
+
+Another optimization is thatParticleContainerdoes not calculate its own bounds, as doing so would negate the performance gains we've created! Instead, it's up to you to provide aboundsAreawhen initializing theParticleContainer.
+
+OLD
+
+constcontainer=newParticleContainer();for(leti=0;i<100000;i++){constparticle=newSprite(texture);container.addChild(particle);}
+
+NEW
+
+constcontainer=newParticleContainer();for(leti=0;i<100000;i++){constparticle=newParticle(texture);container.addParticle(particle);}
+
+with a bounds area
+
+constcontainer=newParticleContainer({boundsArea:newRectangle(0,0,500,500)});
+
+DisplayObjecthas been removed.Containeris now the base class for all PixiJS objects.
+
+updateTransformhas been removed as nodes no longer contain any rendering logic
+
+We do recognise that many people used this function to do custom logic every frame, so we have added a newonRenderfunction that can be used for this purpose.
+
+Old:
+
+classMySpriteextendsSprite{constructor(){super();this.updateTransform();}updateTransform(){super.updateTransform();// do custom logic}}
+
+New:
+
+classMySpriteextendsSprite{constructor(){super();this.onRender=this._onRender.bind(this);}_onRender(){// do custom logic}}
+
+Mipmap generation changes
+
+constmyRenderTexture=RenderTexture.create({width:100,height:100,autoGenerateMipmaps:true});// do some rendering..renderer.render({target:myRenderTexture,container:scene});// now refresh mipmaps when you are readymyRenderTexture.source.updateMipmaps();
+
+consttexture=awaitAssets.load('bunny.png');constsprite=newSprite(texture);texture.frame.width=texture.frame.width/2;texture.update();// guarantees the texture changes will be reflected on the spritesprite.onViewUpdate();// alternatively you can hooke into the sprites eventtexture.on('update',()=>{sprite.onViewUpdate});
+
+The act of adding and removing the event when a sprite's texture was changed led to an unacceptable performance drop, especially when swapping many textures (imagine shooting games with lots of keyframe textures swapping). This is why we now leave that responsibility to the user.
+
+New Container culling approach
+
+With this version of PixiJS we have changed how thecullableproperty works on containers. Previously culling was done for you automatically during the render loop. However, we have moved this logic out and provided users the ability to control when culling happens themselves.
+
+With this change we have added a couple of new properties:
+
+New:
+
+constcontainer=newContainer();constview=newRectangle(0,0,800,600);container.cullable=true;container.cullArea=newRectangle(0,0,400,400);container.cullableChildren=false;Culler.shared.cull(myContainer,view);renderer.render(myContainer);
+
+There is also aCullerPluginthat can be used to automatically callCuller.shared.cullevery frame if you want to simulate the old behaviour.
+
+import{extensions,CullerPlugin}from'pixi.js'extensions.add(CullerPlugin)
+
+Renamed several mesh classes
+
+Deprecations forAssetsremoved
+
+Old:
+
+import{Assets}from'pixi.js';Assets.add('bunny','bunny.png');
+
+New:
+
+import{Assets}from'pixi.js';Assets.add({alias:'bunny',src:'bunny.png'});
+
+settingsobject has been removed
+
+Old:
+
+import{settings,BrowserAdapter}from'pixi.js';settings.RESOLUTION=1;settings.FAIL_IF_MAJOR_PERFORMANCE_CAVEAT=false;settings.ADAPTER=BrowserAdapter;
+
+New:
+
+import{AbstractRenderer,DOMAdapter,BrowserAdapter}from'pixi.js';// Can also be passed into the renderer directly e.g `autoDetectRenderer({resolution: 1})`AbstractRenderer.defaultOptions.resolution=1;// Can also be passed into the renderer directly e.g `autoDetectRenderer({failIfMajorPerformanceCaveat: false})`AbstractRenderer.defaultOptions.failIfMajorPerformanceCaveat=false;// See below for more information about changes to the adapterDOMAdapter.set(BrowserAdapter);
+
+Adapter and Web Worker Changes
+
+settings.ADAPTERhas been removed and replaced withDOMAdapter
+
+Old:
+
+import{settings,WebWorkerAdapter}from'pixi.js';settings.ADAPTER=WebWorkerAdapter;settings.ADAPTER.createCanvas();
+
+New:
+
+import{DOMAdapter,WebWorkerAdapter}from'pixi.js';DOMAdapter.set(WebWorkerAdapter);DOMAdapter.get().createCanvas();
+
+Application type now accepts Renderer instead of view by @Zyie inhttps://github.com/pixijs/pixijs/pull/9740
+
+This is to allowapp.rendererto be typed correctly
+
+Old:
+
+constapp=newApplication<HTMLCanvasElement>();
+
+New:
+
+// WebGL or WebGPU rendererconstapp=newApplication<Renderer<HTMLCanvasElement>>();// WebGL specific rendererconstapp=newApplication<WebGLRenderer<HTMLCanvasElement>>();// WebGPU specific rendererconstapp=newApplication<WebGPURenderer<HTMLCanvasElement>>();
+
+Texture.fromno longer will load a texture from a URL.
+
+When usingTexture.fromyou will need to pass in a source such asCanvasSource/ImageSource/VideoSourceor a resource such asHTMLImageElement/HTMLCanvasElement/HTMLVideoElementor a string that has been loaded throughAssets.load
+
+Old:
+
+import{Texture}from'pixi.js';consttexture=Texture.from('https://i.imgur.com/IaUrttj.png');
+
+New:
+
+import{Assets,Texture}from'pixi.js';awaitAssets.load('https://i.imgur.com/IaUrttj.png');consttexture=Texture.from('https://i.imgur.com/IaUrttj.png');
+
+TheTicker's callback will now pass theTickerinstance instead of the delta time.
+This is to allow for more control over what unit of time is used.
+
+Old:
+
+Ticker.shared.add((dt)=>{bunny.rotation+=dt});
+
+New:
+
+Ticker.shared.add((ticker)=>{bunny.rotation+=ticker.deltaTime;});
+
+Text parsers have been renamed
+
+The defaulteventModeis nowpassiveinstead ofauto
+
+utilshas been removed. All the functions are available as direct imports.
+
+Old:
+
+import{utils}from'pixi.js';utils.isMobile.any();
+
+New:
+
+import{isMobile}from'pixi.js';isMobile.any();
+
+container.getBounds()now returns aBoundsobject instead of aRectangleobject. You can access the rectangle by usingcontainer.getBounds().rectangleinstead.
+
+Old:
+
+constbounds=container.getBounds();
+
+New:
+
+constbounds=container.getBounds().rectangle;
+
+container.cacheAsBitmaphas been replaced withcontainer.cacheAsTexture(). They do the same things, except we changed the namecacheAsTextureas the Bitmap terminology is not really relevant to PixiJS.
+
+Old:
+
+container.cacheAsBitmap=true;
+
+New:
+
+container.cacheAsTexture(true);
+
+Certain features from PixiJS v7 have been deprecated in v8. While they will still work, it's recommended to update your code to use the new alternatives. Refer to the deprecated features section for details on what to replace them with.
+
+Leaf nodes no longer allow children
+
+OnlyContainerscan have children. This means thatSprite,Mesh,Graphicsetc can no longer have children.
+
+To replicate the old behaviour you can create aContainerand add the leaf nodes to it.
+
+Old:
+
+constsprite=newSprite();constspriteChild=newSprite();sprite.addChild(spriteChild);
+
+New:
+
+constcontainer=newContainer();constsprite=newSprite();constspriteChild=newSprite();container.addChild(sprite);container.addChild(spriteChild);
+
+Application.viewreplaced withApplication.canvas
+
+Old:
+
+constapp=newApplication({view:document.createElement('canvas')});document.body.appendChild(app.view);
+
+New:
+
+constapp=newApplication();awaitapp.init({view:document.createElement('canvas')});document.body.appendChild(app.canvas);
+
+NineSlicePlanerenamed toNineSliceSprite
+
+SCALE_MODESreplaced withScaleModestrings
+
+WRAP_MODESreplaced withWrapModestrings
+
+DRAW_MODESreplaced withTopologystrings
+
+Constructors have largely been changed to accept objects instead of multiple arguments
+
+Old:
+
+constblurFilter=newBlurFilter(8,4,1,5);constdisplacementFilter=newDisplacementFilter(sprite,5);constmeshGeometry=newMeshGeometry(vertices,uvs,index);constmesh=newMesh(geometry,shader,state,drawMode);constplane=newPlaneGeometry(width,height,segWidth,segHeight);constnineSlicePlane=newNineSlicePlane(texture,leftWidth,topHeight,rightWidth,bottomHeight);consttileSprite=newTileSprite(texture,width,height);consttext=newText('Hello World',style);constbitmapText=newBitmapText('Hello World',style);consthtmlText=newHTMLText('Hello World',style);
+
+New:
+
+constblurFilter=newBlurFilter({blur:8,quality:4,resolution:1,kernelSize:5,});constdisplacementFilter=newDisplacementFilter({sprite,scale:5,});constmeshGeometry=newMeshGeometry({positions:vertices,uvs,indices:index,topology:'triangle-list';shrinkBuffersToFit:boolean;});constmesh=newMesh({geometryshadertexture});constplane=newPlaneGeometry({width,height,verticesX:segWidth,verticesY:segHeight,});constnineSliceSprite=newNineSliceSprite({texture,leftWidth,topHeight,rightWidth,bottomHeight,});consttileSprite=newTileSprite({texture,width,height,});consttext=newText({text:'Hello World',style,});constbitmapText=newBitmapText({text:'Hello World',style,});consthtmlText=newHTMLText({text:'Hello World',style,});
+
+container.nameis nowcontainer.label
+
+--------------------------------------------------------------------------------
+
+=== Examples ===
+
+Welcome to the PixiJS Examples page! Here you can find a variety of demos and code snippets to help you get started with PixiJS.
+
+Check out some of our featured examples below:
+
+--------------------------------------------------------------------------------
+
+=== Untitled ===
+
+
+
+--------------------------------------------------------------------------------
+
+=== Meet the Team ===
+
+
+
+--------------------------------------------------------------------------------
+
+=== FAQ ===
+
+Everything! Pixi.js is a rendering library that will allow you to create rich,
+interactive graphic experiences, cross-platform applications, and games without
+having to dive into the WebGL API or grapple with the intricacies of browser and
+device compatibility. Killer performance with a clean API, means not only will
+your content be better - but also faster to build!
+
+PixiJS is and always will be free and Open Source. That said, financial contributions
+are what make it possible to push PixiJS further, faster. Contributions allow us to
+commission the PixiJS developer community to accelerate feature development and create
+more in-depth documentation.Support Usby making a contribution viaOpen Collective. Go on! It will be a massive help AND make you feel good about yourself, win win ;)
+
+Visit our GitHub page to download the very latest version of PixiJS. This is the most up-to-date resource for PixiJS and should always be your first port of call to make sure you are using the latest version. Just click the 'Download' link in the navigation.
+
+Right here! Take a look through the Resources section for a wealth of information including documentation, forums, tutorials and the Goodboy blog.
+
+Because you care about speed. PixiJS' #1 mantra has always been speed. We really do feel the need! We do everything we can to make PixiJS as streamlined, efficient and fast as possible, whilst balancing it with offering as many crucial and valuable features as we can.
+
+No. PixiJS is what we've come to think of as a "creation engine". Whilst it is extremely good for making games, the core essence of PixiJS is simply moving things around on screens as quickly and efficiently as possible. It does of course happen that it is absolutely brilliant for making games though!
+
+Outside of the highly active PixiJS community, it is primarily maintained by Mat Groves, Technical Partner of our creative agency Goodboy Digital. One of the huge advantages of creating PixiJS within the framework of a working agency is that it means its features are always driven by genuine industry demands and critically are always trialled "in anger" in our cutting-edge games, sites and apps.
+
+Two things - lets us know via thePixiJS GitHub communityand even better yet, if you know how, post a fix! Our Community is stronger in numbers so we're always keen to welcome new contributors into the team to help us shape what PixiJS becomes next.
+
+--------------------------------------------------------------------------------
+
+=== Branding ===
+
+Below are links to assorted PixiJS branding assets usable for including on your site, game, or app. All assets here are free-to-use. If you have any questions or requests, pleasefile an issue.
+
+This is the banner that is displayed at the top of ourREADME.
+
+We recommend using the Logo in places where the audience may not be familiar with PixiJS.
+
+Download:SVGPNG
+
+Download:SVGPNG
+
+Download:SVGPNG
+
+Download:SVGPNG
+
+We recommend using the Mark in places where the audience is someone familiar with the ecosystem, such as PixiJS Discord users, plugin authors, social media followers.
+
+512px x 512px
+
+Download:SVGPNG
+
+Download:SVGPNG
+
+Download:SVGPNG
+
+--------------------------------------------------------------------------------
+
+=== Untitled ===
+
+Today we are releasingPixiJS Layoutv3, a complete rebuild of the library from the ground up. This new version offers a powerful, web-standard way to manage layout inside PixiJS projects, powered by theYogalayout engine.
+
+More than just a rewrite, v3 represents amajor leap forward: it brings trueflexbox layoutprinciples to the PixiJS ecosystem, opening up PixiJS to web developers who are used to CSS-style layouts. Whether you are creating a game UI, a dynamic canvas app, or a full interactive experience, you can now use the layout patterns you already know —flex-grow,justify-content,align-items, and more.
+
+In addition,PixiJS Layoutv3 integrates seamlessly withPixiJS React, enabling React developers to compose and manage PixiJS UIs with a familiar declarative workflow. Whether you are working in plain PixiJS or combining it with React, layout is now easier, more intuitive, and more powerful.
+
+The wait is over! We're thrilled to announce the release ofPixiJS React v8, a complete reimagining of how React and PixiJS work together. This update represents a major shift in how you'll build interactive graphics in React applications.
+
+Built from the ground up to harness the power of PixiJS v8 and designed exclusively for React 19, this new major version brings unprecedented flexibility, performance, and developer experience to the PixiJS React ecosystem.
+
+We're happy to announce the release of PixiJS v8.7.0, featuring a number of new features and improvements that you have been asking for. This version includes:
+
+Here's a closer look at these features and what they offer.
+
+We have launched a new GitHub organization calledPixiJS Userlandto host many of our popular community-driven extensions. This initiative aims to help PixiJS developers easily identify which projects are officially supported and which are community-driven, while also giving developers more freedom to manage their projects independently.
+
+As we mentioned in our previousPixiJS Update post, we are focusing on making PixiJS easier to use and understand.
+Today we're pushing the project one step closer to that goal and we’re excited to introducePixiJS Create.
+
+An easy to use CLI that provides templates for using PixiJS with your favourite bundler, as well as a new "Creation Template" to get you started with PixiJS and its ecosystem.
+
+Thank you to everyone who participated in our survey! One thing came through loud and clear:better documentation is a top priority for the PixiJS community. We’ve taken your feedback to heart, and work is already underway to make significant improvements.
+
+This post is part of our commitment to better communication. We’ll share how we’re tackling documentation updates and shine a light on some of the great features and improvements we’ve introduced since PixiJS v8 that might have flown under the radar!
+
+PixiJS v8 has taken speed to the next level with the release of its newParticleContainer. This new feature brings a jaw-dropping performance boost, capable of rendering 100K+ without breaking a sweat. If you’ve got tons of elements to throw on the screen, you’re in for a treat!
+
+Today we are very excited to announceAssetPack1.0, an asset management and optimization tool for web developers.
+
+In the world of web development, managing and optimizing assets often demands significant manual effort. Developers need to ensure that their images are compressed, their audio files are optimized, their fonts are loaded efficiently, and more. This process can be time-consuming and error-prone, especially when working on large projects with many assets. To address this challenge, AssetPack provides a configurable asset pipeline that automates many of these tasks, making it easier for developers to manage and deploy assets in their projects.
+
+We have exciting news for all animation enthusiasts and game developers! The Spine team has just smashed it out of the park with the release ofSpine 4.2, which includes some truly great new features. The best part for us PixiJS users? We can start leveraging these remarkable features today in both v7 and v8!
+
+Get ready to push the boundaries of what's possible on the web! PixiJS v8 has landed, and it's a game-changer. Celebrating a decade of driving innovation, we've supercharged PixiJS with the latest technological advancements, making it faster, more robust, and ridiculously powerful. From the seamless integration of WebGPU to leveraging modern JavaScript for smoother development, PixiJS v8 is all about empowering you to create jaw-dropping web experiences with ease. It's not just an update; it's the future of 2D web graphics, today. Dive in and let PixiJS v8 elevate your projects to unseen heights. Let's make the web a more beautiful place, one pixi(el) at a time.
+
+We're thrilled to offer an exclusive preview of the future of 2D web graphics with the Beta release of PixiJS v8. Although not yet finalized, this Beta iteration is packed with killer performance improvements and features we're eager for you to start playing with!
+
+Over the course of a decade—yes, you read that right, ten years!—we've implemented significant changes to the PixiJS engine. But the advancements in this new release are among the most monumental we've ever made!
+
+We are excited to announce the launch of the PixiJS Universe, an initiative to further enhance the capabilities of PixiJS and make it even easier for developers to create amazing games and apps.
+
+--------------------------------------------------------------------------------
+
+=== PixiJS API documentation versions ===
+
+Here you can find the documentation for current released version.
+
+Here you can find the documentation for work-in-process unreleased version.
+
+Here you can find documentation for previous versions of PixiJS.
+
+--------------------------------------------------------------------------------
+
+=== Welcome ===
+
+PixiJS is an open source, web-based rendering system that provides blazing fast performance for games, data visualization, and other graphics intensive projects. These guides are designed to be a companion to theAPI documentation, providing a structured introduction to using the API to solve problems and build projects.
+
+If you're new to PixiJS, we suggest you start with the Basics and read through them in order (a good place to start isGetting Started).  While PixiJS has a mature API and solid documentation, the guides go over many common issues and questions that developers new to the system encounter.
+
+As you explore the guides, you may find these resources valuable:
+
+--------------------------------------------------------------------------------
+
+=== Tutorials ===
+
+Welcome to the tutorials page! Here you can find hand-crafted exercises to get you started with the PixiJS.
+
+Learn the basics of how to use PixiJS.
+
+Let's create a lively fish pond!
+
+Onboard the graphical Choo Choo Train!
+
+Behold the power of interactive Spine animation!
+
+--------------------------------------------------------------------------------
+
+=== Graphics ===
+
+Graphicsis a complex and much misunderstood tool in the PixiJS toolbox.  At first glance, it looks like a tool for drawing shapes.  And it is!  But it can also be used to generate masks.  How does that work?
+
+In this guide, we're going to de-mystify theGraphicsobject, starting with how to think about what it does.
+
+Check out thegraphics example code.
+
+First-time users of theGraphicsclass often struggle with how it works.  Let's look at an example snippet that creates aGraphicsobject and draws a rectangle:
+
+// Create a Graphics object, draw a rectangle and fill itletobj=newGraphics().rect(0,0,200,100).fill(0xff0000);// Add it to the stage to renderapp.stage.addChild(obj);
+
+That code will work - you'll end up with a red rectangle on the screen.  But it's pretty confusing when you start to think about it.  Why am I drawing a rectangle whenconstructingthe object?  Isn't drawing something a one-time action?  How does the rectangle get drawn thesecondframe?  And it gets even weirder when you create aGraphicsobject with a bunch of drawThis and drawThat calls, and then you use it as amask.  What???
+
+The problem is that the function names are centered arounddrawing, which is an action that puts pixels on the screen.  But in spite of that, theGraphicsobject is really aboutbuilding.
+
+Let's look a bit deeper at thatrect()call.  When you callrect(), PixiJS doesn't actually draw anything.  Instead, it stores the rectangle you "drew" into a list of geometry for later use.  If you then add theGraphicsobject to the scene, the renderer will come along, and ask theGraphicsobject to render itself.  At that point, your rectangle actually gets drawn - along with any other shapes, lines, etc. that you've added to the geometry list.
+
+Once you understand what's going on, things start to make a lot more sense.  When you use aGraphicsobject as a mask, for example, the masking system uses that list of graphics primitives in the geometry list to constrain which pixels make it to the screen.  There's no drawing involved.
+
+That's why it helps to think of theGraphicsclass not as a drawing tool, but as a geometry building tool.
+
+There are a lot of functions in theGraphicsclass, but as a quick orientation, here's the list of basic primitives you can add:
+
+In addition, you have access to the following complex primitives:
+
+There is also support for svg. But due to the nature of how PixiJS renders holes (it favours performance) Some complex hole shapes may render incorrectly. But for the majority of shapes, this will do the trick!
+
+letmySvg=newGraphics().svg(`<svg><path d="M 100 350 q 150 -300 300 0" stroke="blue" /></svg>`);
+
+Understanding the relationship between Sprites and their shared Texture can help grasp the concept of aGraphicsContext. Just as multiple Sprites can utilize a single Texture, saving memory by not duplicating pixel data, a GraphicsContext can be shared across multiple Graphics objects.
+
+This sharing of aGraphicsContextmeans that the intensive task of converting graphics instructions into GPU-ready geometry is done once, and the results are reused, much like textures. Consider the difference in efficiency between these approaches:
+
+Creating individual circles without sharing a context:
+
+// Create 5 circlesfor(leti=0;i<5;i++){letcircle=newGraphics().circle(100,100,50).fill('red');}
+
+Versus sharing a GraphicsContext:
+
+// Create a master GraphicscontextletcircleContext=newGraphicsContext().circle(100,100,50).fill('red')// Create 5 duplicate objectsfor(leti=0;i<5;i++){// Initialize the duplicate using our circleContextletduplicate=newGraphics(circleContext);}
+
+Now, this might not be a huge deal for circles and squares, but when you are using SVGs, it becomes quite important to not have to rebuild each time and instead share aGraphicsContext. It's recommended for maximum performance to create your contexts upfront and reuse them, just like textures!
+
+letcircleContext=newGraphicsContext().circle(100,100,50).fill('red')letrectangleContext=newGraphicsContext().rect(0,0,50,50).fill('red')letframes=[circleContext,rectangleContext];letframeIndex=0;constgraphics=newGraphics(frames[frameIndex]);// animate from square to circle:functionupdate(){// swap the context - this is a very cheap operation!// much cheaper than clearing it each frame.graphics.context=frames[frameIndex++%frames.length];}
+
+If you don't explicitly pass aGraphicsContextwhen creating aGraphicsobject, then internally, it will have its own context, accessible viamyGraphics.context. TheGraphicsContextclass manages the list of geometry primitives created by the Graphics parent object. Graphics functions are literally passed through to the internal contexts:
+
+letcircleGraphics=newGraphics().circle(100,100,50).fill('red')
+
+same as:
+
+letcircleGraphics=newGraphics()circleGraphics.context.circle(100,100,50).fill('red')
+
+CallingGraphics.destroy()will destroy the graphics. If a context was passed to it via the constructor then it will leave the destruction of that context to you. However if the context is internally created (the default), when destroyed the Graphics object will destroy its internalGraphicsContext.
+
+OK, so now that we've covered how theGraphicsclass works, let's look at how you use it.  The most obvious use of aGraphicsobject is to draw dynamically generated shapes to the screen.
+
+Doing so is simple.  Create the object, call the various builder functions to add your custom primitives, then add the object to the scene graph.  Each frame, the renderer will come along, ask theGraphicsobject to render itself, and each primitive, with associated line and fill styles, will be drawn to the screen.
+
+You can also use a Graphics object as a complex mask.  To do so, build your object and primitives as usual.  Next create aContainerobject that will contain the masked content, and set itsmaskproperty to your Graphics object.  The children of the container will now be clipped to only show through inside the geometry you've created.  This technique works for both WebGL and Canvas-based rendering.
+
+Check out themasking example code.
+
+TheGraphicsclass is a complex beast, and so there are a number of things to be aware of when using it.
+
+Memory Leaks: Calldestroy()on anyGraphicsobject you no longer need to avoid memory leaks.
+
+Holes: Holes you create have to be completely contained in the shape or else it may not be able to triangulate correctly.
+
+Changing Geometry: If you want to change the shape of aGraphicsobject, you don't need to delete and recreate it.  Instead you can use theclear()function to reset the contents of the geometry list, then add new primitives as desired.  Be careful of performance when doing this every frame.
+
+Performance:Graphicsobjects are generally quite performant.  However, if you build highly complex geometry, you may pass the threshold that permits batching during rendering, which can negatively impact performance. It's better for batching to use manyGraphicsobjects instead of a singleGraphicswith many shapes.
+
+Transparency: Because theGraphicsobject renders its primitives sequentially, be careful when using blend modes or partial transparency with overlapping geometry.  Blend modes likeADDandMULTIPLYwill workon each primitive, not on the final composite image.  Similarly, partially transparentGraphicsobjects will show primitives overlapping. To apply transparency or blend modes to a single flattened surface, consider using AlphaFilter or RenderTexture.
+
+--------------------------------------------------------------------------------
+
+=== Graphics Pixel Line ===
+
+ThepixelLineproperty is a neat feature of the PixiJS Graphics API that allows you to create lines that remain 1 pixel thick, regardless of scaling or zoom level. As part of the Graphics API, it gives developers all the power PixiJS provides for building and stroking shapes. This feature is especially useful for achieving crisp, pixel-perfect visuals, particularly in retro-style or grid-based games, technical drawing, or UI rendering.
+
+In this guide, we'll dive into how this property works, its use cases, and the caveats you should be aware of when using it.
+
+Here’s a simple example:
+
+// Create a Graphics object and draw a pixel-perfect lineletgraphics=newGraphics().moveTo(0,0).lineTo(100,100).stroke({color:0xff0000,pixelLine:true});// Add it to the stageapp.stage.addChild(graphics);// Even if we scale the Graphics object, the line remains 1 pixel widegraphics.scale.set(2);
+
+In this example, no matter how you transform or zoom theGraphicsobject, the red line will always appear 1 pixel thick on the screen.
+
+Pixel-perfect lines can be incredibly useful in a variety of scenarios. Here are some common use cases:
+
+// Create a grid of vertical and horizontal linesconstgrid=newGraphics();// Draw 10 vertical lines spaced 10 pixels apart// Draw vertical linesfor(leti=0;i<10;i++){// Move to top of each line (x = i*10, y = 0)grid.moveTo(i*10,0)// Draw down to bottom (x = i*10, y = 100).lineTo(i*10,100);}// Draw horizontal linesfor(leti=0;i<10;i++){// Move to start of each line (x = 0, y = i*10)grid.moveTo(0,i*10)// Draw across to end (x = 100, y = i*10).lineTo(100,i*10);}// Stroke all lines in white with pixel-perfect widthgrid.stroke({color:0xffffff,pixelLine:true});
+
+// Create a separator line that will always be 1 pixel thickconstseparator=newGraphics()// Start at x=0, y=50.moveTo(0,50)// Draw a horizontal line 200 pixels to the right.lineTo(200,50)// Stroke in green with pixel-perfect 1px width.stroke({color:0x00ff00,pixelLine:true});
+
+// Create a debug box with pixel-perfect strokeconstgraphicsBox=newGraphics().rect(0,0,100,100).stroke({color:0xff00ff,pixelLine:true});/*** Updates the debug box to match the bounds of a given object*@param{Container}obj - The object to draw bounds for*/functiondrawDebugBounds(obj){// Get the bounds of the objectletbounds=obj.getBounds().rectangle;// Position and scale the debug box to match the bounds// this is faster than using `moveTo` and `lineTo` each frame!graphicsBox.position.set(bounds.x,bounds.y);graphicsBox.scale.set(bounds.width/100,bounds.height/100);}
+
+This is achieved under the hood using WebGL or WebGPU's native line rendering methods whenpixelLineis set totrue.
+
+Fun fact its actually faster to draw a pixel line than a regular line. This is because of two main factors:
+
+Simpler Drawing Process: Regular lines in PixiJS (whenpixelLineisfalse) need extra steps to be drawn. PixiJS has to figure out the thickness of the line and create a shape that looks like a line but is actually made up of triangles.
+
+Direct Line Drawing: When usingpixelLine, we can tell the graphics card "just draw a line from point A to point B" and it knows exactly what to do. This is much simpler and faster than creating and filling shapes.
+
+Think of it like drawing a line on paper -pixelLineis like using a pen to draw a straight line, while regular lines are like having to carefully color in a thin rectangle. The pen method is naturally faster and simpler!
+
+While thepixelLineproperty is incredibly useful, there are some limitations and things to keep in mind:
+
+Here's an example of a filled box with a pixel-perfect stroke. The box itself scales and grows, but the stroke remains 1 pixel wide:
+
+// Create a Graphics object and draw a filled box with a pixel-perfect strokeletbox=newGraphics().rect(0,0,100,100).fill('white').stroke({color:0xff0000,pixelLine:true});// Add it to the stageapp.stage.addChild(box);// Scale the boxbox.scale.set(2);
+
+In this example, the blue box grows as it scales, but the red stroke remains at 1 pixel thickness, providing a crisp outline regardless of the scaling.
+
+ThepixelLineproperty is a super useful to have in the PixiJS toolbox for developers looking to create sharp, pixel-perfect lines that remain consistent under transformation. By understanding its strengths and limitations, you can incorporate it into your projects for clean, professional results in both visual and functional elements.
+
+--------------------------------------------------------------------------------
+
+=== Graphics Fill ===
+
+If you are new to graphics, please check out thegraphics guidehere. This guide dives a bit deeper into a specific aspect of graphics: how to fill them! Thefill()method in PixiJS is particularly powerful, enabling you to fill shapes with colors, textures, or gradients. Whether you're designing games, UI components, or creative tools, mastering thefill()method is essential for creating visually appealing and dynamic graphics. This guide explores the different ways to use thefill()method to achieve stunning visual effects.
+
+ThefillStylesdiscussed here can also be applied to Text objects!
+
+When creating aGraphicsobject, you can easily fill it with a color using thefill()method. Here's a simple example:
+
+constobj=newGraphics().rect(0,0,200,100)// Create a rectangle with dimensions 200x100.fill('red');// Fill the rectangle with a red color
+
+This creates a red rectangle. PixiJS supports multiple color formats for thefill()method. Developers can choose a format based on their needs. For example, CSS color strings are user-friendly and readable, hexadecimal strings are compact and widely used in design tools, and numbers are efficient for programmatic use. Arrays and Color objects offer precise control, making them ideal for advanced graphics.
+
+// Using a numberconstobj1=newGraphics().rect(0,0,100,100).fill(0xff0000);// Using a hex stringconstobj2=newGraphics().rect(0,0,100,100).fill('#ff0000');// Using an arrayconstobj3=newGraphics().rect(0,0,100,100).fill([255,0,0]);// Using a Color objectconstcolor=newColor();constobj4=newGraphics().rect(0,0,100,100).fill(color);
+
+For more advanced fills, you can use aFillStyleobject. This allows for additional customization, such as setting opacity:
+
+constobj=newGraphics().rect(0,0,100,100).fill({color:'red',alpha:0.5,// 50% opacity});
+
+Filling shapes with textures is just as simple:
+
+consttexture=awaitAssets.load('assets/image.png');constobj=newGraphics().rect(0,0,100,100).fill(texture);
+
+Textures can be applied in two coordinate spaces:
+
+constshapes=newPIXI.Graphics().rect(50,50,100,100).circle(250,100,50).star(400,100,6,60,40).roundRect(500,50,100,100,10).fill({texture,textureSpace:'local'// default!});
+
+constshapes=newPIXI.Graphics().rect(50,50,100,100).circle(250,100,50).star(400,100,6,60,40).roundRect(500,50,100,100,10).fill({texture,textureSpace:'global'});
+
+To modify texture coordinates, you can apply a transformation matrix, which is a mathematical tool used to scale, rotate, or translate the texture. If you're unfamiliar with transformation matrices, they allow for precise control over how textures are rendered, and you can explore more about themhere.
+
+constmatrix=newMatrix().scale(0.5,0.5);constobj=newGraphics().rect(0,0,100,100).fill({texture:texture,matrix:matrix,// scale the texture down by 2});
+
+constspriteSheetTexture=Texture.from('assets/my-sprite-sheet.png');constnewTexture=renderer.generateTexture(Sprite.from(spriteSheetTexture));constobj=newGraphics().rect(0,0,100,100).fill(newTexture);
+
+PixiJS supports both linear and radial gradients, which can be created using theFillGradientclass. Gradients are particularly useful for adding visual depth and dynamic styling to shapes and text.
+
+Linear gradients create a smooth color transition along a straight line. Here is an example of a simple linear gradient:
+
+constgradient=newFillGradient({type:'linear',colorStops:[{offset:0,color:'yellow'},{offset:1,color:'green'},],});constobj=newGraphics().rect(0,0,100,100).fill(gradient);
+
+You can control the gradient direction with the following properties:
+
+start {x, y}: These define the starting point of the gradient. For example, in a linear gradient, this is where the first color stop is positioned. These values are typically expressed in relative coordinates (0 to 1), where0represents the left/top edge and1represents the right/bottom edge of the shape.
+
+end {x, y}: These define the ending point of the gradient. Similar tostart {x, y}, these values specify where the last color stop is positioned in the shape's local coordinate system.
+
+Using these properties, you can create various gradient effects, such as horizontal, vertical, or diagonal transitions. For example, settingstartto{x: 0, y: 0}andendto{x: 1, y: 1}would result in a diagonal gradient from the top-left to the bottom-right of the shape.
+
+constdiagonalGradient=newFillGradient({type:'linear',start:{x:0,y:0},end:{x:1,y:1},colorStops:[{offset:0,color:'yellow'},{offset:1,color:'green'},],});
+
+Radial gradients create a smooth color transition in a circular pattern. Unlike linear gradients, they blend colors from one circle to another. Here is an example of a simple radial gradient:
+
+constgradient=newFillGradient({type:'radial',colorStops:[{offset:0,color:'yellow'},{offset:1,color:'green'},],});constobj=newGraphics().rect(0,0,100,100).fill(gradient);
+
+You can control the gradient's shape and size using the following properties:
+
+center {x, y}: These define the center of the inner circle where the gradient starts. Typically, these values are expressed in relative coordinates (0 to 1), where0.5represents the center of the shape.
+
+innerRadius: The radius of the inner circle. This determines the size of the gradient's starting point.
+
+outerCenter {x, y}: These define the center of the outer circle where the gradient ends. Likecenter {x, y}, these values are also relative coordinates.
+
+outerRadius: The radius of the outer circle. This determines the size of the gradient's ending point.
+
+By adjusting these properties, you can create a variety of effects, such as small, concentrated gradients or large, expansive ones. For example, setting a smallr0and a largerr1will create a gradient that starts does not start to transition until the inner circle radius is reached.
+
+constradialGradient=newFillGradient({type:'radial',center:{x:0.5,y:0.5},innerRadius:0.25,outerCenter:{x:0.5,y:0.5},outerRadius:0.5,colorStops:[{offset:0,color:'blue'},{offset:1,color:'red'},],});constobj=newGraphics().rect(0,0,100,100).fill(gradient);
+
+Memory Management: UsefillGradient.destroy()to free up resources when gradients are no longer needed.
+
+Animation: Update existing gradients instead of creating new ones for better performance.
+
+Custom Shaders: For complex animations, custom shaders may be more efficient.
+
+Texture and Matrix Limitations: Under the hood, gradient fills set both the texture and matrix properties internally. This means you cannot use a texture fill or matrix transformation at the same time as a gradient fill.
+
+You can combine a texture or gradients with a color tint and alpha to achieve more complex and visually appealing effects. This allows you to overlay a color on top of the texture or gradient, adjusting its transparency with the alpha value.
+
+constgradient=newFillGradient({colorStops:[{offset:0,color:'blue'},{offset:1,color:'red'},]});constobj=newGraphics().rect(0,0,100,100).fill({fill:gradient,color:'yellow',alpha:0.5,});
+
+constobj=newGraphics().rect(0,0,100,100).fill({texture:texture,color:'yellow',alpha:0.5,});
+
+Hopefully, this guide has shown you how easy and powerful fills can be when working with graphics (and text!). By mastering thefill()method, you can unlock endless possibilities for creating visually dynamic and engaging graphics in PixiJS. Have fun!
+
+--------------------------------------------------------------------------------
+
+=== Spritesheets ===
+
+Now that you understand basic sprites, it's time to talk about a better way to create them - theSpritesheetclass.
+
+A Spritesheet is a media format for more efficiently downloading and rendering Sprites.  While somewhat more complex to create and use, they are a key tool in optimizing your project.
+
+The basic idea of a spritesheet is to pack a series of images together into a single image, track where each source image ends up, and use that combined image as a shared BaseTexture for the resulting Sprites.
+
+The first step is to collect the images you want to combine.  The sprite packer then collects the images, and creates a new combined image.
+
+As this image is being created, the tool building it keeps track of the location of the rectangle where each source image is stored.  It then writes out a JSON file with that information.
+
+These two files, in combination, can be passed into a SpriteSheet constructor.  The SpriteSheet object then parses the JSON, and creates a series of Texture objects, one for each source image, setting the source rectangle for each based on the JSON data.  Each texture uses the same shared BaseTexture as its source.
+
+SpriteSheets help your project in two ways.
+
+First, byspeeding up the loading process.  While downloading a SpriteSheet's texture requires moving the same (or even slightly more!) number of bytes, they're grouped into a single file.  This means that the user's browser can request and download far fewer files for the same number of Sprites.  The number of filesitselfis a key driver of download speed, because each request requires a round-trip to the webserver, and browsers are limited to how many files they can download simultaneously.  Converting a project from individual source images to shared sprite sheets can cut your download time in half, at no cost in quality.
+
+Second, byimproving batch rendering.  WebGL rendering speed scales roughly with the number of draw calls made.  Batching multiple Sprites, etc. into a single draw call is the main secret to how PixiJS can run so blazingly fast.  Maximizing batching is a complex topic, but when multiple Sprites all share a common BaseTexture, it makes it more likely that they can be batched together and rendered in a single call.
+
+You can use a 3rd party tool to assemble your sprite sheet files.  Here are two that may fit your needs:
+
+ShoeBox: ShoeBox is a free, Adobe AIR-based sprite packing utility that is great for small projects or learning how SpriteSheets work.
+
+TexturePacker: TexturePacker is a more polished tool that supports advanced features and workflows. A free version is available which has all the necessary features for packing spritesheets for PixiJS. It's a good fit for larger projects and professional game development, or projects that need more complex tile mapping features.
+
+Spritesheet data can also be created manually or programmatically, and supplied to a new AnimatedSprite. This may be an easier option if your sprites are already contained in a single image.
+
+// Create object to store sprite sheet dataconstatlasData={frames:{enemy1:{frame:{x:0,y:0,w:32,h:32},sourceSize:{w:32,h:32},spriteSourceSize:{x:0,y:0,w:32,h:32}},enemy2:{frame:{x:32,y:0,w:32,h:32},sourceSize:{w:32,h:32},spriteSourceSize:{x:0,y:0,w:32,h:32}},},meta:{image:'images/spritesheet.png',format:'RGBA8888',size:{w:128,h:32},scale:1},animations:{enemy:['enemy1','enemy2']//array of frames by name}}// Create the SpriteSheet from data and imageconstspritesheet=newSpritesheet(Texture.from(atlasData.meta.image),atlasData);// Generate all the Textures asynchronouslyawaitspritesheet.parse();// spritesheet is ready to use!constanim=newAnimatedSprite(spritesheet.animations.enemy);// set the animation speedanim.animationSpeed=0.1666;// play the animation on a loopanim.play();// add it to the stage to renderapp.stage.addChild(anim);
+
+--------------------------------------------------------------------------------
+
+=== Text ===
+
+Whether it's a high score or a diagram label, text is often the best way to convey information in your projects.  Surprisingly, drawing text to the screen with WebGL is a very complex process - there's no built in support for it at all.  One of the values PixiJS provides is in hiding this complexity to allow you to draw text in diverse styles, fonts and colors with a few lines of code.  In addition, these bits of text are just as much scene objects as sprites - you can tint text, rotate it, alpha-blend it, and otherwise treat it like any other graphical object.
+
+Let's dig into how this works.
+
+Because of the challenges of working with text in WebGL, PixiJS provides three very different solutions.  In this guide, we're going to go over both methods in some detail to help you make the right choice for your project's needs.  Selecting the wrong text type can have a large negative impact on your project's performance and appearance.
+
+In order to draw text to the screen, you use aTextobject.  Under the hood, this class draws text to an off-screen buffer using the browser's normal text rendering, then uses that offscreen buffer as the source for drawing the text object.  Effectively what this means is that whenever you create or change text, PixiJS creates a new rasterized image of that text, and then treats it like a sprite.  This approach allows truly rich text display while keeping rendering speed high.
+
+So when working with Text objects, there are two sets of options - standard display object options like position, rotation, etc that workafterthe text is rasterized internally, and text style options that are usedwhilerasterizing.  Because text once rendered is basically just a sprite, there's no need to review the standard options.  Instead, let's focus on how text is styled.
+
+Check out thetext example code.
+
+There are a lot of text style options available (seeTextStyle), but they break down into 5 main groups:
+
+Font:fontFamilyto select the webfont to use,fontSizeto specify the size of the text to draw, along with options for font weight, style and variant.
+
+Appearance: Set the color withfillor add astrokeoutline, including options for gradient fills. For more information on thefillproperty, see theGraphics Fillguide.
+
+Drop-Shadows: Set a drop-shadow withdropShadow, with a host of related options to specify offset, blur, opacity, etc.
+
+Layout: Enable withwordWrapandwordWrapWidth, and then customize thelineHeightandalignorletterSpacing
+
+Utilities: Addpaddingortrimextra space to deal with funky font families if needed.
+
+To interactively test out feature of Text Style,check out this tool.
+
+In order for PixiJS to build a Text object, you'll need to make sure that the font you want to use is loaded by the browser. This can be easily accomplished with our good friendsAssets
+
+// load the fontsawaitAssets.load('short-stack.woff2');// now they can be used!consttext=newText({text:'hello',style:{fontFamily:'short-stack'}})
+
+While PixiJS does make working with text easy, there are a few things you need to watch out for.
+
+First, changing an existing text string requires re-generating the internal render of that text, which is a slow operation that can impact performance if you change many text objects each frame.  If your project requires lots of frequently changing text on the screen at once, consider using a BitmapText object (explained below) which uses a fixed bitmap font that doesn't require re-generation when text changes.
+
+Second, be careful when scaling text.  Setting a text object's scale to > 1.0 will result in blurry/pixely display, because the text is not re-rendered at the higher resolution needed to look sharp - it's still the same resolution it was when generated.  To deal with this, you can render at a higher initial size and down-scale, instead.  This will use more memory, but will allow your text to always look clear and crisp.
+
+In addition to the standard Text approach to adding text to your project, PixiJS also supportsbitmap fonts.  Bitmap fonts are very different from TrueType or other general purpose fonts, in that they consist of a single image containing pre-rendered versions of every letter you want to use.  When drawing text with a bitmap font, PixiJS doesn't need to render the font glyphs into a temporary buffer - it can simply copy and stamp out each character of a string from the master font image.
+
+The primary advantage of this approach is speed - changing text frequently is much cheaper and rendering each additional piece of text is much faster due to the shared source texture.
+
+Check out thebitmap text example code.
+
+Text
+
+BitmapText
+
+HTMLText
+
+--------------------------------------------------------------------------------
+
+=== Performance Tips ===
+
+
+
+--------------------------------------------------------------------------------
+
+=== v7 Migration Guide ===
+
+First and foremost, PixiJS v7 is a modernization release that reflects changes in the ecosystem since PixiJS was first published over six years ago. Browsers have gotten better, but PixiJS hasn't really taken advantage of some of the new features likefetch,Workers, modern JavaScript language syntax. This release keeps intact much of the high-level DisplayObjects (e.g., Sprite, Graphics, Mesh, etc). Aside from a few things, this release should be medium to low impact for most users.
+
+Microsoft officially ended support for IE, so we decided to follow. It simplified many of our modernizations since IE was an outliner from Safari/Chrome/Firefox/Edge and mobile browsers. If you need support for IE, please consider usingBabelor some other trans-piling tool.
+
+We removed the bundled polyfills such asrequestAnimationFrameandPromise. These things are widely available in browsers now. If projects require them, developers should include the polyfills they need for backward-compatibility.
+
+PixiJS historically only published ES5 (no classes!). A new output standard allows us to use ES2017 features that previously we couldn't use (e.g.,String.prototype.startsWith,Array.prototype.contains, etc). Not only does it make the code more readable, but the output looks nicer as well. For modules we are outputting ES2020, which contains syntax like nullish coalescing (??). If your project needs to have backward compatibility, you can useBabelto transpile or polyfill.
+
+InteractionManager was getting complex and difficult to maintain. Few core team members understood the code. We decided to move to FederatedEvents, which is concise, better aligned with the DOM, and supports things like bubbling. The good news, is you shouldn't have to change code, as it is largely a drop-in replacement. We addedaddEventListenerandremoveEventListenerAPIs to DisplayObject which have the same DOM signature and can be used instead ofonandoff.
+
+Similarly, we've been wanting to remove the Loader because of its legacy approach (e.g., XMLHttpRequest). This was forked fromresource-loaderthat has been with PixiJS for a long time. The original design inspiration for Loader was driven largely by Flash/AS3, which now seem dated. There were a few things we wanted out of a new iteration: static loading, loading with Workers, background loading, Promise-based, fewer layers of caching. Here's a quick example of how this will change:
+
+import{Loader,Sprite}from'pixi.js';constloader=newLoader();loader.add('background','path/to/assets/background.jpg');loader.load((loader,resources)=>{constimage=Sprite.from(resources.background.texture);});
+
+Now becomes:
+
+import{Assets,Sprite}from'pixi.js';consttexture=awaitAssets.load('path/to/assets/background.jpg');constimage=Sprite.from(texture);
+
+PixiJS heavily usespeerDependenciesin thepackage.jsonwithin each package. This design choice has plagued Pixi with many issues. It's a breaking change to remove, so now was a good time. We have decided to completely removepeerDependencies, instead opting fornothing. This should make installing and upgradingpixi.jsmuch easier. We are working on updatingour toolingfor composing a custom version with packages.Edit: As of 7.2.0, we have reverted this change to keep compatibility with some module-based CDNs.
+
+The@pixi/corepackage now depends and re-exports the following packages.
+
+While some packages will still work when installed directly, others will not, since by installing them alongside@pixi/coreyou will be effectively importing two copies of the same code. 
+This will lead to errors where changing settings from@pixi/settingsdoesn't do anything since@pixi/corehas its own version of that package.
+It is recommended that you uninstall these from your project and use@pixi/coreinstead.
+
+import{Rectangle}from'@pixi/math';import{settings}from'@pixi/settings';import{ALPHA_MODES}from'@pixi/constants';import{string2hex}from'@pixi/utils';
+
+Now becomes:
+
+import{Rectangle,settings,ALPHA_MODES,utils}from'@pixi/core';const{string2hex}=utils;
+
+Extract and prepare plugins have been converted to Renderer "systems".
+
+renderer.plugins.extractrenderer.plugins.prepare
+
+Now becomes:
+
+renderer.extractrenderer.prepare
+
+Extensions now install themselves, so you should only need to import the class in order to use. For example, in v6:
+
+import{AccessibilityManager}from'@pixi/accessibility';import{extensions}from'@pixi/core';extensions.add(AccessibilityManager);
+
+Now becomes:
+
+import'@pixi/accessibility';
+
+With the new events system, one of the common APIs that changed is `hitTest.
+
+import{Application}from'pixi.js';constapp=newApplication();app.renderer.plugins.interaction.hitTest({x,y});
+
+Now becomes:
+
+import{Application,EventBoundary}from'pixi.js';constapp=newApplication();constboundary=newEventBoundary(app.stage);boundary.hitTest(x,y);
+
+The following methods are now async and return a Promise.
+
+import{Application,EventBoundary}from'pixi.js';constapp=newApplication();constdataUri=app.renderer.extract.base64();
+
+Now becomes:
+
+import{Application,EventBoundary}from'pixi.js';constapp=newApplication();constdataUri=awaitapp.renderer.extract.base64();
+
+Interaction events in PixiJS now behave like the DOM in v7. This was intentional to align around behavior that would be familiar with developers, but obviously impacts the behavior withpointermove,mousemove, andtouchmove.
+
+Like the DOM, move events are nowlocal. This means that if you are outside the bounds of the object, you will not receive a move event. Generally, you should consider adding move events to the stage or parent instead of the DisplayObject itself.
+
+Working example:https://jsfiddle.net/bigtimebuddy/spnv4wm6/
+
+Property-based handlers were removed from events. This was a feature of the old InteractionManager. For instance:
+
+sprite.pointertap=()=>{// handler the pointertap};
+
+Now becomes:
+
+sprite.on('pointertap',()=>{// handler the pointertap});
+
+The propertybuttonModewas a convenience for toggling thecursorproperty betweenpointerandnull. It has now been removed.
+
+sprite.buttonMode=true;
+
+Now becomes:
+
+sprite.cursor='pointer';
+
+If you would like to re-add this functionality, you canpatch DisplayObject's prototype:
+
+import{DisplayObject}from'pixi.js';Object.defineProperty(DisplayObject.prototype,'buttonMode',{get(){returnthis.cursor==='pointer';},set(value){this.cursor=value?'pointer':null;},});
+
+If you're planning on transitioning your code from v6, it would be helpful to implement some of the more dramatic changes in v6 first before upgrading to v7:
+
+import{InteractionManager,extensions,Application}from'pixi.js';import{EventSystem}from'@pixi/events';// Uninstall interactionextensions.remove(InteractionManager);// Create the renderer or applicationconstapp=newApplication();// Install eventsapp.renderer.addSystem(EventSystem,'events');
+
+--------------------------------------------------------------------------------
+
+=== v6 Migration Guide ===
+
+PixiJS 6comes with few surface-level breaking changes. This document isnot complete.
+
+If you're using TypeScript, make sure the follow is added to yourtsconfig.json:
+
+{"compilerOptions":{"moduleResolution":"node",// Required for importing 3rd-party dependencies like EventEmitter3"esModuleInterop":true}}
+
+If you ever overrodeMesh._renderDefaultto take into account more uniforms like this:v5 Reference
+
+if(shader.program.uniformData.translationMatrix){shader.uniforms.translationMatrix=this.transform.worldTransform.toArray(true);}
+
+Remove the if, leave the contents, otherwise you might not get correct sync uniform fortranslationMatrix, or even worse - get null pointer.v6 Reference.
+
+shader.uniforms.translationMatrix=this.transform.worldTransform.toArray(true);
+
+--------------------------------------------------------------------------------
+
+=== v5 Migration Guide ===
+
+This document is useful for developers who are attempting toupgrading from v4 to v5. This includes gotchas and important context for understanding why your v4 code made need some subtle changes. In general, we've try to be as backward-compatible in v5 with the use of deprecation warnings in theconsole. There are, however, sometimes when changes are too substantial and require some additional help.
+
+PixiJS v5 has made WebGL the first-class renderer and made CanvasRenderer to be second-class. Functionally, there's not much that changed from v4, but there are a bunch of subtle internal naming changes which could trip-up some developers upgrading to v5. For instance:
+
+If you created a plugin or project that previously usedrenderon a Container (see#5510), this will probably cause your project to not render correctly. Please consider renaming your user-definedrenderto something else. In most other cases, you'll get a deprecation warning trying to invoke WebGL-related classes or methods, e.g.,new PIXI.WebGLRenderer().
+
+Specifyingoptionsas a third parameter inRendererconstructor is officially dropped (same withPIXI.Application,PIXI.autoDetectRenderer&PIXI.CanvasRenderer). In v4 we supported two function signatures, but in v5 we droppedwidth, height, optionssignature. Please addwidthandheighttooptions.
+
+constrenderer=newPIXI.Renderer(800,600,{transparent:true});// badconstrenderer=newPIXI.Renderer({width:800,height:600,transparent:true});// good
+
+Note: Addingtransparent: truein Renderer or Application constructor options might help with strange artifacts on some devices, but it might reduce FPS. It's much better thanpreserveDrawingBuffer: true.
+
+If you need the v4 default behavior of resizing the canvas using css pixels, addautoDensity: trueto the options.
+
+Not everything went to params. To enable WebGL1 even if WebGL2 is available, use
+
+PIXI.settings.PREFER_ENV=PIXI.ENV.WEBGL;
+
+PixiJS v5 introduces a new class calledPIXI.Mesh. This allows overriding the default shader and the ability to add more attributes to geometry. Forexample, you can add colors to vertices.
+
+The old v4 Mesh class has moved fromPIXI.mesh.MeshtoPIXI.SimpleMesh, it extendsPIXI.Mesh.
+
+PIXI.mesh.Rope,PIXI.mesh.Plane,PIXI.mesh.NineSlicePlanehave moved toPIXI.SimpleRope,PIXI.SimplePlaneandPIXI.NineSlicePlanerespectively.
+
+If you used custom shaders or generated meshes in v4, you might be impacted by these changes in v5.
+
+PIXI.SimpleMeshfieldsvertices,uvs,indicesare wrapped insidemesh.geometryattributebuffers. For example, this is how access to buffers provided throughmesh.uvBufferproperty:
+
+getuvBuffer(){returnthis.geometry.buffers[1];}
+
+Theindicesproperty shortcut is also missing, but you can access the data insidemesh.geometry.indexBuffer.
+
+You can override buffer data, and notify it that data was changed, in this case buffer will be uploaded to GPU lazily. Previously in v4 mesh had several flags that indicated which attributes have to be updated and their names confused people.
+
+Drawing holes in Graphics was very limited in v4. This only supported non-Shape drawing, like usinglineTo,bezierCurveTo, etc. In v5, we improved the hole API by supporting shapes. Unfortunately, there's no deprecation strategy to support the v4 API. For instance, in v4:
+
+constgraphic=newPIXI.Graphics().beginFill(0xff0000).moveTo(0,0).lineTo(100,0).lineTo(100,100).lineTo(0,100).moveTo(10,10).lineTo(90,10).lineTo(90,90).lineTo(10,90).addHole();
+
+Live example inv4.x
+
+In v5, Graphics has simplified and the API changed fromaddHoletobeginHoleandendHole.
+
+constgraphic=newPIXI.Graphics().beginFill(0xff0000).drawRect(0,0,100,100).beginHole().drawCircle(50,50,30).endHole();
+
+Live example indev
+
+In v4 filters had a default padding of4and in v5 this has been changed to a default of0. This can cause some filters to look broken when used. To fix this issue simply add some padding to the filters you create.
+
+// Glow filter from https://github.com/pixijs/pixi-filtersconstfilter=newPIXI.filters.GlowFilter();filter.padding=4;
+
+Some filters, likeBlurFilter, automatically calculate the padding so changes may not be necessary.
+
+We reorganized all uniforms dedicated to coordinate system transforms, and renamed them. If your filter doesn't work anymore, check if you use default vertex shader. In that case, you can use old v4 vertex shader code.
+
+All changes are explained in [[Creating Filters|v5-Creating-filters]]
+
+Previously, you may have ended up with code like this in v4 (specifically if you sawIvan's comment/JSFiddle):
+
+constrenderer=PIXI.autoDetectRenderer();renderer.bindTexture(baseRenderTex,false,0);constglTex=baseRenderTex._glTextures[renderer.CONTEXT_UID];glTex.enableMipmap();// this is what actually generates mipmaps in WebGLglTex.enableLinearScaling();// this is what tells WebGL to USE those mipmaps
+
+In v5, this code is no longer needed.
+
+One of the newest features in v5 is that we decoupled all the asset-specific functionality from BaseTexture. We created a new system called "resources" and each BaseTexture now has a resource that wraps some specific asset type. For instance: VideoResource, SVGResource, ImageResource, CanvasResource. In the future, we hope to be able to add other resource types. If there were asset-specific methods or properties being called before, these will probably be onbaseTexture.resource.
+
+Also, we removed all of thefrom*methods from BaseTexture, so you just can callBaseTexture.fromand pass in whatever resource. Please seedocsfor more information aboutfrom.
+
+constcanvas=document.createElement('canvas');constbaseTexture=PIXI.BaseTexture.from(canvas);
+
+That API also allows to use pure WebGL and 2d context calls, see thegradient example.
+
+Has been moved tobaseTexture.resource.source, moved into resource corresponding to the baseTexture.baseTexture.resourcedoes not exist for RenderTexture, and source does not exist for resources that dont have source.
+
+If you use transparent interactive graphics trick, make sure that you use specify alpha=0 for all element, not for its parts. How PixiJS deals with shapes that have alpha=0 is considered undefined behaviour. We might change it back, but we have no guarantees about it.
+
+graphics.beginFill(0xffffff,0.0);//badgraphics.alpha=0;//good
+
+Since WebGL and WebGL2 are now first-class, we have removed the canvas-based fallback from the defaultpixi.jspackage. If you needCanvasRenderer, you should switch to usepixi.js-legacyinstead.
+
+import*asPIXIfrom"pixi.js";// Will NOT return CanvasRenderer because canvas-based// functionality was removed from "pixi.js"constrenderer=PIXI.autoDetectRenderer();// return PIXI.Renderer or throws error
+
+Instead, use the legacy bundle to have access to the canvas rendering.
+
+import*asPIXIfrom"pixi.js-legacy";constrenderer=PIXI.autoDetectRenderer();// returns PIXI.Renderer or PIXI.CanvasRenderer
+
+If you're usingRollup,Parcelor another bundler to add PixiJS into your project there are a few subtle changes when moving to v5. Namely, the globalPIXIobject is no longer created automatically. This was removed from bundling for two purpose: 1) to improve tree-shaking for bundlers, and 2) for security purpose by protectingPIXI.
+
+This is no longer a valid way to import:
+
+import"pixi.js";constrenderer=PIXI.autoDetectRenderer();// INVALID! No more global.PIXI!
+
+Instead, you should import as a namespace or individual elements:
+
+import*asPIXIfrom"pixi.js";constrenderer=PIXI.autoDetectRenderer();// or even better:import{autoDetectRenderer}from"pixi.js";constrenderer=autoDetectRenderer();
+
+Lastly, some 3rd-party plugins maybe expectingwindow.PIXI, so you might have to explicitly expose the global like this, however this isnot recommended.
+
+import*asPIXIfrom'pixi.js';window.PIXI=PIXI;// some bundlers might prefer "global" instead of "window"
+
+WhenWebpackand 3rd-party plugins, likepixi-spine, you might have difficulties building the globalPIXIobject resulting in a runtime errorReferenceError: PIXI is not defined. Usually this can be resolved by usingWebpack shimming globals.
+
+For instance, here's your import code:
+
+import*asPIXIfrom'pixi.js';import'pixi-spine';// or other plugins that need global 'PIXI' to be defined first
+
+Add apluginssection to yourwebpack.config.jsto let know Webpack that the globalPIXIvariable make reference topixi.jsmodule. For instance:
+
+const webpack = require('webpack');module.exports = {entry: '...',output: {...},plugins: [new webpack.ProvidePlugin({PIXI: 'pixi.js'})]}
+
+--------------------------------------------------------------------------------
+
+=== Containers ===
+
+TheContainerclass provides a simple display object that does what its name implies - collect a set of child objects together.  But beyond grouping objects, containers have a few uses that you should be aware of.
+
+The most common attributes you'll use when laying out and animating content in PixiJS are provided by the Container class:
+
+Almost every type of display object is also derived from Container!  This means that in many cases you can create a parent-child hierarchy with the objects you want to render.
+
+However, it's a good ideanotto do this.  Standalone Container objects areverycheap to render, and having a proper hierarchy of Container objects, each containing one or more renderable objects, provides flexibility in rendering order.  It also future-proofs your code, as when you need to add an additional object to a branch of the tree, your animation logic doesn't need to change - just drop the new object into the proper Container, and your logic moves the Container with no changes to your code.
+
+So that's the primary use for Containers - as groups of renderable objects in a hierarchy.
+
+Check out thecontainer example code.
+
+Another common use for Container objects is as hosts for masked content.  "Masking" is a technique where parts of your scene graph are only visible within a given area.
+
+Think of a pop-up window.  It has a frame made of one or more Sprites, then has a scrollable content area that hides content outside the frame.  A Container plus a mask makes that scrollable area easy to implement.  Add the Container, set itsmaskproperty to a Graphics object with a rect, and add the text, image, etc. content you want to display as children of that masked Container.  Any content that extends beyond the rectangular mask will simply not be drawn.  Move the contents of the Container to scroll as desired.
+
+// Create the application helper and add its render target to the pageletapp=newApplication({width:640,height:360});document.body.appendChild(app.view);// Create window frameletframe=newGraphics({x:320-104,y:180-104}).rect(0,0,208,208).fill(0x666666).stroke({color:0xffffff,width:4,alignment:0})app.stage.addChild(frame);// Create a graphics object to define our maskletmask=newGraphics()// Add the rectangular area to show.rect(0,0,200,200).fill(0xffffff);// Add container that will hold our masked contentletmaskContainer=newContainer();// Set the mask to use our graphics object from abovemaskContainer.mask=mask;// Add the mask as a child, so that the mask is positioned relative to its parentmaskContainer.addChild(mask);// Offset by the window's frame widthmaskContainer.position.set(4,4);// And add the container to the window!frame.addChild(maskContainer);// Create contents for the masked containerlettext=newText({text:'This text will scroll up and be masked, so you can see how masking works.  Lorem ipsum and all that.\n\n'+'You can put anything in the container and it will be masked!',style:{fontSize:24,fill:0x1010ff,wordWrap:true,wordWrapWidth:180},x:10});maskContainer.addChild(text);// Add a ticker callback to scroll the text up and downletelapsed=0.0;app.ticker.add((ticker)=>{// Update the text's y coordinate to scroll itelapsed+=ticker.deltaTime;text.y=10+-100.0+Math.cos(elapsed/50.0)*100.0;});
+
+There are two types of masks supported by PixiJS:
+
+Use aGraphicsobject to create a mask with an arbitrary shape - powerful, but doesn't support anti-aliasing
+
+Sprite: Use the alpha channel from aSpriteas your mask, providing anti-aliased edging -notsupported on the Canvas renderer
+
+Another common use for Container objects is as hosts for filtered content.  Filters are an advanced, WebGL/WebGPU-only feature that allows PixiJS to perform per-pixel effects like blurring and displacements.  By setting a filter on a Container, the area of the screen the Container encompasses will be processed by the filter after the Container's contents have been rendered.
+
+Below are list of filters available by default in PixiJS. There is, however, a community repository withmany more filters.
+
+Under the hood, each Filter we offer out of the box is written in both glsl (for WebGL) and wgsl (for WebGPU). This means all filters should work on both renderers.
+
+Important:Filters should be used somewhat sparingly. They can slow performance and increase memory usage if used too often in a scene.
+
+--------------------------------------------------------------------------------
+
+=== Architecture Overview ===
+
+OK, now that you've gotten a feel for how easy it is to build a PixiJS application, let's get into the specifics.  For the rest of the Basics section, we're going to work from the high level down to the details.  We'll start with an overview of how PixiJS is put together.
+
+Before we get into how the code is laid out, let's talk about where it lives.  PixiJS is an open source product hosted onGitHub.  Like any GitHub repo, you can browse and download the raw source files for each PixiJS class, as well as search existing issues & bugs, and even submit your own.  PixiJS is written in a JavaScript variant calledTypeScript, which enables type-checking in JavaScript via a pre-compile step.
+
+Here's a list of the major components that make up PixiJS.  Note that this list isn't exhaustive.  Additionally, don't worry too much about how each component works.  The goal here is to give you a feel for what's under the hood as we start exploring the engine.
+
+--------------------------------------------------------------------------------
+
+=== Render Loop ===
+
+Now that you understand the major parts of the system, let's look at how these parts work together to get your project onto the screen.  Unlike a web page, PixiJS is constantly updating and re-drawing itself, over and over.  You update your objects, then PixiJS renders them to the screen, then the process repeats.  We call this cycle the render loop.
+
+The majority of any PixiJS project is contained in this update + render cycle.  You code the updates, PixiJS handles the rendering.
+
+Let's walk through what happens each frame of the render loop.  There are three main steps.
+
+The first step is to calculate how much time has elapsed since the last frame, and then call the Application object's ticker callbacks with that time delta.  This allows your project's code to animate and update the sprites, etc. on the stage in preparation for rendering.
+
+We'll talk alotmore about what a scene graph is and what it's made of in the next guide, but for now, all you need to know is that it contains the things you're drawing - sprites, text, etc. - and that these objects are in a tree-like hierarchy.  After you've updated your game objects by moving, rotating and so forth, PixiJS needs to calculate the new positions and state of every object in the scene, before it can start drawing.
+
+Now that our game's state has been updated, it's time to draw it to the screen.  The rendering system starts with the root of the scene graph (app.stage), and starts rendering each object and its children, until all objects have been drawn.  No culling or other cleverness is built into this process.  If you have lots of objects outside of the visible portion of the stage, you'll want to investigate disabling them as an optimization.
+
+A note about frame rates.  The render loop can't be run infinitely fast - drawing things to the screen takes time.  In addition, it's not generally useful to have a frame updated more than once per screen update (commonly 60fps, but newer monitors can support 144fps and up).  Finally, PixiJS runs in the context of a web browser like Chrome or Firefox.  The browser itself has to balance the needs of various internal operations with servicing any open tabs.  All this to say, determining when to draw a frame is a complex issue.
+
+In cases where you want to adjust that behavior, you can set theminFPSandmaxFPSattributes on a Ticker to give PixiJS hints as to the range of tick speeds you want to support.  Just be aware that due to the complex environment, your project cannotguaranteea given FPS.  Use the passedticker.deltaTimevalue in your ticker callbacks to scale any animations to ensure smooth playback.
+
+What we've just covered is the default render loop provided out of the box by the Application helper class.  There are many other ways of creating a render loop that may be helpful for advanced users looking to solve a given problem.    While you're prototyping and learning PixiJS, sticking with the Application's provided system is the recommended approach.
+
+--------------------------------------------------------------------------------
+
+=== Scene Graph ===
+
+Every frame, PixiJS is updating and then rendering the scene graph.  Let's talk about what's in the scene graph, and how it impacts how you develop your project.  If you've built games before, this should all sound very familiar, but if you're coming from HTML and the DOM, it's worth understanding before we get into specific types of objects you can render.
+
+The scene graph's root node is a container maintained by the application, and referenced withapp.stage.  When you add a sprite or other renderable object as a child to the stage, it's added to the scene graph and will be rendered and interactable.  PixiJSContainerscan also have children, and so as you build more complex scenes, you will end up with a tree of parent-child relationships, rooted at the app's stage.
+
+(A helpful tool for exploring your project is thePixi.js devtools pluginfor Chrome, which allows you to view and manipulate the scene graph in real time as it's running!)
+
+When a parent moves, its children move as well.  When a parent is rotated, its children are rotated too.  Hide a parent, and the children will also be hidden.  If you have a game object that's made up of multiple sprites, you can collect them under a container to treat them as a single object in the world, moving and rotating as one.
+
+Each frame, PixiJS runs through the scene graph from the root down through all the children to the leaves to calculate each object's final position, rotation, visibility, transparency, etc.  If a parent's alpha is set to 0.5 (making it 50% transparent), all its children will start at 50% transparent as well.  If a child is then set to 0.5 alpha, it won't be 50% transparent, it will be 0.5 x 0.5 = 0.25 alpha, or 75% transparent.  Similarly, an object's position is relative to its parent, so if a parent is set to an x position of 50 pixels, and the child is set to an x position of 100 pixels, it will be drawn at a screen offset of 150 pixels, or 50 + 100.
+
+Here's an example.  We'll create three sprites, each a child of the last, and animate their position, rotation, scale and alpha.  Even though each sprite's properties are set to the same values, the parent-child chain amplifies each change:
+
+// Create the application helper and add its render target to the pageconstapp=newApplication();awaitapp.init({width:640,height:360})document.body.appendChild(app.canvas);// Add a container to center our sprite stack on the pageconstcontainer=newContainer({x:app.screen.width/2,y:app.screen.height/2});app.stage.addChild(container);// load the textureawaitAssets.load('assets/images/sample.png');// Create the 3 sprites, each a child of the lastconstsprites=[];letparent=container;for(leti=0;i<3;i++){letwrapper=newContainer();letsprite=Sprite.from('assets/images/sample.png');sprite.anchor.set(0.5);wrapper.addChild(sprite);parent.addChild(wrapper);sprites.push(wrapper);parent=wrapper;}// Set all sprite's properties to the same value, animated over timeletelapsed=0.0;app.ticker.add((delta)=>{elapsed+=delta.deltaTime/60;constamount=Math.sin(elapsed);constscale=1.0+0.25*amount;constalpha=0.75+0.25*amount;constangle=40*amount;constx=75*amount;for(leti=0;i<sprites.length;i++){constsprite=sprites[i];sprite.scale.set(scale);sprite.alpha=alpha;sprite.angle=angle;sprite.x=x;}});
+
+The cumulative translation, rotation, scale and skew of any given node in the scene graph is stored in the object'sworldTransformproperty.  Similarly, the cumulative alpha value is stored in theworldAlphaproperty.
+
+So we have a tree of things to draw.  Who gets drawn first?
+
+PixiJS renders the tree from the root down.  At each level, the current object is rendered, then each child is rendered in order of insertion.  So the second child is rendered on top of the first child, and the third over the second.
+
+Check out this example, with two parent objects A & D, and two children B & C under A:
+
+// Create the application helper and add its render target to the pageconstapp=newApplication();awaitapp.init({width:640,height:360})document.body.appendChild(app.canvas);// Label showing scene graph hierarchyconstlabel=newText({text:'Scene Graph:\n\napp.stage\n  ┗ A\n     ┗ B\n     ┗ C\n  ┗ D',style:{fill:'#ffffff'},position:{x:300,y:100}});app.stage.addChild(label);// Helper function to create a block of color with a letterconstletters=[];functionaddLetter(letter,parent,color,pos){constbg=newSprite(Texture.WHITE);bg.width=100;bg.height=100;bg.tint=color;consttext=newText({text:letter,style:{fill:"#ffffff"}});text.anchor.set(0.5);text.position={x:50,y:50};constcontainer=newContainer();container.position=pos;container.visible=false;container.addChild(bg,text);parent.addChild(container);letters.push(container);returncontainer;}// Define 4 lettersleta=addLetter('A',app.stage,0xff0000,{x:100,y:100});letb=addLetter('B',a,0x00ff00,{x:20,y:20});letc=addLetter('C',a,0x0000ff,{x:20,y:40});letd=addLetter('D',app.stage,0xff8800,{x:140,y:100});// Display them over time, in orderletelapsed=0.0;app.ticker.add((ticker)=>{elapsed+=ticker.deltaTime/60.0;if(elapsed>=letters.length){elapsed=0.0;}for(leti=0;i<letters.length;i++){letters[i].visible=elapsed>=i;}});
+
+If you'd like to re-order a child object, you can usesetChildIndex().  To add a child at a given point in a parent's list, useaddChildAt().  Finally, you can enable automatic sorting of an object's children using thesortableChildrenoption combined with setting thezIndexproperty on each child.
+
+As you delve deeper into PixiJS, you'll encounter a powerful feature known as Render Groups. Think of Render Groups as specialized containers within your scene graph that act like mini scene graphs themselves. Here's what you need to know to effectively use Render Groups in your projects. For more info check out theRenderGroups overview
+
+If you're building a project where a large proportion of your scene objects are off-screen (say, a side-scrolling game), you will want tocullthose objects.  Culling is the process of evaluating if an object (or its children!) is on the screen, and if not, turning off rendering for it.  If you don't cull off-screen objects, the renderer will still draw them, even though none of their pixels end up on the screen.
+
+PixiJS doesn't provide built-in support for viewport culling, but you can find 3rd party plugins that might fit your needs.  Alternately, if you'd like to build your own culling system, simply run your objects during each tick and setrenderableto false on any object that doesn't need to be drawn.
+
+If you add a sprite to the stage, by default it will show up in the top left corner of the screen.  That's the origin of the global coordinate space used by PixiJS.  If all your objects were children of the stage, that's the only coordinates you'd need to worry about.  But once you introduce containers and children, things get more complicated.  A child object at [50, 100] is 50 pixels right and 100 pixels downfrom its parent.
+
+We call these two coordinate systems "global" and "local" coordinates.  When you useposition.set(x, y)on an object, you're always working in local coordinates, relative to the object's parent.
+
+The problem is, there are many times when you want to know the global position of an object.  For example, if you want to cull offscreen objects to save render time, you need to know if a given child is outside the view rectangle.
+
+To convert from local to global coordinates, you use thetoGlobal()function.  Here's a sample usage:
+
+// Get the global position of an object, relative to the top-left of the screenletglobalPos=obj.toGlobal(newPoint(0,0));
+
+This snippet will setglobalPosto be the global coordinates for the child object, relative to [0, 0] in the global coordinate system.
+
+When your project is working with the host operating system or browser, there is a third coordinate system that comes into play - "screen" coordinates (aka "viewport" coordinates).  Screen coordinates represent position relative to the top-left of the canvas element that PixiJS is rendering into.  Things like the DOM and native mouse click events work in screen space.
+
+Now, in many cases, screen space is equivalent to world space.  This is the case if the size of the canvas is the same as the size of the render view specified when you create youApplication.  By default, this will be the case - you'll create for example an 800x600 application window and add it to your HTML page, and it will stay that size.  100 pixels in world coordinates will equal 100 pixels in screen space.  BUT!  It is common to stretch the rendered view to have it fill the screen, or to render at a lower resolution and up-scale for speed.  In that case, the screen size of the canvas element will change (e.g. via CSS), but the underlying render view willnot, resulting in a mis-match between world coordinates and screen coordinates.
+
+--------------------------------------------------------------------------------
+
+=== SVG's ===
+
+PixiJS provides powerful support for rendering SVGs, allowing developers to integrate scalable vector graphics seamlessly into their projects. This guide explores different ways to use SVGs in PixiJS, covering real-time rendering, performance optimizations, and potential pitfalls.
+
+SVGs have several advantages over raster images like PNGs:
+
+✅Smaller File Sizes– SVGs can be significantly smaller than PNGs, especially for large but simple shapes. A high-resolution PNG may be several megabytes, while an equivalent SVG could be just a few kilobytes.
+
+✅Scalability– SVGs scale without losing quality, making them perfect for responsive applications and UI elements.
+
+✅Editable After Rendering– Unlike textures, SVGs rendered via Graphics can be modified dynamically (e.g., changing stroke colors, modifying shapes).
+
+✅Efficient for Simple Graphics– If the graphic consists of basic shapes and paths, SVGs can be rendered efficiently as vector graphics.
+
+However, SVGs can also be computationally expensive to parse, particularly for intricate illustrations with many paths or effects.
+
+PixiJS offers two primary ways to render SVGs:
+
+Each method has its advantages and use cases, which we will explore below.
+
+SVGs can be loaded as textures and used within Sprites. This method is efficient but does not retain the scalability of vector graphics.
+
+constsvgTexture=awaitAssets.load('tiger.svg');constmySprite=newSprite(svgTexture);
+
+You can specify a resolution when loading an SVG as a texture to control its size:
+This does increase memory usage, but it be of a higher fidelity.
+
+constsvgTexture=awaitAssets.load('path/to.svg',{resolution:4// will be 4 times as big!});constmySprite=newSprite(svgTexture);
+
+This ensures the texture appears at the correct size and resolution.
+
+✅Fast to render(rendered as a quad, not geometry)✅Good for static images✅Supports resolution scaling for precise sizing✅Ideal for complex SVGs that do not need crisp vector scaling(e.g., UI components with fixed dimensions)❌Does not scale cleanly(scaling may result in pixelation)❌Less flexibility(cannot modify the shape dynamically)
+❌Texture Size LimitA texture can only be up to 4096x4096 pixels, so if you need to render a larger SVG, you will need to use the Graphics method.
+
+PixiJS can render SVGs as real scalable vector graphics using theGraphicsclass.
+
+constgraphics=newGraphics().svg('<svg width="100" height="100"><rect width="100" height="100" fill="red"/></svg>');
+
+If you want to use the same SVG multiple times, you can useGraphicsContextto share the parsed SVG data across multiple graphics objects, improving performance by parsing it once and reusing it.
+
+constcontext=newGraphicsContext().svg('<svg width="100" height="100"><rect width="100" height="100" fill="red"/></svg>');constgraphics1=newGraphics(context);constgraphics2=newGraphics(context);
+
+Instead of passing an SVG string directly, you can load an SVG file using PixiJS’sAssets.loadmethod. This will return aGraphicsContextobject, which can be used to create multipleGraphicsobjects efficiently.
+
+constsvgContext=awaitAssets.load('path/to.svg',{parseAsGraphicsContext:true// If false, it returns a texture instead.});constmyGraphics=newGraphics(svgContext);
+
+Since it's loaded viaAssets.load, it will be cached and reused, much like a texture.
+
+✅Retains vector scalability(no pixelation when zooming)✅Modifiable after rendering(change colors, strokes, etc.)✅Efficient for simple graphics✅fast rendering if SVG structure does not change(no need to reparse)
+❌More expensive to parse(complex SVGs can be slow to render)❌Not ideal for static images
+
+PixiJS supports most SVG features that can be rendered in a Canvas 2D context. Below is a list of common SVG features and their compatibility:
+
+✅Use Graphics for scalable and dynamic SVGs✅Use Textures for performance-sensitive applications✅UseGraphicsContextto avoid redundant parsing✅Considerresolutionwhen using textures to balance quality and memory
+
+⚠Large SVGs can be slow to parse– Optimize SVGs before using them in PixiJS.⚠Texture-based SVGs do not scale cleanly– Use higher resolution if necessary.⚠Not all SVG features are supported– Complex filters and text elements may not work as expected.
+
+By understanding how PixiJS processes SVGs, developers can make informed decisions on when to useGraphics.svg(),GraphicsContext, or SVG textures, balancing quality and performance for their specific use case.
+
+--------------------------------------------------------------------------------
+
+=== Cache As Texture ===
+
+ThecacheAsTexturefunction in PixiJS is a powerful tool for optimizing rendering in your applications. By rendering a container and its children to a texture,cacheAsTexturecan significantly improve performance for static or infrequently updated containers. Let's explore how to use it effectively, along with its benefits and considerations.
+
+cacheAsTextureis PixiJS v8's equivalent of the previouscacheAsBitmapfunctionality. If you're migrating from v7 or earlier, simply replacecacheAsBitmapwithcacheAsTexturein your code.
+
+When you setcontainer.cacheAsTexture(), the container is rendered to a texture. Subsequent renders reuse this texture instead of rendering all the individual children of the container. This approach is particularly useful for containers with many static elements, as it reduces the rendering workload.
+
+To update the texture after making changes to the container, call:
+
+container.updateCacheTexture();
+
+and to turn it off, call:
+
+container.cacheAsTexture(false);
+
+Here's an example that demonstrates how to usecacheAsTexture:
+
+import*asPIXIfrom'pixi.js';(async()=>{// Create a new applicationconstapp=newApplication();// Initialize the applicationawaitapp.init({background:'#1099bb',resizeTo:window});// Append the application canvas to the document bodydocument.body.appendChild(app.canvas);// load sprite sheet..awaitAssets.load('https://pixijs.com/assets/spritesheet/monsters.json');// holder to store aliensconstaliens=[];constalienFrames=['eggHead.png','flowerTop.png','helmlok.png','skully.png'];letcount=0;// create an empty containerconstalienContainer=newContainer();alienContainer.x=400;alienContainer.y=300;app.stage.addChild(alienContainer);// add a bunch of aliens with textures from image pathsfor(leti=0;i<100;i++){constframeName=alienFrames[i%4];// create an alien using the frame name..constalien=Sprite.from(frameName);alien.tint=Math.random()*0xffffff;alien.x=Math.random()*800-400;alien.y=Math.random()*600-300;alien.anchor.x=0.5;alien.anchor.y=0.5;aliens.push(alien);alienContainer.addChild(alien);}// this will cache the container and its children as a single texture// so instead of drawing 100 sprites, it will draw a single texture!alienContainer.cacheAsTexture()})();
+
+In this example, thecontainerand its children are rendered to a single texture, reducing the rendering overhead when the scene is drawn.
+
+Play around with the examplehere.
+
+Instead of enabling cacheAsTexture with true, you can pass a configuration object which is very similar to texture source options.
+
+container.cacheAsTexture({resolution:2,antialias:true,});
+
+Under the hood,cacheAsTextureconverts the container into a render group and renders it to a texture. It uses the same texture cache mechanism as filters:
+
+container.enableRenderGroup();container.renderGroup.cacheAsTexture=true;
+
+Once the texture is cached, updating it viaupdateCacheTexture()is efficient and incurs minimal overhead. Its as fast as rendering the container normally.
+
+Rendering Depends on Scene Visibility: The cache updates only when the containing scene is rendered. Modifying the layout after settingcacheAsTexturebut before rendering your scene will be reflected in the cache.
+
+Containers are rendered with no transform: Cached items are rendered at their actual size, ignoring transforms like scaling. For instance, an item scaled down by 50%, its texture will be cached at 100% size and then scaled down by the scene.
+
+Caching and Filters: Filters may not behave as expected withcacheAsTexture. To cache the filter effect, wrap the item in a parent container and applycacheAsTextureto the parent.
+
+Reusing the texture: If you want to create a new texture based on the container, its better to useconst texture = renderer.generateTexture(container)and share that amongst you objects!
+
+By understanding and applyingcacheAsTexturestrategically, you can significantly enhance the rendering performance of your PixiJS projects. Happy coding!
+
+--------------------------------------------------------------------------------
+
+=== Mixing PixiJS and Three.js ===
+
+In many projects, developers aim to harness the strengths of both 3D and 2D graphics. Combining the advanced 3D rendering capabilities of Three.js with the speed and versatility of PixiJS for 2D can result in a powerful, seamless experience. Together, these technologies create opportunities for dynamic and visually compelling applications. Lets see how to do this.
+
+This guide assumes PixiJS will be used as the top layer to deliver UI over a 3D scene rendered by Three.js. However, developers can render either in any order, as many times as needed. This flexibility allows for creative and dynamic applications.
+
+Three.js will handle the 3D rendering the creation of the dom element and context.
+
+constWIDTH=window.innerWidth;constHEIGHT=window.innerHeight;constthreeRenderer=newTHREE.WebGLRenderer({antialias:true,stencil:true// so masks work in pixijs});threeRenderer.setSize(WIDTH,HEIGHT);threeRenderer.setClearColor(0xdddddd,1);document.body.appendChild(threeRenderer.domElement);constscene=newTHREE.Scene();constcamera=newTHREE.PerspectiveCamera(70,WIDTH/HEIGHT);camera.position.z=50;scene.add(camera);constboxGeometry=newTHREE.BoxGeometry(10,10,10);constbasicMaterial=newTHREE.MeshBasicMaterial({color:0x0095dd});constcube=newTHREE.Mesh(boxGeometry,basicMaterial);cube.rotation.set(0.4,0.2,0);scene.add(cube);
+
+We used the dom element and context created by the three.js renderer to pass to the pixijs renderer.
+This was the simplest way to ensure that the two renderers were using the same WebGL context. You could have done it the other way round
+if you wanted to.
+
+PixiJS will handle the 2D overlay.
+
+constpixiRenderer=newPIXI.WebGLRenderer();awaitpixiRenderer.init({context:threeRenderer.getContext(),width:WIDTH,height:HEIGHT,clearBeforeRender:false,// Prevent PixiJS from clearing the Three.js render});conststage=newPIXI.Container();constamazingUI=newPIXI.Graphics().roundRect(20,80,100,100,5).roundRect(220,80,100,100,5).fill(0xffff00);stage.addChild(amazingUI);
+
+To ensure smooth transitions between the renderers, reset their states before each render:
+
+functionrender(){// Render the Three.js scenethreeRenderer.resetState();threeRenderer.render(scene,camera);// Render the PixiJS stagepixiRenderer.resetState();pixiRenderer.render({container:stage});requestAnimationFrame(render);}requestAnimationFrame(render);
+
+Here’s the complete example integrating PixiJS and Three.js:
+
+Enable Stencil Buffers:
+
+Keep Dimensions in Sync:
+
+Pass the WebGL Context:
+
+Disable Clear Before Render:
+
+Manage Render Order:
+
+Separate Resources:
+
+Mixing PixiJS and Three.js can be a powerful way to create dynamic and visually appealing applications. By carefully managing the rendering loop and states, you can achieve seamless transitions between 3D and 2D layers. This approach allows you to leverage the strengths of both technologies, creating applications that are both visually stunning and performant.
+
+This technique can be used with other renderers too - as long as they have their own way of resetting their state (which the main ones do) you can mix them. Popular 3D engines like Babylon.js and PlayCanvas both support state management through their respective APIs, making them compatible with this mixing approach. This gives you the flexibility to choose the 3D engine that best suits your needs while still leveraging PixiJS's powerful 2D capabilities.
+
+--------------------------------------------------------------------------------
+
+=== Render Layers ===
+
+The PixiJS Layer API provides a powerful way to control therendering orderof objects independently of theirlogical parent-child relationshipsin the scene graph. With RenderLayers, you can decouple how objects are transformed (via their logical parent) from how they are visually drawn on the screen.
+
+Using RenderLayers ensures these elements are visually prioritized while maintaining logical parent-child relationships. Examples include:
+
+A character with a health bar: Ensure the health bar always appears on top of the world, even if the character moves behind an object.
+
+UI elements like score counters or notifications: Keep them visible regardless of the game world’s complexity.
+
+Highlighting Elements in Tutorials: Imagine a tutorial where you need to push back most game elements while highlighting a specific object. RenderLayers can split these visually. The highlighted object can be placed in a foreground layer to be rendered above a push back layer.
+
+This guide explains the key concepts, provides practical examples, and highlights common gotchas to help you use the Layer API effectively.
+
+Independent Rendering Order:
+
+Logical Parenting Stays Intact:
+
+Explicit Object Management:
+
+Dynamic Sorting:
+
+First lets create two items that we want to render, red guy and blue guy.
+
+constredGuy=newPIXI.Sprite('red guy');redGuy.tint=0xff0000;constblueGuy=newPIXI.Sprite('blue guy');blueGuy.tint=0x0000ff;stage.addChild(redGuy,blueGuy);
+
+Now we know that red guy will be rendered first, then blue guy. Now in this simple example you could get away with just sorting thezIndexof the red guy and blue guy to help reorder.
+
+But this is a guide about render layers, so lets create one of those.
+
+UserenderLayer.attachto assign an object to a layer. This overrides the object’s default render order defined by its logical parent.
+
+// a layer..constlayer=newRenderLayer();stage.addChild(layer);layer.attach(redGuy);
+
+So now our scene graph order is:
+
+|- stage|-- redGuy|-- blueGuy|-- layer
+
+And our render order is:
+
+|- stage|-- blueGuy|-- layer|-- redGuy
+
+This happens because the layer is now the last child in the stage. Since the red guy is attached to the layer, it will be rendered at the layer's position in the scene graph. However, it still logically remains in the same place in the scene hierarchy.
+
+Now let's remove the red guy from the layer. To stop an object from being rendered in a layer, useremoveFromLayer. Once removed from the layer, its still going to be in the scene graph, and will be rendered in its scene graph order.
+
+layer.detach(redGuy);//  Stop rendering the rect via the layer
+
+Removing an object from its logical parent (removeChild) automatically removes it from the layer.
+
+stage.removeChild(redGuy);// if the red guy was removed from the stage, it will also be removed from the layer
+
+However, if you remove the red guy from the stage and then add it back to the stage, it will not be added to the layer again.
+
+// add red guy to his original positionstage.addChildAt(redGuy,0);
+
+You will need to reattach it to the layer yourself.
+
+layer.attach(redGuy);// re attach it to the layer again!
+
+This may seem like a pain, but it's actually a good thing. It means that you have full control over the render order of the object, and you can change it at any time. It also means you can't accidentally add an object to a container and have it automatically re-attach to a layer that may or may not still be around - it would be quite confusing and lead to some very hard to debug bugs!
+
+The layer’s position in the scene graph determines its render priority relative to other layers and objects.
+
+// reparent the layer to render first in the stagestage.addChildAt(layer,0);
+
+Here’s a real-world example that shows how to use RenderLayers to set ap player ui on top of the world.
+
+Manual Reassignment:
+
+Nested Children:
+
+Sorting Within Layers:
+
+rect.zIndex=10;// Higher values render laterlayer.sortableChildren=true;// Enable sortinglayer.sortRenderLayerChildren();// Apply the sorting
+
+Layer Overlap:
+
+By understanding and leveraging RenderLayers effectively, you can achieve precise control over your scene's visual presentation while maintaining a clean and logical hierarchy.
+
+--------------------------------------------------------------------------------
+
+=== Interaction ===
+
+PixiJS is primarily a rendering system, but it also includes support for interactivity. Adding support for mouse and touch events to your project is simple and consistent.
+
+Prior to v7, interaction was defined and managed by theInteractionpackage and itsInteractionManager.
+Beginning with v7, however, a new event-based system has replaced the previousInteractionpackage, and
+expanded the definition of what it means for aContainerto be interactive.
+
+With this, we have introducedeventModewhich allows you to control how an object responds to interaction events.
+If you're familiar with the formerInteractionsystem, theeventModeis similar to theinteractiveproperty, but with more options.
+
+PixiJS supports the following event types:
+
+AnyContainer-derived object (Sprite,Container, etc.) can become interactive simply by setting itseventModeproperty to any of the eventModes listed above. Doing so will cause the object to emit interaction events that can be responded to in order to drive your project's behavior.
+
+Check out theclick interactivity example code.
+
+To respond to clicks and taps, bind to the events fired on the object, like so:
+
+letsprite=Sprite.from('/some/texture.png');sprite.on('pointerdown',(event)=>{alert('clicked!');});sprite.eventMode='static';
+
+Check out theContainerfor the list of interaction events supported.
+
+You can check if an object is interactive by calling theisInteractiveproperty. This will return true ifeventModeis set tostaticordynamic.
+
+if(sprite.isInteractive()){// sprite is interactive}
+
+PixiJS supports three types of interaction events: mouse, touch, and pointer.
+
+What this means is that, in many cases, you can write your project to use pointer events and it will just work when used witheithermouse or touch input.
+
+Given that, the only reason to use non-pointer events is to support different modes of operation based on input type or to support multi-touch interaction. In all other cases, prefer pointer events.
+
+Hit testing requires walking the full object tree, which in complex projects can become an optimization bottleneck.
+
+To mitigate this issue, PixiJSContainer-derived objects have a property namedinteractiveChildren. If you haveContainers or other objects with complex child trees that you know willneverbe interactive,
+you can set this property tofalse, and the hit-testing algorithm will skip those children when checking for hover and click events.
+
+As an example, if you were building a side-scrolling game, you would probably want to setbackground.interactiveChildren = falsefor your background layer with rocks, clouds, flowers, etc. Doing so would substantially speed up hit-testing due to the number of unclickable child objects the background layer would contain.
+
+TheEventSystemcan also be customised to be more performant:
+
+constapp=newApplication({eventMode:'passive',eventFeatures:{move:true,/** disables the global move events which can be very expensive in large scenes */globalMove:false,click:true,wheel:true,}});
+
+--------------------------------------------------------------------------------
+
+=== Click ===
+
+
+
+--------------------------------------------------------------------------------
+
+=== Class: Container ===
+
+Container is a general-purpose display object that holds children. It also adds built-in support for advanced
+rendering features like masking and filtering.
+
+It is the base class of all display objects that act as a container for other objects, including Graphics
+and Sprite.
+
+The transform of a display object describes the projection from its
+local coordinate space to its parent's local coordinate space. The following properties are derived
+from the transform:
+
+Skewing. This can be used to deform a rectangular display object into a parallelogram.
+
+In PixiJS, skew has a slightly different behaviour than the conventional meaning. It can be
+         thought of the net rotation applied to the coordinate axes (separately). For example, if "skew.x" is
+         ⍺ and "skew.y" is β, then the line x = 0 will be rotated by ⍺ (y = -x*cot⍺) and the line y = 0 will be
+         rotated by β (y = x*tanβ). A line y = x*tanϴ (i.e. a line at angle ϴ to the x-axis in local-space) will
+         be rotated by an angle between ⍺ and β.
+
+It can be observed that if skew is applied equally to both axes, then it will be equivalent to applying
+         a rotation. Indeed, if "skew.x" = -ϴ and "skew.y" = ϴ, it will produce an equivalent of "rotation" = ϴ.
+
+Another quite interesting observation is that "skew.x", "skew.y", rotation are commutative operations. Indeed,
+         because rotation is essentially a careful combination of the two.
+
+This alpha sets a display object'srelative opacityw.r.t its parent. For example, if the alpha of a display
+object is 0.5 and its parent's alpha is 0.5, then it will be rendered with 25% opacity (assuming alpha is not
+applied on any ancestor further up the chain).
+
+Therenderableandvisibleproperties can be used to prevent a display object from being rendered to the
+screen. However, there is a subtle difference between the two. When usingrenderable, the transforms  of the display
+object (and its children subtree) will continue to be calculated. When usingvisible, the transforms will not
+be calculated.
+
+import{ BlurFilter, Container, Graphics, Sprite }from'pixi.js';constcontainer =newContainer();constsprite = Sprite.from('https://s3-us-west-2.amazonaws.com/s.cdpn.io/693612/IaUrttj.png');
+
+sprite.width =512;
+sprite.height =512;// Adds a sprite as a child to this container. As a result, the sprite will be rendered whenever the container// is rendered.container.addChild(sprite);// Blurs whatever is rendered by the containercontainer.filters = [newBlurFilter()];// Only the contents within a circle at the center should be rendered onto the screen.container.mask =newGraphics()
+    .beginFill(0xffffff)
+    .drawCircle(sprite.width /2, sprite.height /2,Math.min(sprite.width, sprite.height) /2)
+    .endFill();
+
+In PixiJS v8, containers can be set to operate in 'render group mode',
+transforming them into entities akin to a stage in traditional rendering paradigms.
+A render group is a root renderable entity, similar to a container,
+but it's rendered in a separate pass with its own unique set of rendering instructions.
+This approach enhances rendering efficiency and organization, particularly in complex scenes.
+
+You can enable render group mode on any container using container.enableRenderGroup()
+or by initializing a new container with the render group property set to true (new Container({isRenderGroup: true})).
+The method you choose depends on your specific use case and setup requirements.
+
+An important aspect of PixiJS’s rendering process is the automatic treatment of rendered scenes as render groups.
+This conversion streamlines the rendering process, but understanding when and how this happens is crucial
+to fully leverage its benefits.
+
+One of the key advantages of using render groups is the performance efficiency in moving them. Since transformations
+are applied at the GPU level, moving a render group, even one with complex and numerous children,
+doesn't require recalculating the rendering instructions or performing transformations on each child.
+This makes operations like panning a large game world incredibly efficient.
+
+However, it's crucial to note that render groups do not batch together.
+This means that turning every container into a render group could actually slow things down,
+as each render group is processed separately. It's best to use render groups judiciously, at a broader level,
+rather than on a per-child basis.
+This approach ensures you get the performance benefits without overburdening the rendering process.
+
+RenderGroups maintain their own set of rendering instructions,
+ensuring that changes or updates within a render group don't affect the rendering
+instructions of its parent or other render groups.
+This isolation ensures more stable and predictable rendering behavior.
+
+Additionally, renderGroups can be nested, allowing for powerful options in organizing different aspects of your scene.
+This feature is particularly beneficial for separating complex game graphics from UI elements,
+enabling intricate and efficient scene management in complex applications.
+
+This means that Containers have 3 levels of matrix to be mindful of:
+
+Flag for if the object is accessible. If true AccessibilityManager will overlay a
+shadow div with attributes set
+
+Setting to false will prevent any children inside this container to
+be accessible. Defaults to true.
+
+Sets the aria-label attribute of the shadow div
+
+Specify the pointer-events the accessible div will use
+Defaults to auto.
+
+Sets the text content of the shadow div
+
+Sets the title attribute of the shadow div
+If accessibleTitle AND accessibleHint has not been this will default to 'container [tabIndex]'
+
+Specify the type of div the accessible layer is. Screen readers treat the element differently
+depending on this type. Defaults to button.
+
+The opacity of the object.
+
+The angle of the object in degrees.
+'rotation' and 'angle' have the same effect on a display object; rotation is in radians, angle is in degrees.
+
+The blend mode to be applied to the sprite. Apply a value of'normal'to reset the blend mode.
+
+An optional bounds area for this container. Setting this rectangle will stop the renderer
+from recursively measuring the bounds of each children and instead use this single boundArea.
+This is great for optimisation! If for example you have a 1000 spinning particles and you know they all sit
+within a specific bounds, then setting it will mean the renderer will not need to measure the
+1000 children to find the bounds. Instead it will just use the bounds you set.
+
+Legacy property for backwards compatibility with PixiJS v7 and below.
+UsecacheAsTextureinstead.
+
+The array of children of this container.
+
+Should this object be rendered if the bounds of this object are out of frame?
+
+Culling has no effect on whether updateTransform is called.
+
+Determines if the children to the container can be culled
+Setting this to false allows PixiJS to bypass a recursive culling function
+Which can help to optimize very complex scenes
+
+If set, this shape is used for culling instead of the bounds of this object.
+It can improve the culling performance of objects with many children.
+The culling area is defined in local space.
+
+If the object has been destroyed via destroy(). If true, it should not be used.
+
+The group transform is a transform relative to the render group it belongs too.
+If this container is render group then this will be an identity matrix. other wise it
+will be the same as the relativeGroupTransform.
+Use this value when actually rendering things to the screen
+
+The height of the Container, setting this will actually modify the scale to achieve the value set.
+
+Interaction shape. Children will be hit first, then this shape will be checked.
+Setting this will cause this shape to be checked in hit tests rather than the container's bounds.
+
+import{Rectangle,Sprite}from'pixi.js';constsprite=newSprite(texture);sprite.interactive=true;sprite.hitArea=newRectangle(0,0,100,100);
+
+Determines if the children to the container can be clicked/touched
+Setting this to false allows PixiJS to bypass a recursivehitTestfunction
+
+Whether this container is currently cached as a texture.
+
+Whether or not the object should be rendered.
+
+Returns true if this container is a render group.
+This means that it will be rendered as a separate pass, with its own set of instructions
+
+The instance label of the object.
+
+Current transform of the object based on local factors: position, scale, other stuff.
+
+The instance name of the object.
+
+Property-based event handler for theclickevent.
+
+this.onclick=(event)=>{//some function here that happens on click}
+
+Property-based event handler for theglobalmousemoveevent.
+
+this.onglobalmousemove=(event)=>{//some function here that happens on globalmousemove}
+
+Property-based event handler for theglobalpointermoveevent.
+
+this.onglobalpointermove=(event)=>{//some function here that happens on globalpointermove}
+
+Property-based event handler for theglobaltouchmoveevent.
+
+this.onglobaltouchmove=(event)=>{//some function here that happens on globaltouchmove}
+
+Property-based event handler for themousedownevent.
+
+this.onmousedown=(event)=>{//some function here that happens on mousedown}
+
+Property-based event handler for themouseenterevent.
+
+this.onmouseenter=(event)=>{//some function here that happens on mouseenter}
+
+Property-based event handler for themouseleaveevent.
+
+this.onmouseleave=(event)=>{//some function here that happens on mouseleave}
+
+Property-based event handler for themousemoveevent.
+
+this.onmousemove=(event)=>{//some function here that happens on mousemove}
+
+Property-based event handler for themouseoutevent.
+
+this.onmouseout=(event)=>{//some function here that happens on mouseout}
+
+Property-based event handler for themouseoverevent.
+
+this.onmouseover=(event)=>{//some function here that happens on mouseover}
+
+Property-based event handler for themouseupevent.
+
+this.onmouseup=(event)=>{//some function here that happens on mouseup}
+
+Property-based event handler for themouseupoutsideevent.
+
+this.onmouseupoutside=(event)=>{//some function here that happens on mouseupoutside}
+
+Property-based event handler for thepointercancelevent.
+
+this.onpointercancel=(event)=>{//some function here that happens on pointercancel}
+
+Property-based event handler for thepointerdownevent.
+
+this.onpointerdown=(event)=>{//some function here that happens on pointerdown}
+
+Property-based event handler for thepointerenterevent.
+
+this.onpointerenter=(event)=>{//some function here that happens on pointerenter}
+
+Property-based event handler for thepointerleaveevent.
+
+this.onpointerleave=(event)=>{//some function here that happens on pointerleave}
+
+Property-based event handler for thepointermoveevent.
+
+this.onpointermove=(event)=>{//some function here that happens on pointermove}
+
+Property-based event handler for thepointeroutevent.
+
+this.onpointerout=(event)=>{//some function here that happens on pointerout}
+
+Property-based event handler for thepointeroverevent.
+
+this.onpointerover=(event)=>{//some function here that happens on pointerover}
+
+Property-based event handler for thepointertapevent.
+
+this.onpointertap=(event)=>{//some function here that happens on pointertap}
+
+Property-based event handler for thepointerupevent.
+
+this.onpointerup=(event)=>{//some function here that happens on pointerup}
+
+Property-based event handler for thepointerupoutsideevent.
+
+this.onpointerupoutside=(event)=>{//some function here that happens on pointerupoutside}
+
+Property-based event handler for therightclickevent.
+
+this.onrightclick=(event)=>{//some function here that happens on rightclick}
+
+Property-based event handler for therightdownevent.
+
+this.onrightdown=(event)=>{//some function here that happens on rightdown}
+
+Property-based event handler for therightupevent.
+
+this.onrightup=(event)=>{//some function here that happens on rightup}
+
+Property-based event handler for therightupoutsideevent.
+
+this.onrightupoutside=(event)=>{//some function here that happens on rightupoutside}
+
+Property-based event handler for thetapevent.
+
+this.ontap=(event)=>{//some function here that happens on tap}
+
+Property-based event handler for thetouchcancelevent.
+
+this.ontouchcancel=(event)=>{//some function here that happens on touchcancel}
+
+Property-based event handler for thetouchendevent.
+
+this.ontouchend=(event)=>{//some function here that happens on touchend}
+
+Property-based event handler for thetouchendoutsideevent.
+
+this.ontouchendoutside=(event)=>{//some function here that happens on touchendoutside}
+
+Property-based event handler for thetouchmoveevent.
+
+this.ontouchmove=(event)=>{//some function here that happens on touchmove}
+
+Property-based event handler for thetouchstartevent.
+
+this.ontouchstart=(event)=>{//some function here that happens on touchstart}
+
+Property-based event handler for thewheelevent.
+
+this.onwheel=(event)=>{//some function here that happens on wheel}
+
+The display object container that contains this display object.
+
+The RenderLayer this container belongs to, if any.
+If it belongs to a RenderLayer, it will be rendered from the RenderLayer's position in the scene.
+
+The center of rotation, scaling, and skewing for this display object in its local space. Thepositionis the projection ofpivotin the parent's local space.
+
+By default, the pivot is the origin (0, 0).
+
+The coordinate of the object relative to the local coordinates of the parent.
+
+The relative group transform is a transform relative to the render group it belongs too. It will include all parent
+transforms and up to the render group (think of it as kind of like a stage - but the stage can be nested).
+If this container is is self a render group matrix will be relative to its parent render group
+
+Can this object be rendered, if false the object will not be drawn but the transform will still be updated.
+
+The rotation of the object in radians.
+'rotation' and 'angle' have the same effect on a display object; rotation is in radians, angle is in degrees.
+
+The scale factors of this object along the local coordinate axes.
+
+The default scale is (1, 1).
+
+The skew factor for the object in radians.
+
+If set to true, the container will sort its children byzIndexvalue
+when the next render is called, or manually ifsortChildren()is called.
+
+This actually changes the order of elements in the array, so should be treated
+as a basic solution that is not performant compared to other solutions,
+such asPixiJS Layers
+
+Also be aware of that this may not work nicely with theaddChildAt()function,
+as thezIndexsorting may cause the child to automatically sorted to another position.
+
+Should children be sorted by zIndex at the next render call.
+
+Will get automatically set to true if a new child is added, or if a child's zIndex changes.
+
+The tint applied to the sprite. This is a hex value.
+
+A value of 0xFFFFFF will remove any tint effect.
+
+unique id for this container
+
+Updates the cached texture of this container. This will flag the container's cached texture
+to be redrawn on the next render.
+
+The visibility of the object. If false the object will not be drawn, and the transform will not be updated.
+
+The width of the Container, setting this will actually modify the scale to achieve the value set.
+
+Current transform of the object based on world (parent) factors.
+
+The position of the container on the x axis relative to the local coordinates of the parent.
+An alias to position.x
+
+The position of the container on the y axis relative to the local coordinates of the parent.
+An alias to position.y
+
+Mixes all enumerable properties and methods from a source object to Container.
+
+The source of properties and methods to mix in.
+
+Recursively calculates the global bounds for the container and its children.
+This method is used internally by getFastGlobalBounds to traverse the scene graph.
+
+A flag indicating whether to consider render layers in the calculation.
+
+The bounds object to update with the calculated values.
+
+The current render layer being processed.
+
+Adds one or more children to the container.
+
+Multiple items can be added like so:myContainer.addChild(thingOne, thingTwo, thingThree)
+
+The Container(s) to add to the container
+
+Adds a child to the container at a specified index. If the index is out of bounds an error will be thrown.
+If the child is already in this container, it will be moved to the specified index.
+
+The child to add.
+
+The absolute index where the child will be positioned at the end of the operation.
+
+UnlikeonoraddListenerwhich are methods from EventEmitter,addEventListenerseeks to be compatible with the DOM'saddEventListenerwith support for options.
+
+The type of event to listen to.
+
+The listener callback or object.
+
+Listener options, used for capture phase.
+
+// Tell the user whether they did a single, double, triple, or nth click.button.addEventListener('click',{handleEvent(e):{let prefix;switch(e.detail){case1:prefix='single';break;case2:prefix='double';break;case3:prefix='triple';break;default:prefix=e.detail+'th';break;}console.log('That was a '+prefix+'click');}});// But skip the first click!button.parent.addEventListener('click',functionblockClickOnce(e){e.stopImmediatePropagation();button.parent.removeEventListener('click',blockClickOnce,true);},{capture:true,});
+
+Caches this container as a texture. This allows the container to be rendered as a single texture,
+which can improve performance for complex static containers.
+
+If true, enables caching with default options. If false, disables caching.
+Can also pass options object to configure caching behavior.
+
+Collects all renderables from the container and its children, adding them to the instruction set.
+This method decides whether to use a simple or advanced collection method based on the container's properties.
+
+The set of instructions to which the renderables will be added.
+
+The renderer responsible for rendering the scene.
+
+The current render layer being processed.
+
+Collects renderables using a simple method, suitable for containers marked as simple.
+This method iterates over the container's children and adds their renderables to the instruction set.
+
+The set of instructions to which the renderables will be added.
+
+The renderer responsible for rendering the scene.
+
+The current render layer being processed.
+
+Collects renderables using an advanced method, suitable for containers with complex processing needs.
+This method handles additional effects and transformations that may be applied to the renderables.
+
+The set of instructions to which the renderables will be added.
+
+The renderer responsible for rendering the scene.
+
+The current render layer being processed.
+
+Removes all internal references and listeners as well as removes children from the display list.
+Do not use a Container after callingdestroy.
+
+Options parameter. A boolean will act as if all options
+have been set to that value
+
+if set to true, all the children will have their destroy
+method called as well. 'options' will be passed on to those calls.
+
+Only used for children with textures e.g. Sprites. If options.children
+is set to true it should destroy the texture of the child sprite
+
+Only used for children with textures e.g. Sprites.
+If options.children is set to true it should destroy the texture source of the child sprite
+
+Only used for children with graphicsContexts e.g. Graphics.
+If options.children is set to true it should destroy the context of the child graphics
+
+This will disable the render group for this container.
+
+Dispatch the event on this Container using the event's EventBoundary.
+
+The target of the event is set tothisand thedefaultPreventedflag is cleared before dispatch.
+
+The event to dispatch.
+
+// Reuse a click event!button.dispatchEvent(clickEvent);
+
+Calling this enables a render group for this container.
+This means it will be rendered as a separate set of instructions.
+The transform of the container will also be handled on the GPU rather than the CPU.
+
+Enable interaction events for the Container. Touch, pointer and mouse.
+There are 5 types of interaction settings:
+
+import{Sprite}from'pixi.js';constsprite=newSprite(texture);sprite.eventMode='static';sprite.on('tap',(event)=>{// Handle event});
+
+The area the filter is applied to. This is used as more of an optimization
+rather than figuring out the dimensions of the displayObject each frame you can set this rectangle.
+
+Also works as an interaction mask.
+
+Sets the filters for the displayObject.
+IMPORTANT: This is a WebGL only feature and will be ignored by the canvas renderer.
+To remove filters simply set this property to'null'.
+
+Calculates and returns the (world) bounds of the display object as a Rectangle.
+
+Setting totruewill stop the transforms of the scene graph from
+being updated. This means the calculation returned MAY be out of date BUT will give you a
+nice performance boost.
+
+Optional bounds to store the result of the bounds calculation.
+
+Returns the child at the specified index
+
+The index to get the child at
+
+Returns the first child in the container with the specified label.
+
+Recursive searches are done in a pre-order traversal.
+
+Instance label.
+
+Whether to search recursively
+
+Instance name.
+
+Whether to search recursively
+
+Returns the index position of a child Container instance
+
+The Container instance to identify
+
+Returns all children in the container with the specified label.
+
+Instance label.
+
+Whether to search recursively
+
+The array to store matching children in.
+
+Computes an approximate global bounding box for the container and its children.
+This method is optimized for speed by using axis-aligned bounding boxes (AABBs),
+and uses the last render results from when it updated the transforms. This function does not update them.
+which may result in slightly larger bounds but never smaller than the actual bounds.
+
+for accurate (but less performant) results usecontainer.getGlobalBounds
+
+A flag indicating whether to consider render layers in the calculation.
+
+The output bounds object to store the result. If not provided, a new one is created.
+
+Returns the global position of the container.
+
+The optional point to write the global value to.
+
+Should we skip the update transform.
+
+Retrieves the local bounds of the container as a Bounds object.
+
+Retrieves the size of the container as a Size object.
+This is faster than get the width and height separately.
+
+Optional object to store the size in.
+
+Enable interaction events for the Container. Touch, pointer and mouse
+
+Is this container cached as a texture?
+
+Determines if the container is interactive or not
+
+import{Sprite}from'pixi.js';constsprite=newSprite(texture);sprite.eventMode='static';sprite.isInteractive();// truesprite.eventMode='dynamic';sprite.isInteractive();// truesprite.eventMode='none';sprite.isInteractive();// falsesprite.eventMode='passive';sprite.isInteractive();// falsesprite.eventMode='auto';sprite.isInteractive();// false
+
+Sets a mask for the displayObject. A mask is an object that limits the visibility of an
+object to the shape of the mask applied to it. In PixiJS a regular mask must be a
+Graphics or a {@link Sprite} object. This allows for much faster masking in canvas as it
+utilities shape clipping. Furthermore, a mask of an object must be in the subtree of its parent.
+Otherwise,getLocalBoundsmay calculate incorrect bounds, which makes the container's width and height wrong.
+To remove a mask, set this property tonull.
+
+For sprite mask both alpha and red channel are used. Black mask is the same as transparent mask.
+
+import{Graphics,Sprite}from'pixi.js';constgraphics=newGraphics();graphics.beginFill(0xFF3300);graphics.drawRect(50,250,100,100);graphics.endFill();constsprite=newSprite(texture);sprite.mask=graphics;
+
+This callback is used when the container is rendered. This is where you should add your custom
+logic that is needed to be run every frame.
+
+In v7 many users usedupdateTransformfor this, however the way v8 renders objects is different
+and "updateTransform" is no longer called every frame
+
+constcontainer=newContainer();container.onRender=()=>{container.rotation+=0.01;};
+
+Removes one or more children from the container.
+
+The Container(s) to remove
+
+Removes a child from the specified index position.
+
+The index to get the child from
+
+Removes all children from this container that are within the begin and end indexes.
+
+The beginning position.
+
+The ending position. Default value is size of the container.
+
+UnlikeofforremoveListenerwhich are methods from EventEmitter,removeEventListenerseeks to be compatible with the DOM'sremoveEventListenerwith support for options.
+
+The type of event the listener is bound to.
+
+The listener callback or object.
+
+The original listener options. This is required to deregister a capture phase listener.
+
+Remove the Container from its parent Container. If the Container has no parent, do nothing.
+
+Reparent the child to this container, keeping the same worldTransform.
+
+The child to reparent
+
+Reparent the child to this container at the specified index, keeping the same worldTransform.
+
+The child to reparent
+
+The index to reparent the child to
+
+Changes the position of an existing child in the container
+
+The child Container instance for which you want to change the index number
+
+The resulting index number for the child container
+
+Updates the local transform using the given matrix.
+
+The matrix to use for updating the transform.
+
+Used to set mask and control mask options.
+
+import{Graphics,Sprite}from'pixi.js';constgraphics=newGraphics();graphics.beginFill(0xFF3300);graphics.drawRect(50,250,100,100);graphics.endFill();constsprite=newSprite(texture);sprite.setMask({mask:graphics,inverse:true,});
+
+Sets the size of the container to the specified width and height.
+This is faster than setting the width and height separately.
+
+This can be either a number or a Size object.
+
+The height to set. Defaults to the value ofwidthif not provided.
+
+Swaps the position of 2 Containers within this container.
+
+First container to swap
+
+Second container to swap
+
+Calculates the global position of the container.
+
+The world origin to calculate from.
+
+A Point object in which to store the value, optional
+(otherwise will create a new Point).
+
+Should we skip the update transform.
+
+Calculates the local position of the container relative to another point.
+
+The world origin to calculate from.
+
+The Container to calculate the global position from.
+
+A Point object in which to store the value, optional
+(otherwise will create a new Point).
+
+Should we skip the update transform
+
+Updates the cached texture. Will flag that this container's cached texture needs to be redrawn.
+This will happen on the next render.
+
+Updates the local transform.
+
+Updates the transform properties of the container (accepts partial values).
+
+The options for updating the transform.
+
+The x position of the container.
+
+The y position of the container.
+
+The scale factor on the x-axis.
+
+The scale factor on the y-axis.
+
+The rotation of the container, in radians.
+
+The skew factor on the x-axis.
+
+The skew factor on the y-axis.
+
+The x coordinate of the pivot point.
+
+The y coordinate of the pivot point.
+
+The zIndex of the container.
+
+Setting this value, will automatically set the parent to be sortable. Children will be automatically
+sorted by zIndex value; a higher value will mean it will be moved towards the end of the array,
+and thus rendered on top of other display objects within the same container.
+
+Sorts children by zIndex.
+
+Fired when a pointer device button (usually a mouse left-button) is pressed and released on
+the container. Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+Aclickevent fires after thepointerdownandpointerupevents, in that
+order. If the mouse is moved over another Container after thepointerdownevent, theclickevent is fired on the most specific common ancestor of the two target Containers.
+
+Thedetailproperty of the event is the number of clicks that occurred within a 200ms
+window of each other upto the current click. For example, it will be2for a double click.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofclick.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device (usually a mouse) is moved globally over the scene.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device is moved globally over the scene.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a touch point is moved globally over the scene.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a mouse button (usually a mouse left-button) is pressed on the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+The mousedown event.
+
+Capture phase equivalent ofmousedown.
+
+These events are propagating from the EventSystem.
+
+The capture phase mousedown.
+
+Fired when the mouse pointer is moved over a Container and its descendant's hit testing boundaries.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofmouseenter
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when the mouse pointer exits a Container and its descendants.
+
+These events are propagating from the EventSystem.
+
+Capture phase equivalent ofmouseleave.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device (usually a mouse) is moved while over the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofmousemove.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device (usually a mouse) is moved off the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+This may be fired on a Container that was removed from the scene graph immediately after
+amouseoverevent.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofmouseout.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device (usually a mouse) is moved onto the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofmouseover.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device button (usually a mouse left-button) is released over the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofmouseup.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device button (usually a mouse left-button) is released outside the
+container that initially registered a
+mousedown.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+This event is specific to the Federated Events API. It does not have a capture phase, unlike most of the
+other events. It only bubbles to the most specific ancestor of the targets of the correspondingpointerdownandpointerupevents, i.e. the target of theclickevent.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofmouseupoutside.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when the operating system cancels a pointer event.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointercancel.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device button is pressed on the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointerdown.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when the pointer is moved over a Container and its descendant's hit testing boundaries.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointerenter
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when the pointer leaves the hit testing boundaries of a Container and its descendants.
+
+This event notifies only the target and does not bubble.
+
+These events are propagating from the EventSystem.
+
+Thepointerleaveevent.
+
+Capture phase equivalent ofpointerleave.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device is moved while over the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointermove.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device is moved off the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointerout.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device is moved onto the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointerover.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device button is pressed and released on the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointertap.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device button is released over the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointerup.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device button is released outside the container that initially
+registered a pointerdown.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+This event is specific to the Federated Events API. It does not have a capture phase, unlike most of the
+other events. It only bubbles to the most specific ancestor of the targets of the correspondingpointerdownandpointerupevents, i.e. the target of theclickevent.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofpointerupoutside.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device secondary button (usually a mouse right-button) is pressed
+and released on the container. Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+This event follows the semantics ofclick.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofrightclick.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device secondary button (usually a mouse right-button) is pressed
+on the container. Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofrightdown.
+
+These events are propagating from the EventSystem.
+
+The rightdowncapture event.
+
+Fired when a pointer device secondary button (usually a mouse right-button) is released
+over the container. Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofrightup.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a pointer device secondary button (usually a mouse right-button) is released
+outside the container that initially registered a
+rightdown.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent ofrightupoutside.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a touch point is placed and removed from the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent oftap.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when the operating system cancels a touch.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent oftouchcancel.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a touch point is removed from the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent oftouchend.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a touch point is removed outside of the container that initially
+registered a touchstart.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent oftouchendoutside.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a touch point is moved along the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent oftouchmove.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a touch point is placed on the container.
+Container'seventModeproperty must be set tostaticor 'dynamic' to fire event.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Capture phase equivalent oftouchstart.
+
+These events are propagating from the EventSystem.
+
+Event
+
+Fired when a the user scrolls with the mouse cursor over a Container.
+
+These events are propagating from the EventSystem.
+
+Capture phase equivalent ofwheel.
+
+These events are propagating from the EventSystem.
+
+--------------------------------------------------------------------------------
+
+=== Sprites ===
+
+Sprites are the simplest and most common renderable object in PixiJS.  They represent a single image to be displayed on the screen.  EachSpritecontains aTextureto be drawn, along with all the transformation and display state required to function in the scene graph.
+
+To create a Sprite, all you need is a Texture (check out the Texture guide).  Load a PNG's URL using theAssetsclass, then callSprite.from(url)and you're all set. Unlike v7 you now must load your texture before using it, this is to ensure best practices.
+
+Check out thesprite example code.
+
+In ourContainer guide, we learned about the Container class and the various properties it defines.  Since Sprite objects are also containers, you can move a sprite, rotate it, and update any other display property.
+
+Alpha is a standard display object property.  You can use it to fade sprites into the scene by animating each sprite's alpha from 0.0 to 1.0 over a period of time.
+
+Tinting allows you to multiply the color value of every pixel by a single color.  For example, if you had a dungeon game, you might show a character's poison status by settingobj.tint = 0x00FF00, which would give a green tint to the character.
+
+Blend modes change how pixel colors are added to the screen when rendering.  The three main modes areadd, which adds each pixel's RGB channels to whatever is under your sprite (useful for glows and lighting),multiplywhich works liketint, but on a per-pixel basis, andscreen, which overlays the pixels, brightening whatever is underneath them.
+
+One common area of confusion when working with sprites lies in scaling and dimensions.  The Container class allows you to set the x and y scale for any object.  Sprites, being Containers, also support scaling.  In addition, however, Sprites support explicitwidthandheightattributes that can be used to achieve the same effect, but are in pixels instead of a percentage.  This works because a Sprite object owns a Texture, which has an explicit width and height.  When you set a Sprite's width, internally PixiJS converts that width into a percentage of the underlying texture's width and updates the object's x-scale.  So width and height are really just convenience methods for changing scale, based on pixel dimensions rather than percentages.
+
+If you add a sprite to your stage and rotate it, it will by default rotate around the top-left corner of the image.  In some cases, this is what you want.  In many cases, however, what you want is for the sprite to rotate around the center of the image it contains, or around an arbitrary point.
+
+There are two ways to achieve this:pivotsandanchors
+
+An object'spivotis an offset, expressed in pixels, from the top-left corner of the Sprite.  It defaults to (0, 0).  If you have a Sprite whose texture is 100px x 50px, and want to set the pivot point to the center of the image, you'd set your pivot to (50, 25) - half the width, and half the height.  Note that pivots can be setoutsideof the image, meaning the pivot may be less than zero or greater than the width/height.  This can be useful in setting up complex animation hierarchies, for example.  Every Container has a pivot.
+
+Ananchor, in contrast, is only available for Sprites.  Anchors are specified in percentages, from 0.0 to 1.0, in each dimension.  To rotate around the center point of a texture using anchors, you'd set your Sprite's anchor to (0.5, 0.5) - 50% in width and height.  While less common, anchors can also be outside the standard 0.0 - 1.0 range.
+
+The nice thing about anchors is that they are resolution and dimension agnostic.  If you set your Sprite to be anchored in the middle then later change the size of the texture, your object will still rotate correctly.  If you had instead set a pivot using pixel-based calculations, changing the texture size would require changing your pivot point.
+
+So, generally speaking, you'll want to use anchors when working with Sprites.
+
+One final note: unlike CSS, where setting the transform-origin of the image doesn't move it, in PixiJS setting an anchor or pivotwillmove your object on the screen.  In other words, setting an anchor or pivot affects not just the rotation origin, but also the position of the sprite relative to its parent.
+
+--------------------------------------------------------------------------------
+

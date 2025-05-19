@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8 кнопок в блоке поверх спойлера</title>
+    <link rel="stylesheet" href="/static/shop/style.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+</head>
+<body>
+    <div id="header"></div>
+    <main>
+    <div class="characteristic-name">
+        <span>Максимальное здоровье</span>
+        <div class="characteristic-stat">
+            <span>10 <img src="/media/shop/main/health.png" alt="Ловкость" width="14px" height="14px" style="filter: invert(63%) sepia(26%) saturate(5174%) hue-rotate(78deg) brightness(100%) contrast(100%);"></span>
+        </div>
+    </div>
+    <div class="preview">
+        <video class="character-preview" poster="https://cdn.akamai.steamstatic.com/apps/dota2/videos/dota_react/heroes/renders/juggernaut.png" autoplay="" preload="auto" loop="" playsinline="">
+            <source type="video/mp4; codecs=&quot;hvc1&quot;" src="https://cdn.akamai.steamstatic.com/apps/dota2/videos/dota_react/heroes/renders/juggernaut.mov">
+            <source type="video/webm" src="https://cdn.akamai.steamstatic.com/apps/dota2/videos/dota_react/heroes/renders/juggernaut.webm?undefined">
+            <img src="https://cdn.akamai.steamstatic.com/apps/dota2/videos/dota_react/heroes/renders/juggernaut.png">
+        </video>
+    </div>
+
+        <!-- Шаблон для предметов -->
+        <template id="item-template">
+            <div class="item">
+                <div class="icon-column">
+                    <div class="icon-container">
+                        <img src="" alt="Иконка предмета">
+                        <span class="item-level">1</span>
+                    </div>
+                </div>
+                <div class="description-column">
+                    <h3 class="item-title"></h3>
+                </div>
+                <div class="price-column">
+                    <div class="svg-container">
+                        <svg class="button" viewBox="0 0 300 100" width="100%" height="100%" preserveAspectRatio="none">
+                            <path class="button-path"
+                                  d="M52,7 L248,7 L275,54 L248,95 L52,95 L25,54 Z"
+                                  fill="#0014a8"
+                                  stroke="#FFC300"
+                                  stroke-width="3"
+                                  vector-effect="non-scaling-stroke" />
+                            <text fill="white" text-anchor="middle" x="125" y="62" font-size="35"></text>
+                            <image x="180" y="25" width="50" height="50" xlink:href="/media/shop/images/gold.png" />
+                        </svg>
+                    </div>
+                    <p class="stats-row"></p>
+                </div>
+            </div>
+        </template>
+        
+
+        <div id="shop-main-menu" class="menu-section">
+            <div class="menu-container">
+                <div class="menu-grid">
+                    <button class="menu-item" data-section="max-health" style="background: linear-gradient(to bottom, #20bc25b6, #3e8839a8); ">
+                        <img src="/media/shop/main/health.png" alt="Максимальное здоровье" class="menu-icon">
+                    </button>
+                    <button class="menu-item" data-section="health-regen" style="background: linear-gradient(to bottom, #bc9520b4, #7c8839be);">
+                        <img src="/media/shop/main/healing.png" alt="Восстановление здоровья" class="menu-icon">
+                    </button>
+                    <button class="menu-item" data-section="max-mana" style="background: linear-gradient(to bottom, #2d52e4b0, #352d9db6);">
+                        <img src="/media/shop/main/mana.png" alt="Максимальная мана" class="menu-icon">
+                    </button>
+                    <button class="menu-item" data-section="mana-regen" style="background: linear-gradient(to bottom, #6404bec2, #41026386);">
+                        <img src="/media/shop/main/regmana.png" alt="Восстановление маны" class="menu-icon">
+                    </button>
+                    <button class="menu-item" data-section="damage" style="background: linear-gradient(to bottom, #c00000c2, #740000b2);">
+                        <img src="/media/shop/main/damage.png" alt="Урон" class="menu-icon">
+                    </button>
+                    <button class="menu-item" data-section="vampirism" style="background: linear-gradient(to bottom, #d1007aaf, #760068b2);">
+                        <img src="/media/shop/main/vampiric.png" alt="Вампиризм" class="menu-icon">
+                    </button>
+                    <button class="menu-item" data-section="movement-speed" style="background: linear-gradient(to bottom, #c63f00b2, #8f3200b7);">
+                        <img src="/media/shop/main/speed.png" alt="Скорость бега" class="menu-icon">
+                    </button>
+                    <button class="menu-item" data-section="income" style="background: linear-gradient(to bottom, #d7de009f, #abab00af);">
+                        <img src="/media/shop/main/gold.png" alt="Доход" class="menu-icon">
+                    </button>
+                </div>
+            </div>
+            <div class="spoiler" id="spoiler">
+                <div class="spoiler-content" id="spoiler-content">
+                    <!-- Сила -->
+                    <div data-section="max-health" class="upgrade-section">
+                        <!-- Секция теперь заполняется динамически -->
+                    </div>
+                    <!-- Восстановление здоровья -->
+                    <div data-section="health-regen" class="upgrade-section" style="display: none;">
+                    </div>
+                    <!-- Максимальная мана -->
+                    <div data-section="max-mana" class="upgrade-section" style="display: none;">
+                    </div>
+                    <!-- Восстановление маны -->
+                    <div data-section="mana-regen" class="upgrade-section" style="display: none;">
+                    </div>
+                    <!-- Урон -->
+                    <div data-section="damage" class="upgrade-section" style="display: none;">
+                    </div>
+                    <!-- Вампиризм -->
+                    <div data-section="vampirism" class="upgrade-section" style="display: none;">
+                    </div>
+                    <!-- Скорость бега -->
+                    <div data-section="movement-speed" class="upgrade-section" style="display: none;">
+                    </div>
+                    <!-- Доход -->
+                    <div data-section="income" class="upgrade-section" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <div id="footer"></div>
+    <script src="/front1/shop/shop.js" defer type="module"></script>
+    <script src="/front1/game/game.js" defer type="module"></script>
+</body>
+</html>

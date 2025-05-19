@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Игра Кликер - Телеграм Mini App</title>
+    <link rel="stylesheet" href="/static/shop/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+    <!-- <link rel="stylesheet" href="/static/menu.css"> -->
+    <link rel="stylesheet" href="/static/style.css?v=1.2">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- Подключаем Font Awesome -->
+
+</head>
+
+<body>
+    <div id="header"></div> 
+    
+    <!-- Основной экран с персонажем -->
+    <main class="main-screen">
+        <!-- Поле для игры с Джаггернаутом -->
+        <div id="game-over-screen" class="end-game">
+            <h1 style="font-size: 4rem; margin-bottom: 20px;">DEAD</h1>
+            <button id="menu-button" style="padding: 10px 20px; font-size: 1.5rem; background: #ff4d4d; border: none; color: white; cursor: pointer;">Меню</button>
+        </div>
+        
+        <canvas id="gameCanvas" width="1000" height="500"></canvas>
+        <div id="pause-controls" style="display: none;">
+            <button id="resume1-button" class="pause-button">Продолжить</button>
+            <button id="mute-button" class="pause-button">Выключить звук</button>
+        </div>
+        <div id="coin-animation-container"></div>
+        
+        <div id="viewport"></div>
+        <!-- <div id="viewport-params-size"></div> -->
+        <!-- <div id="viewport-params-expand"></div> -->
+    </main>
+<!-- <div id="footer"></div> -->
+
+
+    <!-- Данные о размере экрана -->
+ 
+
+    <div id="footer"></div>
+    <script type="module" src="/front1/game/game.js"></script>
+    <script src="/front1/shop/shop.js" defer type="module"></script>
+    <!-- Eruda is console for mobile browsers -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/eruda"></script> -->
+    <!-- <script>eruda.init();</script> -->
+</body>
+</html>

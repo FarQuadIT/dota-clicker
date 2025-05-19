@@ -1,0 +1,218 @@
+body{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+    background: url('../front1/menu/background.PNG') no-repeat center center fixed;
+    background-size: cover;
+}
+.menu-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-bottom: 0rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    box-sizing: border-box;
+}
+
+.main-buttons-section {
+    display: flex;
+    gap: 0.3rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.main-btn {
+    position: relative;
+    cursor: pointer;
+    border-radius: 0;
+    border: 0;
+    margin: 0;
+    font-size: 1rem;
+    color: rgb(144, 147, 151);
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+    height: 3rem;
+    padding: 0 1rem;
+    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), linear-gradient(to top, rgba(28, 32, 40, 0.808), #1c2028);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1 1 0; /* Уменьшение ширины при необходимости */
+    min-width: 2rem;
+    box-sizing: border-box;
+    transform: skew(10deg);
+}
+
+.main-btn .text {
+    font-weight: 700;
+    /* transform: skew(-15deg); */
+    text-shadow: -0.03125rem -0.03125rem #000, 0 -0.03125rem 0 #757575;
+    text-transform: uppercase;
+    transition: 0.3s;
+}
+
+.main-btn.active, .main-btn:hover {
+    color: rgb(170, 205, 241);
+}
+
+.logo-section {
+    position: relative;
+    width: 8rem;
+    height: 2.5rem;
+    margin: 0 0.5rem;
+    /* transform: scale(-1, -1); */
+    flex-shrink: 0;
+}
+
+.logo-section--image {
+    width: 1.8125rem;
+    height: 1.8125rem;
+    position: absolute;
+    left: 50%;
+    margin-left: -0.90625rem;
+    top: 0.8rem;
+    z-index: 4;
+    transform: scale(-1, -1);
+}
+.logo-section--second-layer {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%) perspective(10px) rotateX(2deg);
+    z-index: 2;
+    height: 2.65rem;
+    width: 6.25rem;
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+}
+
+.logo-section--forward-layer {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    border: 0;
+    cursor: pointer;
+    color: rgb(144, 147, 151);
+    transform: translateX(-50%) perspective(10px) translateY(-7.7%);
+    z-index: 3;
+    width: 5rem;
+    height: 3rem;
+    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+.logo-section--forward-layer .text {
+    font-weight: 700;
+    transform: skew(-15deg);
+    text-shadow: -0.03125rem -0.03125rem #000, 0 -0.03125rem 0 #757575;
+    text-transform: uppercase;
+    transition: 0.3s;
+}
+
+.logo-section--forward-layer.active, .logo-section--forward-layer:hover {
+    color: rgb(170, 205, 241);
+}
+
+
+@media (max-width: 768px) {
+    .main-btn {
+        font-size: 0.4rem;
+        height: 2.5rem;
+        padding: 0 0.5rem;
+    }
+    .logo-section {
+        width: 7rem;
+        height: 3rem;
+        margin: 0 0.2rem;
+    }
+}
+.header-container {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 0.5rem 1.5rem;
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+background: rgba(0, 0, 0, 0.8);
+color: #fff;
+font-size: 1rem;
+box-sizing: border-box;
+z-index: 1000;
+}
+
+.header-info-section {
+display: flex;
+gap: 1rem;
+flex: 1;
+justify-content: center;
+}
+
+.info-item {
+display: flex;
+align-items: center;
+gap: 0.3rem;
+}
+
+.info-item i {
+color: #ffd700; /* Золотой цвет для иконок */
+}
+
+.text {
+font-weight: 700;
+text-transform: uppercase;
+}
+/* Контейнер для полоски здоровья */
+.health-bar-container {
+position: absolute;
+top: 30%; /* Позиция над Джаггернаутом */
+left: 50%;
+transform: translateX(-50%);
+width: 8rem;
+background-color: rgba(0, 0, 0, 0.6);
+border-radius: 0.3rem;
+padding: 0.1rem;
+overflow: hidden;
+z-index: 900;
+box-sizing: border-box;
+}
+
+/* Заголовок "Здоровье" над полоской */
+.health-label {
+text-align: center;
+font-size: 0.8rem;
+color: white;
+font-weight: bold;
+margin-bottom: 0.2rem; /* Отступ от заголовка до полоски */
+}
+
+/* Полоска здоровья */
+.health-bar {
+width: 100%;
+height: 1.2rem;
+background-color: #ff4d4d; /* Красный цвет полоски здоровья */
+border-radius: 0.3rem;
+transform-origin: right; /* Устанавливаем точку отсчета справа */
+transition: width 0.3s ease; /* Плавное изменение ширины */
+}
+
+/* Текст на полоске здоровья */
+.health-text {
+position: absolute;
+width: 100%;
+text-align: center;
+color: white;
+font-size: 0.8rem;
+font-weight: bold;
+top: 50%;
+transform: translateY(-50%);
+pointer-events: none;
+}

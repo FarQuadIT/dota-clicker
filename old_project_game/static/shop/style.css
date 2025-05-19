@@ -1,0 +1,627 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,700;1,700&display=swap');
+@font-face {
+    font-family: 'Doka'; /* Имя шрифта, которое будет использоваться в CSS */
+    src: url('/static/fonts/zh-cn.ttf') format('truetype'); /* Путь к файлу шрифта и его формат */
+    font-weight: normal; /* Вес шрифта (например, normal, bold) */
+    font-style: normal; /* Стиль шрифта (например, normal, italic) */
+}
+
+
+body {
+    font-family: "Doka", serif;
+    background-color: #1c2028;
+    color: white;
+    margin: 0;
+    background-image: url(/media/shop/images/bg_repeater.jpg);
+    background-repeat: repeat;
+    overflow: hidden; /* Отключаем прокрутку для всего тела */
+    height: 100vh;
+}
+
+main {
+    flex: 1; /* Контейнер растягивается на оставшееся пространство */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Запрет глобальной прокрутки */
+}
+
+/* Верхняя панель */
+header.top-bar {
+    display: flex;
+    justify-content: space-between; /* Разделяем кнопку настроек и золото */
+    align-items: center;
+    padding: 2px 5px 2px 5px; /* Отступы по краям */
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+    position: relative;
+    top: 0;
+    width: 100%; /* Блок занимает всю ширину экрана */
+    z-index: 1000;
+    box-sizing: border-box; /* Учитываем отступы внутри ширины */
+}
+
+.left-icon svg {
+    fill: rgb(121, 121, 121); /* Цвет иконки */
+    width: 24px; /* Размер */
+    height: 24px;
+    cursor: pointer;
+    transition: fill 0.3s;
+}
+
+.top-bar-figure {
+    position: absolute;
+    top: 50%; /* Смещение вниз на 50% высоты родителя */
+    left: 50%; /* Центрирование по горизонтали */
+    transform: translate(-50%, -50%) perspective(4px) rotateX(-2deg);
+    z-index: 1; /* Поверх других элементов */
+    height: 4rem;
+    width: 6.25rem;
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+    pointer-events: none; /* Фигура не блокирует клики по элементам под ней */
+}
+
+/* Кнопка настроек */
+.right-icon .settings-icon {
+    background: none;
+    border: none;
+    color: rgb(121, 121, 121);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.1s ease, color 0.3s ease;
+}
+
+/* Кнопка настроек */
+.right-icon .settings-icon.active{
+    transform: rotate(180deg); /* Вращение на 180 градусов */
+}
+
+/* Контейнер для золота */
+/* Контейнер для золота */
+#gold-container {
+    position: absolute;
+    top: 50%; /* Смещение вниз на 50% высоты родителя */
+    left: 50%; /* Центрирование по горизонтали */
+    transform: translate(-50%, -50%); /* Центрирование блока */
+    z-index: 2; /* Устанавливаем z-index выше, чем у фигуры */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    color: #ffd700; /* Золотистый цвет */
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+/* Блок золота и иконки */
+#gold-row {
+    display: inline-flex; /* Элементы располагаются в одной строке */
+    align-items: center; /* Центрируем текст и иконку по вертикали */
+    gap: 5px; /* Отступ между текстом и изображением */
+}
+
+/* Текст с количеством золота */
+#gold-amount {
+    font-size: 16px;
+}
+
+/* Пассивный доход */
+#passive-income {
+    font-size: 12px;
+    color: #aaa;
+    margin-top: 0px; /* Отступ сверху */
+}
+
+
+
+
+.characteristic-name {
+    position: absolute;
+    width: auto;
+    z-index: 1;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.1), transparent 90%);
+    display: flex;
+    flex-direction: column; /* Элементы располагаются вертикально */
+    align-items: flex-start; /* Выравнивание по левому краю */
+    margin-top: 5%;
+    margin-left: 5%;
+}
+
+.characteristic-name span {
+    display: inline; /* Span не требует flexbox */
+    font-size: 16px;
+    line-height: 12px;
+    text-shadow: 2px 1px 2px rgba(0, 0, 0, 0.7);
+    padding: 5px 10px 5px 10px;
+    font-family: 'Doka';
+    color: #77d87a;
+}
+
+.characteristic-stat span {
+    display: block; /* Span не требует flexbox */
+    font-size: 16px;
+    line-height: 12px;
+    text-shadow: 2px 1px 2px rgba(0, 0, 0, 0.7);
+    padding: 0px 10px 5px 10px;
+    font-family: 'Doka';
+    color: #77d87a;
+}
+
+
+.preview{
+    z-index: 0;
+    position: relative;
+    text-align: right; /* Выравнивание содержимого блока по правому краю */
+    background-position-x: -20vw;
+    background-color: #000;
+    background-image: url(../../media/shop/images/radiant_tower.png);
+    background-size: 100% auto;
+    background-position: center top;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    background-size: cover;
+}
+
+.character-preview{
+    width: 25%;
+    min-height: 25%;
+    max-width: 1500px;
+}
+/* Медиазапросы для маленьких экранов */
+@media (max-width: 768px) {
+    .character-preview {
+        width: 40%;
+        min-height: 25%;
+        max-width: 1500px;
+    }
+}
+.menu-section {
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+}
+
+/* Контейнер для кнопок */
+.menu-container {
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+    border: 1px solid #2b2f33;
+    border-radius: 10px;
+    padding: 15px;
+    position: absolute;
+    top: -60px; /* Поднимаем блок над спойлером */
+    left: 50%; /* Центрируем блок горизонтально */
+    transform: translateX(-50%);
+    z-index: 2;
+}
+
+/* Сетка кнопок */
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 кнопки в строке */
+    gap: 10px;
+}
+
+.menu-item {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-size: cover, cover, contain;
+    background-blend-mode: overlay, normal, normal;
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s, border 0.3s;
+}
+
+.menu-item:hover, .menu-item.active {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    border: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.menu-item img.menu-icon {
+    width: 30px;
+    height: 30px;
+    display: block;
+    object-fit: contain;
+}
+
+.spoiler {
+    display: flex;
+    flex-direction: column;
+    border-top: 2px solid #2b2f33;
+    color: white;
+    padding: 65px 0px 15px 0px; /* Увеличенный верхний отступ для блока кнопок */
+    position: relative;
+}
+
+.spoiler-content {
+    margin-top: 20px;
+    flex: 1; /* Занимает всё оставшееся пространство внутри main */
+}
+
+.upgrade-section {
+    max-height: calc(100vh - 335px);  /* Укажите желаемую высоту */
+    overflow-y: auto; /* Включает вертикальную прокрутку */
+    padding: 10px; /* Отступы для содержимого */
+    border-radius: 8px; /* Скругление углов */
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.item {
+    display: grid; /* Включаем Grid */
+    grid-template-columns: auto 1fr auto; /* Три колонки: авто, адаптивная, авто */
+    grid-gap: 8px; /* Отступы между колонками */
+    align-items: center; /* Выравнивание элементов по вертикали */
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+    border: 2px solid #000000;
+    border-style: ridge;
+    padding: 2px;
+    margin: 5px 10px 5px 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-width: 100%; /* Гарантируем, что блоки не выходят за границы экрана */
+    box-sizing: border-box; /* Учитываем padding в общей ширине */
+    position: relative;
+}
+
+
+
+/* Контейнер для изображения и уровня */
+.icon-container {
+    position: relative; /* Контекст для абсолютного позиционирования */
+    display: inline-block; /* Объединяем изображение и уровень */
+    width: 80px; /* Совпадает с шириной изображения */
+    height: auto;
+}
+
+/* Стили изображения */
+.icon-column img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid rgb(119, 19, 19);
+    border-radius: 2px;
+}
+
+/* Стили уровня */
+.item-level {
+    position: absolute;
+    top: 0%; /* Смещение от верхнего края */
+    left: 0px; /* Смещение от правого края */
+    background: rgb(93, 102, 184); /* Полупрозрачный фон */
+    color: #fff; /* Белый текст */
+    padding: 2px 4px; /* Внутренние отступы */
+    font-size: 10px; /* Размер текста */
+    font-weight: bold; /* Жирный текст */
+    border-radius: 1px; /* Скругление углов */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7); /* Тень для текста */
+    pointer-events: none; /* Уровень не блокирует клики */
+}
+
+/* Средняя колонка */
+.description-column {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* Обрезаем текст при необходимости */
+    white-space: normal; /* Разрешаем перенос строк */
+    word-wrap: break-word; /* Переносим длинные слова */
+}
+
+.description-column h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #d5d7df;
+    margin-bottom: 1px;
+    font-weight: 600;
+}
+
+
+.description-column p {
+    margin: 2px;
+    color: #dfdfdf;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal; /* Для описания допускаем перенос строк */
+}
+
+/* Правая колонка */
+.price-column {
+    text-align: right;
+    display: inline-block; /* Убираем лишнее растяжение */
+    align-items: center; /* Вертикальное выравнивание */
+    justify-content: center; /* Горизонтальное выравнивание */
+    text-align: center; /* Для текста, если понадобится */
+    gap: 0;
+    margin: 0;
+    padding: 0;
+}
+
+
+.level-container p{
+    font-size: 8px;
+    margin: 0;
+}
+
+
+.stats-row, .level-row {
+    margin: 0; /* Убираем внешние отступы */
+    padding: 0; /* Убираем внутренние отступы */
+    line-height: 1; /* Минимизируем высоту строки */
+    font-size: 12px;
+}
+
+
+
+:root {
+    /* Основные цвета заливки */
+    --start-color: #040266; /* Начальный цвет заливки */
+    --end-color: #244af3;   /* Конечный цвет заливки (вверху) */
+
+    /* Основные цвета границы */
+    --border-start-color: #bbbe00; /* Начальный цвет границы (внизу) */
+    --border-end-color: #e5ff00;   /* Конечный цвет границы (вверху) */
+}
+
+
+.svg-container {
+    width: auto; /* Контейнер адаптивный */
+    display: inline-block;
+    max-width: 120px; 
+    padding: 0;
+    cursor: pointer;
+    margin: 0;
+    padding:0;
+}
+
+svg {
+    display: block;
+    width: 100%; /* Растягивается на весь контейнер */
+    height: auto; /* Сохраняет пропорции */
+    mix-blend-mode: normal;
+}
+
+.button {
+    display: inline-block;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button:active {
+    /* Изменения для заливки */
+    --start-color: #040266; /* Начальный цвет заливки */
+    --end-color: #244af3;   /* Конечный цвет заливки */
+
+    /* Изменения для границы */
+    --border-start-color: #bbbe00; /* Начальный цвет границы */
+    --border-end-color: #e5ff00;   /* Конечный цвет границы */
+
+    transform: translateY(2px); /* Эффект вдавливания */
+}
+
+.button-path {
+    fill: #1728a3; /* Статичный цвет заливки */
+    stroke: #FFC300; /* Статичный цвет обводки */
+    transition: fill 0.2s ease, stroke 0.2s ease; /* Плавный переход для градиентов */
+    pointer-events: all; /* Убедитесь, что события обрабатываются всей кнопкой */
+}
+
+.gradient-line{
+    height: 1px; /* толщина линии */
+    background: linear-gradient(to right, #747474, #0000ff00); /* градиент */
+    border-radius: 2px; /* скругление */
+}  
+
+.button-path.disabled {
+    fill: #666 !important; /* Серый цвет для неактивных кнопок */
+    stroke: #999 !important; /* Обводка для неактивных кнопок */
+    pointer-events: none; /* Отключаем взаимодействие */
+    cursor: not-allowed; /* Указатель мыши для неактивной кнопки */
+    transform: none !important; /* Убираем трансформации */
+    transition: none !important; /* Отключаем переходы */
+}
+
+/* Основной контейнер таб-бара */
+.tabbar {
+    background-color: #912020;
+    height: 50px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: content-box;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    z-index: 10;
+  }
+  
+  /* Убираем стили списка */
+  .tabbar ul,
+  .tabbar li {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Контейнер для элементов */
+  .tabbar ul {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 50px;
+    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+  }
+  
+  /* Элементы таб-бара */
+  .tabbar li {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    width: 60px;
+    height: 60px;
+    position: relative;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.3s ease-out;
+  }
+
+  .tabbar li .icon-shop {
+    margin-top: 10px;
+    padding-left: 10px;
+    width: 37px; /* Устанавливаем размер иконки */
+    height: 37px;
+    fill: #888; /* Цвет неактивной иконки */
+    transition: fill 0.3s ease-out; /* Плавное изменение цвета */
+}
+
+/* Активная иконка */
+.tab-style3 li.active .icon-shop {
+    fill: #b62f2f; /* Цвет активной иконки */
+}
+
+.tabbar li .icon-upgrade {
+    margin-bottom: 5px;
+    width: 45px; /* Устанавливаем размер иконки */
+    height: 45px;
+    fill: none; /* Цвет заливки, если нужно */
+    stroke: #888; /* Цвет линий по умолчанию */
+    stroke-width: 2; /* Ширина линий */
+    transition: stroke 0.3s ease-out; /* Плавное изменение цвета */
+}
+
+/* Активная иконка */
+.tab-style3 li.active .icon-upgrade{
+    stroke: #b62f2f; /* Цвет линий для активной иконки */
+}
+
+.tabbar li .icon-roulette {
+    margin-top: 10px;
+    margin-left: 10px;
+    width: 45px; /* Устанавливаем размер иконки */
+    height: 45px;
+    fill: #888; /* Цвет заливки, если нужно */
+    transition: stroke 0.3s ease-out; /* Плавное изменение цвета */
+}
+
+/* Активная иконка */
+.tab-style3 li.active .icon-roulette{
+    fill: #b62f2f; /* Цвет линий для активной иконки */
+}
+  
+  .tabbar li.follow {
+    position: absolute;
+    top: 0;
+    border-top: 3px solid #b62f2f;
+    width: 20%;
+    height: 1px;
+    transition: all 0.3s ease-out;
+  }
+  
+  /* Анимация активного элемента */
+  .tab-style3 li:nth-child(1).active ~ .follow {
+    left: 0%;
+  }
+  
+  .tab-style3 li:nth-child(2).active ~ .follow {
+    left: 20%;
+  }
+  
+  .tab-style3 li:nth-child(3).active ~ .follow {
+    left: 40%;
+  }
+  
+  .tab-style3 li:nth-child(4).active ~ .follow {
+    left: 60%;
+  }
+  
+  .tab-style3 li:nth-child(5).active ~ .follow {
+    left: 80%;
+  }
+  
+  /* Стиль активного элемента */
+  .tab-style3 li.active {
+    color:  #b62f2f;
+  }
+  
+  :root {
+    --accent-color: #1fa8f5; /* Основной цвет */
+    
+  }
+  
+/* Информационная кнопка */
+.info-button {
+    background: none;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: 10px; /* Отступ от текста */
+    position: relative;
+}
+
+/* Всплывающее окно */
+.info-popup {
+    display: none; /* Скрыто по умолчанию */
+    position: absolute;
+    top: 25px; /* Расстояние от кнопки */
+    left: 0;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    max-width: 250px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+}
+
+/* Видимое всплывающее окно */
+.info-popup.visible {
+    display: block;
+}
+#pause-controls {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.pause-button {
+    padding: 10px 20px;
+    font-size: 18px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.pause-button:hover {
+    background-color: #0056b3;
+}
+
+#gameCanvas {
+    display: block;
+    z-index: 1;
+    pointer-events: auto;
+}
