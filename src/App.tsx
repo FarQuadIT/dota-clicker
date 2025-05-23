@@ -1,6 +1,6 @@
 // src/App.tsx
 
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate} from 'react-router-dom';
 import MainPage from './pages/MainPage/MainPage';
 import ShopPage from './pages/ShopPage/ShopPage';
 import GamePage from './pages/GamePage/GamePage';
@@ -19,8 +19,6 @@ import { fetchHeroStats } from './shared/api/apiService';
  * Содержит маршрутизацию и основной макет приложения
  */
 function AppContent() {
-  const location = useLocation();
-  const isShopPage = location.pathname === '/shop';
   const setStats = useHeroStore((state) => state.setStats);
   const stats = useHeroStore((state) => state.stats);
   const [isLoading, setIsLoading] = useState(false); // Добавляем состояние загрузки
@@ -102,7 +100,6 @@ function AppContent() {
       <main style={{
         paddingTop: '40px',
         paddingBottom: '50px',
-        padding: isShopPage ? '0' : '20px',
         height: '100vh',
         overflow: 'hidden',
         boxSizing: 'border-box'
