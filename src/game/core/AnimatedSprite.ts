@@ -279,6 +279,13 @@ export class AnimatedSprite extends Container {
   }
 
   /**
+   * Получение текущего кадра анимации
+   */
+  public getCurrentFrame(): number {
+    return this.animationState.currentFrame;
+  }
+
+  /**
    * Очистка ресурсов при удалении объекта
    */
   public destroy(): void {

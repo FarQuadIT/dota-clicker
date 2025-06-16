@@ -4,19 +4,43 @@
  * Принципы работы:
  * 1. Загружает все игровые ресурсы (текстуры, звуки, спрайтшиты)
  * 2. Кэширует загруженные ресурсы для быстрого доступа
- * 3. Предоставляет информацию о прогрессе загрузки
- * 4. Использует PixiJS Assets API для оптимальной загрузки
+ * 3. Разбивает спрайтшиты на отдельные кадры для анимаций
+ * 4. Предоставляет информацию о прогрессе загрузки
+ * 5. Использует PixiJS Assets API для оптимальной загрузки
  * 
  * Документация: 
  * - PixiJS Assets: https://pixijs.download/release/docs/assets.Assets.html
  * - В all_pixijs_content.txt раздел "Assets"
  */
 
-import { Assets, Texture } from 'pixi.js';
+import { Assets, Texture, Rectangle } from 'pixi.js';
 
 // ==================================================================================
 // ТИПЫ ДАННЫХ ДЛЯ МЕНЕДЖЕРА РЕСУРСОВ
 // ==================================================================================
+
+/**
+ * Конфигурация спрайтшита для анимации
+ */
+interface SpriteSheetConfig {
+  /** Путь к файлу спрайтшита */
+  path: string;
+  
+  /** Ширина одного кадра в пикселях */
+  frameWidth: number;
+  
+  /** Высота одного кадра в пикселях */
+  frameHeight: number;
+  
+  /** Количество кадров по горизонтали */
+  framesX: number;
+  
+  /** Количество кадров по вертикали */
+  framesY: number;
+  
+  /** Общее количество используемых кадров (исключая пустые ячейки) */
+  totalFrames: number;
+}
 
 /**
  * Основной интерфейс для всех игровых ресурсов
@@ -24,22 +48,22 @@ import { Assets, Texture } from 'pixi.js';
  */
 interface GameAssets {
   // Текстуры персонажей
-      /**
+  heroes: {
+    /**
      * Индексная сигнатура, позволяющая хранить героев с любым именем
      * 
      * Пример практического использования:
      * 
      * // Добавление нового героя в игру
      * this.assets.heroes["axe"] = { 
-     *   idle: axeIdleTexture, 
-     *   run: axeRunTexture, 
-     *   attack: axeAttackTexture 
+     *   idle: axeIdleFrames, 
+     *   run: axeRunFrames, 
+     *   attack: axeAttackFrames 
      * };
      * 
-     * // Доступ к текстурам героя по строковому ключу (например, из конфига)
-     * const heroTexture = this.assets.heroes[heroConfig.name].idle;
+     * // Доступ к кадрам анимации героя
+     * const heroFrames = this.assets.heroes[heroConfig.name].idle;
      */
-  heroes: {
     [heroName: string]: HeroAssets;
   };
   
@@ -64,27 +88,25 @@ interface GameAssets {
 }
 
 /**
- * Интерфейс текстур для героев
- * Содержит набор анимаций с их текстурами
- * Индексная сигнатура [animation: string] позволяет доступ по строковому ключу
+ * Интерфейс кадров анимаций для героев
+ * Содержит массивы кадров для каждой анимации
  */
 interface HeroAssets {
-  [animation: string]: Texture;
-  idle: Texture;      // Анимация ожидания
-  run: Texture;       // Анимация бега
-  attack: Texture;    // Анимация атаки
+  [animation: string]: Texture[];
+  idle: Texture[];      // Массив кадров анимации ожидания
+  run: Texture[];       // Массив кадров анимации бега
+  attack: Texture[];    // Массив кадров анимации атаки
 }
 
 /**
- * Интерфейс текстур для врагов (крипов)
- * Содержит набор анимаций с их текстурами
- * Индексная сигнатура позволяет доступ по строковому ключу
+ * Интерфейс кадров анимаций для врагов (крипов)
+ * Содержит массивы кадров для каждой анимации
  */
 interface CreepAssets {
-  [animation: string]: Texture;
-  idle: Texture;      // Анимация ожидания
-  attack: Texture;    // Анимация атаки
-  death: Texture;     // Анимация смерти
+  [animation: string]: Texture[];
+  idle: Texture[];      // Массив кадров анимации ожидания
+  attack: Texture[];    // Массив кадров анимации атаки
+  death: Texture[];     // Массив кадров анимации смерти
 }
 
 /**
@@ -199,26 +221,63 @@ class AssetsManager {
    */
   private createAssetManifest() {
     return {
-      // Ресурсы героев - пути к изображениям для разных анимаций
+      // Ресурсы героев - конфигурации спрайтшитов для разных анимаций
       heroes: {
         juggernaut: {
-          idle: '/media/game/assets/heroes/juggernaut_idle.png',
-          run: '/media/game/assets/heroes/juggernaut_run.png', 
-          attack: '/media/game/assets/heroes/juggernaut_attack.png'
+          idle: {
+            path: '/media/game/assets/heroes/juggernaut_idle.png',
+            frameWidth: 512,
+            frameHeight: 512,
+            framesX: 6,
+            framesY: 6,
+            totalFrames: 35
+          },
+          run: {
+            path: '/media/game/assets/heroes/juggernaut_run.png',
+            frameWidth: 512,
+            frameHeight: 512,
+            framesX: 7,
+            framesY: 3,
+            totalFrames: 21
+          },
+          attack: {
+            path: '/media/game/assets/heroes/juggernaut_attack.png',
+            frameWidth: 512,
+            frameHeight: 512,
+            framesX: 6,
+            framesY: 5,
+            totalFrames: 30
+          }
         }
       },
       
-      // Ресурсы врагов (крипов) - пути к изображениям для разных анимаций
+      // Ресурсы врагов (крипов) - конфигурации спрайтшитов для разных анимаций
       creeps: {
         direCreep: {
-          idle: '/media/game/assets/creeps/dire_creep_idle.png',
-          attack: '/media/game/assets/creeps/dire_creep_attack.png',
-          death: '/media/game/assets/creeps/dire_creep_death.png'
-        },
-        wolf: {
-          idle: '/media/game/assets/creeps/wolf_idle.png',
-          attack: '/media/game/assets/creeps/wolf_attack.png', 
-          death: '/media/game/assets/creeps/wolf_death.png'
+          idle: {
+            path: '/media/game/assets/creeps/dire_creep_idle.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 8,
+            framesY: 7,
+            totalFrames: 52
+          },
+          attack: {
+            path: '/media/game/assets/creeps/dire_creep_attack.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 6,
+            framesY: 5,
+            totalFrames: 29
+          },
+          death: {
+            path: '/media/game/assets/creeps/dire_creep_death.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 6,
+            framesY: 5,
+            totalFrames: 29
+          }
         }
       },
       
@@ -263,9 +322,42 @@ class AssetsManager {
   }
 
   /**
+   * Создание кадров анимации из спрайтшита
+   * 
+   * Разбивает спрайтшит на отдельные текстуры кадров для анимации
+   * 
+   * @param spritesheet - загруженная текстура спрайтшита
+   * @param config - конфигурация разбивки спрайтшита
+   * @returns Массив текстур кадров
+   */
+  private createFrameTextures(spritesheet: Texture, config: SpriteSheetConfig): Texture[] {
+    const frames: Texture[] = [];
+    
+    console.log(`🎬 Создание кадров из спрайтшита: ${config.totalFrames} кадров (${config.framesX}x${config.framesY})`);
+    
+    // Создаем текстуру для каждого кадра
+    for (let i = 0; i < config.totalFrames; i++) {
+      // Вычисляем позицию кадра в сетке спрайтшита
+      const x = (i % config.framesX) * config.frameWidth;
+      const y = Math.floor(i / config.framesX) * config.frameHeight;
+      
+      // Создаем новую текстуру для кадра
+      const frameTexture = new Texture({
+        source: spritesheet.source,
+        frame: new Rectangle(x, y, config.frameWidth, config.frameHeight)
+      });
+      
+      frames.push(frameTexture);
+    }
+    
+    console.log(`✅ Создано ${frames.length} кадров анимации`);
+    return frames;
+  }
+
+  /**
    * Загрузка ресурсов героев
    * 
-   * @param heroManifest - Объект с путями к ресурсам героев
+   * @param heroManifest - Объект с конфигурациями спрайтшитов героев
    */
   private async loadHeroAssets(heroManifest: any): Promise<void> {
     console.log('🦸 Загружаем ресурсы героев...');
@@ -278,35 +370,37 @@ class AssetsManager {
       this.loadingProgress.currentAsset = `Герой: ${heroName}`;
       this.notifyProgress();
       
-      // Создаем объект для хранения текстур анимаций героя
+      // Создаем объект для хранения кадров анимаций героя
       const heroAssets: HeroAssets = {} as HeroAssets;
       
       // Загружаем каждую анимацию героя
-      for (const [animName, path] of Object.entries(heroPaths as any)) {
+      for (const [animName, config] of Object.entries(heroPaths as any)) {
         try {
           // Обновляем информацию о текущем загружаемом ресурсе
           this.loadingProgress.currentAsset = `${heroName} - ${animName}`;
           this.notifyProgress();
           
-          // Используем Assets.load() из PixiJS для загрузки текстуры
-          // Это асинхронная операция, поэтому используем await
-          const texture = await Assets.load(path as string);
-          heroAssets[animName] = texture;
+          // Загружаем спрайтшит
+          const spritesheet = await Assets.load((config as SpriteSheetConfig).path);
+          
+          // Разбиваем спрайтшит на кадры
+          const frames = this.createFrameTextures(spritesheet, config as SpriteSheetConfig);
+          heroAssets[animName] = frames;
           
           // Увеличиваем счетчик загруженных ресурсов
           this.incrementProgress();
           
-          console.log(`✅ Загружена анимация ${animName} для героя ${heroName}`);
+          console.log(`✅ Загружена анимация ${animName} для героя ${heroName} (${frames.length} кадров)`);
           
         } catch (error) {
           // В случае ошибки загрузки, используем белую текстуру как запасной вариант
-          console.error(`❌ Ошибка загрузки ${path}:`, error);
-          heroAssets[animName] = Texture.WHITE; // Texture.WHITE - пустая белая текстура из PixiJS
+          console.error(`❌ Ошибка загрузки ${(config as SpriteSheetConfig).path}:`, error);
+          heroAssets[animName] = [Texture.WHITE]; // Fallback - массив с одной белой текстурой
           this.incrementProgress();
         }
       }
       
-      // Сохраняем загруженные текстуры героя в общий объект ресурсов
+      // Сохраняем загруженные кадры героя в общий объект ресурсов
       this.assets.heroes![heroName] = heroAssets;
     }
   }
@@ -315,7 +409,7 @@ class AssetsManager {
    * Загрузка ресурсов врагов (крипов)
    * Принцип работы аналогичен loadHeroAssets
    * 
-   * @param creepManifest - Объект с путями к ресурсам врагов
+   * @param creepManifest - Объект с конфигурациями спрайтшитов врагов
    */
   private async loadCreepAssets(creepManifest: any): Promise<void> {
     console.log('👹 Загружаем ресурсы врагов...');
@@ -328,31 +422,32 @@ class AssetsManager {
       this.loadingProgress.currentAsset = `Враг: ${creepName}`;
       this.notifyProgress();
       
-      // Создаем объект для хранения текстур анимаций врага
+      // Создаем объект для хранения кадров анимаций врага
       const creepAssets: CreepAssets = {} as CreepAssets;
       
       // Загружаем каждую анимацию врага
-      for (const [animName, path] of Object.entries(creepPaths as any)) {
+      for (const [animName, config] of Object.entries(creepPaths as any)) {
         try {
           this.loadingProgress.currentAsset = `${creepName} - ${animName}`;
           this.notifyProgress();
           
-          // Загружаем текстуру и сохраняем её
-          const texture = await Assets.load(path as string);
-          creepAssets[animName] = texture;
+          // Загружаем спрайтшит и создаем кадры
+          const spritesheet = await Assets.load((config as SpriteSheetConfig).path);
+          const frames = this.createFrameTextures(spritesheet, config as SpriteSheetConfig);
+          creepAssets[animName] = frames;
           
           this.incrementProgress();
           
-          console.log(`✅ Загружена анимация ${animName} для врага ${creepName}`);
+          console.log(`✅ Загружена анимация ${animName} для врага ${creepName} (${frames.length} кадров)`);
           
         } catch (error) {
-          console.error(`❌ Ошибка загрузки ${path}:`, error);
-          creepAssets[animName] = Texture.WHITE;
+          console.error(`❌ Ошибка загрузки ${(config as SpriteSheetConfig).path}:`, error);
+          creepAssets[animName] = [Texture.WHITE];
           this.incrementProgress();
         }
       }
       
-      // Сохраняем загруженные текстуры врага в общий объект ресурсов
+      // Сохраняем загруженные кадры врага в общий объект ресурсов
       this.assets.creeps![creepName] = creepAssets;
     }
   }
@@ -457,41 +552,53 @@ class AssetsManager {
   // =============================================================================
 
   /**
-   * Получение текстуры героя
+   * Получение кадров анимации героя
    * 
    * @param heroName - имя героя (например, 'juggernaut')
    * @param animation - тип анимации ('idle', 'run', 'attack')
-   * @returns Texture или fallback в случае отсутствия текстуры
+   * @returns Массив текстур кадров или fallback
    */
-  public getHeroTexture(heroName: string, animation: string): Texture {
-    // Получаем объект с текстурами для указанного героя
+  public getHeroFrames(heroName: string, animation: string): Texture[] {
     const heroAssets = this.assets.heroes?.[heroName];
-    
-    // Проверяем, существует ли герой и требуемая анимация
     if (heroAssets && heroAssets[animation]) {
       return heroAssets[animation];
     }
     
-    // Если текстура не найдена, выводим предупреждение и возвращаем белую текстуру
-    console.warn(`⚠️ Текстура героя не найдена: ${heroName}.${animation}`);
-    return Texture.WHITE; // Fallback - белая текстура
+    console.warn(`⚠️ Кадры анимации героя не найдены: ${heroName}.${animation}`);
+    return [Texture.WHITE]; // Fallback - массив с одной белой текстурой
   }
 
   /**
-   * Получение текстуры врага
+   * Получение первого кадра анимации героя (для обратной совместимости)
    * 
-   * @param creepName - имя врага (например, 'direCreep')
-   * @param animation - тип анимации ('idle', 'attack', 'death')
-   * @returns Texture или fallback в случае отсутствия текстуры
+   * @param heroName - имя героя (например, 'juggernaut')
+   * @param animation - тип анимации ('idle', 'run', 'attack')
+   * @returns Первый кадр анимации или fallback
    */
-  public getCreepTexture(creepName: string, animation: string): Texture {
+  public getHeroTexture(heroName: string, animation: string): Texture {
+    const frames = this.getHeroFrames(heroName, animation);
+    return frames[0] || Texture.WHITE;
+  }
+
+  /**
+   * Получение кадров анимации врага
+   */
+  public getCreepFrames(creepName: string, animation: string): Texture[] {
     const creepAssets = this.assets.creeps?.[creepName];
     if (creepAssets && creepAssets[animation]) {
       return creepAssets[animation];
     }
     
-    console.warn(`⚠️ Текстура врага не найдена: ${creepName}.${animation}`);
-    return Texture.WHITE;
+    console.warn(`⚠️ Кадры анимации врага не найдены: ${creepName}.${animation}`);
+    return [Texture.WHITE];
+  }
+
+  /**
+   * Получение первого кадра анимации врага (для обратной совместимости)
+   */
+  public getCreepTexture(creepName: string, animation: string): Texture {
+    const frames = this.getCreepFrames(creepName, animation);
+    return frames[0] || Texture.WHITE;
   }
 
   /**

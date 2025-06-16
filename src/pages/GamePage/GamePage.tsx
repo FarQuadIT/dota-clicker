@@ -1,7 +1,8 @@
 // src/pages/GamePage/GamePage.tsx
 import { useEffect, useRef, useState } from 'react';
-import { Application, Graphics, Sprite } from 'pixi.js';
+import { Application, Graphics, TilingSprite } from 'pixi.js';
 import { assetsManager, type LoadingProgress } from '../../game/managers/AssetsManager';
+import { GAME_CONFIG } from '../../game/config/GameConfig';
 
 /**
 * Компонент игровой страницы с полноэкранным Pixi.js канвасом
@@ -159,8 +160,7 @@ export default function GamePage() {
     * После загрузки ресурсов создаем основные игровые объекты:
     * - Фон
     * - Героя
-    * - Врагов
-    * - UI элементы
+    * - Игровой контроллер для управления циклом боя
     */
    async function createGameScene(app: Application): Promise<void> {
      console.log('🏗️ Создание игровой сцены...');
@@ -171,11 +171,8 @@ export default function GamePage() {
      // Создаем фон
      await createBackground(app);
 
-     // Создаем тестового героя для проверки загруженных ресурсов
-     await createTestHero(app);
-
-     // Создаем тестового врага
-     await createTestCreep(app);
+     // Создаем героя и игровой контроллер
+     await createGameController(app);
 
      console.log('✅ Игровая сцена создана');
    }
@@ -183,35 +180,58 @@ export default function GamePage() {
    /**
     * Создание фонового изображения
     * 
-    * Использует загруженную текстуру фона и создает повторяющийся фон
-    * Документация: all_pixijs_content.txt раздел "Sprites"
+    * Использует TilingSprite для создания движущегося фона
+    * Документация: https://pixijs.download/release/docs/scene.TilingSprite.html
     */
    async function createBackground(app: Application): Promise<void> {
-     console.log('🌲 Создание фона...');
+     console.log('🌲 Создание движущегося фона...');
 
      try {
        // Получаем загруженную текстуру фона
        const forestTexture = assetsManager.getBackgroundTexture('forest');
        
-       // Создаем спрайт для фона
-       const backgroundSprite = new Sprite(forestTexture);
+       // Создаем TilingSprite для повторяющегося фона
+       // TilingSprite позволяет создавать бесшовный повторяющийся фон
+       const backgroundTiling = new TilingSprite(
+         forestTexture,
+         app.screen.width * 2,  // Делаем шире экрана для плавного движения
+         app.screen.height
+       );
        
-       // Масштабируем фон по размеру экрана
-       // Сохраняем пропорции, но покрываем весь экран
-       const scaleX = app.screen.width / backgroundSprite.width;
-       const scaleY = app.screen.height / backgroundSprite.height;
-       const scale = Math.max(scaleX, scaleY);
+       // Масштабируем фон по высоте экрана
+       // Сохраняем пропорции, но покрываем всю высоту
+       const scaleY = app.screen.height / forestTexture.height;
+       backgroundTiling.tileScale.set(scaleY, scaleY);
        
-       backgroundSprite.scale.set(scale);
-       
-       // Центрируем фон
-       //backgroundSprite.x = (app.screen.width - backgroundSprite.width * scale) / 2;
-       //backgroundSprite.y = (app.screen.height - backgroundSprite.height * scale) / 2;
+       // Позиционируем фон
+       backgroundTiling.x = 0;
+       backgroundTiling.y = 0;
        
        // Добавляем фон на сцену (он будет отрисован первым)
-       app.stage.addChild(backgroundSprite);
+       app.stage.addChild(backgroundTiling);
        
-       console.log('✅ Фон создан и добавлен на сцену');
+       // Анимация движения фона справа налево
+       // Скорость движения в пикселях за тик
+       const scrollSpeed = GAME_CONFIG.BACKGROUND.scroll.speed;
+       
+       // Флаг для управления движением фона
+       let isBackgroundMoving = false;
+       
+       app.ticker.add((time) => {
+         // Двигаем фон только если установлен флаг движения
+         if (isBackgroundMoving) {
+           backgroundTiling.tilePosition.x -= scrollSpeed * time.deltaTime;
+         }
+       });
+       
+       // Сохраняем функцию управления движением фона в контексте приложения
+       // Это позволит герою управлять фоном
+       (app as any).setBackgroundMoving = (moving: boolean) => {
+         isBackgroundMoving = moving;
+         console.log(`🌊 Фон ${moving ? 'начал' : 'остановил'} движение`);
+       };
+       
+       console.log('✅ Движущийся фон создан и добавлен на сцену');
        
      } catch (error) {
        console.error('❌ Ошибка создания фона:', error);
@@ -225,81 +245,60 @@ export default function GamePage() {
    }
 
    /**
-    * Создание тестового героя
+    * Создание игрового контроллера
     * 
-    * Создает спрайт героя с анимацией для проверки загруженных ресурсов
-    * В будущем заменим на полноценный класс Hero
+    * Создает героя и игровой контроллер для управления циклом боя
     */
-   async function createTestHero(app: Application): Promise<void> {
-     console.log('🦸 Создание тестового героя...');
+   async function createGameController(app: Application): Promise<void> {
+     console.log('🎮 Создание игрового контроллера...');
 
      try {
-       // Получаем текстуру героя в состоянии idle
-       const heroTexture = assetsManager.getHeroTexture('juggernaut', 'idle');
+       // Импортируем необходимые классы
+       const { Hero } = await import('../../game/entities/Hero');
+       const { GameController } = await import('../../game/core/GameController');
        
-       // Создаем спрайт героя
-       const heroSprite = new Sprite(heroTexture);
-       
-       // Настраиваем позицию и размер
-       heroSprite.anchor.set(0.5); // Центрируем якорь
-       heroSprite.x = app.screen.width * 0.3; // Слева от центра
-       heroSprite.y = app.screen.height * 0.7; // Внизу экрана
-       
-       // Масштабируем героя
-       const heroScale = Math.min(app.screen.width, app.screen.height) / 1000;
-       heroSprite.scale.set(heroScale);
-       
-       // Добавляем на сцену
-       app.stage.addChild(heroSprite);
-       
-       // Простая анимация дыхания для проверки
-       app.ticker.add((time) => {
-         heroSprite.scale.set(heroScale + Math.sin(time.lastTime * 0.002) * 0.02);
+       // Создаем героя типа 'juggernaut'
+       const hero = new Hero(app, 'juggernaut', {
+         positionX: GAME_CONFIG.HERO.position.x,  // 20% от левого края
+         positionY: GAME_CONFIG.HERO.position.y,  // 70% от верха (внизу экрана)
+         scale: GAME_CONFIG.HERO.scale.gamePage   // 150% размера
        });
        
-       console.log('✅ Тестовый герой создан');
+       // Создаем игровой контроллер
+       const gameController = new GameController(app, hero);
        
-     } catch (error) {
-       console.error('❌ Ошибка создания героя:', error);
-     }
-   }
-
-   /**
-    * Создание тестового врага
-    * 
-    * Создает спрайт врага для проверки загруженных ресурсов
-    */
-   async function createTestCreep(app: Application): Promise<void> {
-     console.log('👹 Создание тестового врага...');
-
-     try {
-       // Получаем текстуру врага в состоянии idle
-       const creepTexture = assetsManager.getCreepTexture('direCreep', 'idle');
-       
-       // Создаем спрайт врага
-       const creepSprite = new Sprite(creepTexture);
-       
-       // Настраиваем позицию и размер
-       creepSprite.anchor.set(0.5);
-       creepSprite.x = app.screen.width * 0.7; // Справа от центра
-       creepSprite.y = app.screen.height * 0.7; // Внизу экрана
-       
-       // Масштабируем врага
-       const creepScale = Math.min(app.screen.width, app.screen.height) / 1200;
-       creepSprite.scale.set(creepScale);
-       
-       // Добавляем на сцену
-       app.stage.addChild(creepSprite);
-       
-       // Простая анимация покачивания
-       app.ticker.add((time) => {
-         creepSprite.rotation = Math.sin(time.lastTime * 0.003) * 0.1;
+       // Связываем героя с движением фона
+       hero.setMovementCallback((isMoving: boolean) => {
+         if ((app as any).setBackgroundMoving) {
+           (app as any).setBackgroundMoving(isMoving);
+         }
        });
        
-       console.log('✅ Тестовый враг создан');
+       // Связываем героя с контроллером для нанесения урона после атаки
+       hero.setAttackCallback(() => {
+         gameController.dealDamageToCreep();
+       });
+       
+       // Добавляем героя на сцену
+       app.stage.addChild(hero);
+       
+       // Добавляем героя в игровой цикл для обновления анимаций
+       app.ticker.add((time) => {
+         hero.update(time.deltaMS);
+       });
+       
+       // Добавляем контроллер в игровой цикл
+       app.ticker.add((time) => {
+         gameController.update(time.deltaMS);
+       });
+       
+       // Запускаем игровой цикл
+       gameController.startGameLoop();
+       
+       console.log('✅ Игровой контроллер создан и запущен');
        
      } catch (error) {
-       console.error('❌ Ошибка создания врага:', error);
+       console.error('❌ Ошибка создания игрового контроллера:', error);
      }
    }
 
