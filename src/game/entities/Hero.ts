@@ -16,6 +16,8 @@ import { GameEntity } from '../core/GameEntity';
 import { EntityState } from '../core/GameStates';
 import { assetsManager } from '../managers/AssetsManager';
 import { GAME_CONFIG } from '../config/GameConfig';
+import { HeroHealthBar } from '../components/HeroHealthBar';
+import { useHeroStore } from '../../contexts/heroStore';
 
 // ==================================================================================
 // ИНТЕРФЕЙСЫ И ТИПЫ
@@ -80,6 +82,9 @@ export class Hero extends GameEntity {
   
   // Флаг для отслеживания нанесения урона в атаке
   private hasDealtDamage: boolean = false;
+  
+  // Полоски здоровья и маны (добавляются на сцену через GameController)
+  private healthBar!: HeroHealthBar;
 
   /**
    * Конструктор героя
@@ -109,8 +114,9 @@ export class Hero extends GameEntity {
     
     this.setupHero();
     this.setupAnimations();
+    this.setupHealthBar();
     
-    console.log(`🦸 Создан герой ${this.heroType}`);
+
   }
 
   // ==================================================================================
@@ -121,11 +127,25 @@ export class Hero extends GameEntity {
    * Настройка базовых параметров героя
    */
   private setupHero(): void {
+    // Устанавливаем базовый zIndex для героя (меньше чем у полосок здоровья)
+    this.zIndex = 100;
+    
     // Позиционируем героя на экране
     this.updatePosition();
     
     // Устанавливаем масштаб
     this.updateScale();
+  }
+
+  /**
+   * Настройка полосок здоровья и маны
+   */
+  private setupHealthBar(): void {
+    // Создаем полоски здоровья и маны
+    this.healthBar = new HeroHealthBar();
+    
+    // НЕ добавляем как дочерний элемент - это будет делать GameController
+    // чтобы полоски были поверх всех остальных элементов
   }
 
   /**
@@ -162,8 +182,7 @@ export class Hero extends GameEntity {
         loop: false, // Атака не зацикливается
         onComplete: () => {
           // После завершения атаки возвращаемся к бегу
-          console.log('⚔️ Анимация атаки завершена');
-          console.log('🏃 Возврат к бегу');
+          
           this.setMoving();
         }
       });
@@ -171,10 +190,7 @@ export class Hero extends GameEntity {
       // Запускаем анимацию idle по умолчанию
       this.playAnimation('idle');
       
-      console.log(`✅ Анимации для героя ${this.heroType} настроены:`);
-      console.log(`   - idle: ${idleFrames.length} кадров`);
-      console.log(`   - run: ${runFrames.length} кадров`);
-      console.log(`   - attack: ${attackFrames.length} кадров`);
+      
       
     } catch (error) {
       console.error(`❌ Ошибка настройки анимаций для героя ${this.heroType}:`, error);
@@ -227,7 +243,7 @@ export class Hero extends GameEntity {
     // Во время атаки герой не двигается
     this.notifyMovement(false);
     
-    console.log('⚔️ Герой: анимация атаки запущена');
+
   }
 
   // ==================================================================================
@@ -241,6 +257,7 @@ export class Hero extends GameEntity {
    */
   public setMovementCallback(callback: MovementCallback): void {
     this.movementCallback = callback;
+
   }
   
   /**
@@ -250,7 +267,7 @@ export class Hero extends GameEntity {
    */
   public setAttackCallback(callback: AttackCallback): void {
     this.attackCallback = callback;
-    console.log('⚔️ Коллбэк атаки установлен');
+
   }
 
   /**
@@ -322,14 +339,56 @@ export class Hero extends GameEntity {
   public onResize(): void {
     this.updatePosition();
     this.updateScale();
+    
+    // Обновляем позицию полосок здоровья
+    this.updateHealthBarPosition();
+  }
+  
+  /**
+   * Обновление полосок здоровья и маны
+   */
+  private updateHealthBars(deltaTime: number = 16.6): void {
+    // Получаем актуальные статы героя из heroStore
+    const heroStats = useHeroStore.getState().stats;
+    
+    if (!heroStats || !this.healthBar) {
+      return;
+    }
+    
+    // Обновляем полоски на основе текущих статов
+    this.healthBar.updateBars(heroStats, deltaTime);
+    
+    // Позиционируем полоски над героем
+    this.updateHealthBarPosition();
+  }
+  
+  /**
+   * Обновление позиции полосок здоровья над героем
+   */
+  private updateHealthBarPosition(): void {
+    if (this.healthBar) {
+      // Получаем размеры героя
+      const heroBounds = this.getBounds();
+      
+      // Позиционируем полоски над героем
+      this.healthBar.positionAboveHero(
+        heroBounds.x,
+        heroBounds.y,
+        heroBounds.width,
+        this.scale.x
+      );
+    }
   }
 
   /**
    * Переопределение метода обновления для специфичной логики героя
    */
-  protected onUpdate(): void {
+  protected onUpdate(deltaTime?: number): void {
     // Отслеживаем кадр атаки для точного нанесения урона
     this.checkAttackDamageFrame();
+    
+    // Обновляем полоски здоровья и маны
+    this.updateHealthBars(deltaTime);
   }
   
   /**
@@ -344,7 +403,7 @@ export class Hero extends GameEntity {
         if (this.getCurrentFrame() >= GAME_CONFIG.HERO.animations.damageFrame) {
           this.hasDealtDamage = true;
           
-          console.log(`⚔️ Достигнут кадр удара (${GAME_CONFIG.HERO.animations.damageFrame + 1}), наносим урон!`);
+  
           
           if (this.attackCallback) {
             this.attackCallback();
@@ -371,5 +430,27 @@ export class Hero extends GameEntity {
   /** Получение имени героя */
   public getName(): string {
     return this.config.name;
+  }
+  
+  /**
+   * Получение полосок здоровья для добавления на сцену
+   */
+  public getHealthBar(): HeroHealthBar {
+    return this.healthBar;
+  }
+  
+  /**
+   * Очистка ресурсов героя
+   */
+  public destroy(): void {
+    // Очищаем полоски здоровья
+    if (this.healthBar) {
+      this.healthBar.destroy();
+    }
+    
+    // Вызываем родительский метод destroy
+    super.destroy();
+    
+
   }
 }

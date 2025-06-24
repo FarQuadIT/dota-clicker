@@ -157,6 +157,9 @@ interface BackgroundConfig {
     
     /** Множитель ширины для TilingSprite */
     widthMultiplier: number;
+    
+    /** Общий коэффициент скорости движения мира */
+    speedMultiplier: number;
   };
   
   /** Fallback цвет фона при ошибке загрузки */
@@ -302,6 +305,7 @@ export const GAME_CONFIG: GameConfig = {
     scroll: {
       speed: 5.0,             // Скорость прокрутки фона (GamePage.tsx:212)
       widthMultiplier: 2,     // Множитель ширины для TilingSprite
+      speedMultiplier: 1.5,   // Общий коэффициент скорости движения мира
     },
     
     // Fallback настройки

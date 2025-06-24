@@ -41,6 +41,21 @@ interface HeroStore {
    * @param value - Новое значение характеристики
    */
   updateStat: (key: keyof HeroStats, value: number) => void;
+
+  /**
+   * Обновление нескольких характеристик одновременно
+   * Используется для более эффективного обновления сразу нескольких значений
+   * 
+   * @param updates - Объект с парами ключ-значение для обновления
+   */
+  updateStats: (updates: Partial<HeroStats>) => void;
+  
+  /**
+   * Инициализация героя с базовыми характеристиками
+   * Используется при первом запуске игры или сбросе характеристик
+   * Устанавливает значения из старого проекта как базовые
+   */
+  initializeWithDefaults: () => void;
 }
 
 /**
@@ -71,4 +86,30 @@ export const useHeroStore = create<HeroStore>((set) => ({
       // Обновляем только указанную характеристику, сохраняя остальные
       return { stats: { ...state.stats, [key]: value } };
     }),
+
+  // Обновляем несколько характеристик одновременно
+  updateStats: (updates) =>
+    set((state) => {
+      // Если stats = null, возвращаем текущее состояние без изменений
+      if (!state.stats) {
+        return state;
+      }
+      
+      // Создаем новый объект статов, объединяя существующие и новые значения
+      const newStats: HeroStats = { ...state.stats };
+      Object.keys(updates).forEach(key => {
+        const value = updates[key as keyof HeroStats];
+        if (value !== undefined) {
+          (newStats as any)[key] = value;
+        }
+      });
+      
+      return { stats: newStats };
+    }),
+
+  // Инициализация с базовыми характеристиками из старого проекта
+  // DEPRECATED: Теперь данные загружаются с сервера через App.tsx
+  initializeWithDefaults: () => {
+    // Метод оставлен для совместимости, но не используется
+  },
 }));

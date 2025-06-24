@@ -35,10 +35,27 @@ export default function GamePage() {
    currentAsset: ''
  });
  const [error, setError] = useState<string | null>(null);
- const [isGameReady, setIsGameReady] = useState(false);
+ 
 
- // Эффект для инициализации Pixi.js при монтировании компонента
+ // Состояние для отслеживания готовности DOM
+ const [isDOMReady, setIsDOMReady] = useState(false);
+
+ // Эффект для проверки готовности DOM
  useEffect(() => {
+       const checkDOMReady = () => {
+      if (gameContainerRef.current) {
+        setIsDOMReady(true);
+      } else {
+        requestAnimationFrame(checkDOMReady);
+      }
+    };
+   
+   checkDOMReady();
+ }, []);
+
+ // Эффект для инициализации Pixi.js когда DOM готов
+ useEffect(() => {
+   if (!isDOMReady) return;
    /**
     * Основная функция инициализации игры
     * 
@@ -49,12 +66,12 @@ export default function GamePage() {
     */
    async function initializeGame() {
      try {
-       // Проверяем наличие контейнера и что приложение еще не создано
-       if (!gameContainerRef.current || pixiApp) {
+       // Проверяем что приложение еще не создано
+       if (pixiApp) {
          return;
        }
+       
 
-       console.log('🎮 Начинаем инициализацию игры...');
        setIsInitializing(true);
        setError(null);
 
@@ -70,9 +87,9 @@ export default function GamePage() {
 
        // Шаг 3: Создание игровой сцены
        await createGameScene(app);
-       setIsGameReady(true);
+       
 
-       console.log('🎉 Игра инициализирована и готова к работе!');
+
 
      } catch (err) {
        console.error('❌ Ошибка инициализации игры:', err);
@@ -89,10 +106,16 @@ export default function GamePage() {
     * Документация: https://pixijs.download/release/docs/app.Application.html
     */
    async function initializePixiApp(): Promise<Application> {
-     console.log('⚙️ Создание Pixi.js приложения...');
+
 
      // Создаем новый экземпляр Pixi Application
      const app = new Application();
+
+     // Вычисляем правильный размер канваса с учетом header и footer
+     const headerHeight = 40; // Из Header.css
+     const footerHeight = 50; // Из Footer.css
+     const gameWidth = window.innerWidth;
+     const gameHeight = window.innerHeight - headerHeight - footerHeight;
 
      // Инициализируем приложение с настройками
      // Это асинхронная операция в PixiJS v8
@@ -100,12 +123,12 @@ export default function GamePage() {
        // Цвет фона (темно-серый)
        background: '#1a1a1a',
        
-       // Размеры канваса - полный экран
-       width: window.innerWidth,
-       height: window.innerHeight,
+       // Размеры канваса - весь экран минус header и footer
+       width: gameWidth,
+       height: gameHeight,
        
-       // Автоматическое изменение размера при изменении окна
-       resizeTo: window,
+       // НЕ используем resizeTo: window, так как нам нужен кастомный размер
+       // resizeTo: window,
        
        // Включаем антиалиасинг для сглаживания
        antialias: true,
@@ -117,12 +140,63 @@ export default function GamePage() {
        autoDensity: true,
      });
 
-     console.log('✅ Pixi.js приложение создано');
-     console.log('📏 Размеры экрана:', app.screen.width, 'x', app.screen.height);
+     
 
      // Добавляем canvas в контейнер
      // В PixiJS v8 используется app.canvas вместо app.view
-     gameContainerRef.current!.appendChild(app.canvas);
+     const container = gameContainerRef.current;
+     if (!container) {
+       throw new Error('Game container is not available');
+     }
+     
+     // Проверяем что canvas создан
+     if (!app.canvas) {
+       throw new Error('Canvas was not created by PixiJS');
+     }
+     
+     // Очищаем контейнер от предыдущих элементов (если есть)
+     container.innerHTML = '';
+     
+     // Добавляем canvas
+     container.appendChild(app.canvas);
+     
+     
+
+     // Добавляем обработчик изменения размера окна
+     const handleResize = () => {
+       const headerHeight = 40;
+       const footerHeight = 50;
+       const newGameWidth = window.innerWidth;
+       const newGameHeight = window.innerHeight - headerHeight - footerHeight;
+       
+       // Изменяем размер рендерера
+       app.renderer.resize(newGameWidth, newGameHeight);
+       
+       // Обновляем скорость фона пропорционально новой ширине экрана
+       if ((app as any).updateBackgroundSpeed) {
+         (app as any).updateBackgroundSpeed(newGameWidth / 200);
+       }
+       
+       // Обновляем размеры фона
+       if ((app as any).updateBackgroundSize) {
+         (app as any).updateBackgroundSize();
+       }
+       
+       // Обновляем игровые объекты при изменении размера
+       if ((app as any).gameHero) {
+         (app as any).gameHero.onResize();
+       }
+       if ((app as any).gameController) {
+         (app as any).gameController.onResize();
+       }
+     };
+     
+     window.addEventListener('resize', handleResize);
+     
+     // Сохраняем функцию для очистки
+     (app as any).removeResizeListener = () => {
+       window.removeEventListener('resize', handleResize);
+     };
 
      return app;
    }
@@ -134,12 +208,12 @@ export default function GamePage() {
     * Отслеживает прогресс загрузки для отображения пользователю
     */
    async function loadGameAssets(): Promise<void> {
-     console.log('📦 Загрузка игровых ресурсов...');
+
 
      // Подписываемся на обновления прогресса загрузки
      const progressCallback = (progress: LoadingProgress) => {
        setLoadingProgress(progress);
-       console.log(`📈 Прогресс загрузки: ${progress.percentage}% (${progress.currentAsset})`);
+       
      };
 
      assetsManager.onProgress(progressCallback);
@@ -147,7 +221,7 @@ export default function GamePage() {
      try {
        // Запускаем загрузку всех ресурсов
        await assetsManager.loadGameAssets();
-       console.log('✅ Все ресурсы загружены');
+       
      } finally {
        // Отписываемся от обновлений прогресса
        assetsManager.offProgress(progressCallback);
@@ -163,9 +237,9 @@ export default function GamePage() {
     * - Игровой контроллер для управления циклом боя
     */
    async function createGameScene(app: Application): Promise<void> {
-     console.log('🏗️ Создание игровой сцены...');
 
-     // Очищаем сцену от тестовых объектов
+
+     // Очищаем сцену
      app.stage.removeChildren();
 
      // Создаем фон
@@ -174,7 +248,7 @@ export default function GamePage() {
      // Создаем героя и игровой контроллер
      await createGameController(app);
 
-     console.log('✅ Игровая сцена создана');
+     
    }
 
    /**
@@ -184,7 +258,7 @@ export default function GamePage() {
     * Документация: https://pixijs.download/release/docs/scene.TilingSprite.html
     */
    async function createBackground(app: Application): Promise<void> {
-     console.log('🌲 Создание движущегося фона...');
+
 
      try {
        // Получаем загруженную текстуру фона
@@ -192,14 +266,14 @@ export default function GamePage() {
        
        // Создаем TilingSprite для повторяющегося фона
        // TilingSprite позволяет создавать бесшовный повторяющийся фон
-       const backgroundTiling = new TilingSprite(
-         forestTexture,
-         app.screen.width * 2,  // Делаем шире экрана для плавного движения
-         app.screen.height
-       );
+       const backgroundTiling = new TilingSprite({
+         texture: forestTexture,
+         width: app.screen.width * 2,  // Делаем шире экрана для плавного движения
+         height: app.screen.height
+       });
        
-       // Масштабируем фон по высоте экрана
-       // Сохраняем пропорции, но покрываем всю высоту
+       // Масштабируем фон по высоте игрового экрана (с учетом header/footer)
+       // Сохраняем пропорции, но покрываем всю игровую высоту
        const scaleY = app.screen.height / forestTexture.height;
        backgroundTiling.tileScale.set(scaleY, scaleY);
        
@@ -210,9 +284,11 @@ export default function GamePage() {
        // Добавляем фон на сцену (он будет отрисован первым)
        app.stage.addChild(backgroundTiling);
        
-       // Анимация движения фона справа налево
-       // Скорость движения в пикселях за тик
-       const scrollSpeed = GAME_CONFIG.BACKGROUND.scroll.speed;
+       // Анимация движения фона справа налево  
+       // Скорость движения пропорциональная ширине экрана с общим коэффициентом
+       const baseSpeed = app.screen.width / 200;
+       const speedMultiplier = GAME_CONFIG.BACKGROUND.scroll.speedMultiplier;
+       let scrollSpeed = baseSpeed * speedMultiplier;
        
        // Флаг для управления движением фона
        let isBackgroundMoving = false;
@@ -224,14 +300,29 @@ export default function GamePage() {
          }
        });
        
-       // Сохраняем функцию управления движением фона в контексте приложения
-       // Это позволит герою управлять фоном
+       // Сохраняем функции управления фоном в контексте приложения
+       // Это позволит герою управлять фоном и обновлять скорость при изменении размера
        (app as any).setBackgroundMoving = (moving: boolean) => {
          isBackgroundMoving = moving;
          console.log(`🌊 Фон ${moving ? 'начал' : 'остановил'} движение`);
        };
        
-       console.log('✅ Движущийся фон создан и добавлен на сцену');
+       (app as any).updateBackgroundSpeed = (newBaseSpeed: number) => {
+         scrollSpeed = newBaseSpeed * speedMultiplier; // Применяем общий коэффициент скорости
+         console.log(`🌊 Скорость фона обновлена: ${scrollSpeed.toFixed(2)} (базовая: ${newBaseSpeed.toFixed(2)}, множитель: ${speedMultiplier})`);
+       };
+       
+       // Функция для обновления размеров фона при изменении экрана
+       (app as any).updateBackgroundSize = () => {
+         backgroundTiling.width = app.screen.width * 2;
+         backgroundTiling.height = app.screen.height;
+         
+         // Пересчитываем масштаб
+         const scaleY = app.screen.height / forestTexture.height;
+         backgroundTiling.tileScale.set(scaleY, scaleY);
+       };
+       
+
        
      } catch (error) {
        console.error('❌ Ошибка создания фона:', error);
@@ -250,29 +341,23 @@ export default function GamePage() {
     * Создает героя и игровой контроллер для управления циклом боя
     */
    async function createGameController(app: Application): Promise<void> {
-     console.log('🎮 Создание игрового контроллера...');
+     
 
      try {
        // Импортируем необходимые классы
        const { Hero } = await import('../../game/entities/Hero');
        const { GameController } = await import('../../game/core/GameController');
        
-       // Создаем героя типа 'juggernaut'
-       const hero = new Hero(app, 'juggernaut', {
+       // Создаем игровой контроллер
+       const gameController = new GameController(app, new Hero(app, 'juggernaut', {
          positionX: GAME_CONFIG.HERO.position.x,  // 20% от левого края
          positionY: GAME_CONFIG.HERO.position.y,  // 70% от верха (внизу экрана)
          scale: GAME_CONFIG.HERO.scale.gamePage   // 150% размера
-       });
+       }));
        
-       // Создаем игровой контроллер
-       const gameController = new GameController(app, hero);
+       // Характеристики героя теперь загружаются автоматически в App.tsx через API
        
-       // Связываем героя с движением фона
-       hero.setMovementCallback((isMoving: boolean) => {
-         if ((app as any).setBackgroundMoving) {
-           (app as any).setBackgroundMoving(isMoving);
-         }
-       });
+       const hero = gameController.getHero();
        
        // Связываем героя с контроллером для нанесения урона после атаки
        hero.setAttackCallback(() => {
@@ -287,15 +372,22 @@ export default function GamePage() {
          hero.update(time.deltaMS);
        });
        
+
+       
        // Добавляем контроллер в игровой цикл
        app.ticker.add((time) => {
          gameController.update(time.deltaMS);
        });
        
+       // Сохраняем ссылки для обработки resize
+       (app as any).gameHero = hero;
+       (app as any).gameController = gameController;
+       
        // Запускаем игровой цикл
        gameController.startGameLoop();
        
-       console.log('✅ Игровой контроллер создан и запущен');
+       
+
        
      } catch (error) {
        console.error('❌ Ошибка создания игрового контроллера:', error);
@@ -308,7 +400,10 @@ export default function GamePage() {
    // Функция очистки при размонтировании компонента
    return () => {
      if (pixiApp) {
-       console.log('🧹 Очистка игровых ресурсов...');
+       // Очищаем обработчик изменения размера
+       if ((pixiApp as any).removeResizeListener) {
+         (pixiApp as any).removeResizeListener();
+       }
        
        // Останавливаем все анимации
        pixiApp.ticker.stop();
@@ -316,21 +411,19 @@ export default function GamePage() {
        // Уничтожаем приложение и освобождаем ресурсы
        pixiApp.destroy(true);
        
-       setPixiApp(null);
-       setIsGameReady(false);
+             setPixiApp(null);
      }
    };
- }, []); // Пустой массив зависимостей - эффект выполнится только один раз
+ }, [isDOMReady]); // Зависит от готовности DOM
 
  // Обработчик для перезагрузки при ошибке
- const handleRetry = () => {
-   setError(null);
-   setIsInitializing(true);
-   setIsLoadingAssets(false);
-   setIsGameReady(false);
-   // Перезагружаем страницу для повторной инициализации
-   window.location.reload();
- };
+   const handleRetry = () => {
+    setError(null);
+    setIsInitializing(true);
+    setIsLoadingAssets(false);
+    // Перезагружаем страницу для повторной инициализации
+    window.location.reload();
+  };
 
  /**
   * Компонент экрана загрузки
@@ -462,11 +555,11 @@ export default function GamePage() {
      <div 
        ref={gameContainerRef}
        style={{
-         // Канвас занимает весь доступный размер
+         // Канвас занимает пространство между header и footer
          width: '100%',
-         height: '100%',
+         height: 'calc(100vh - 90px)', // 40px (header) + 50px (footer)
          
-         // Позиционирование под Header и Footer
+         // Позиционирование - используем paddingTop из main, убираем top
          position: 'absolute',
          top: 0,
          left: 0,
@@ -519,22 +612,7 @@ export default function GamePage() {
        </div>
      )}
 
-     {/* Индикатор готовности игры */}
-     {isGameReady && (
-       <div style={{
-         position: 'absolute',
-         top: '20px',
-         right: '20px',
-         backgroundColor: 'rgba(76, 175, 80, 0.8)',
-         color: 'white',
-         padding: '10px 15px',
-         borderRadius: '5px',
-         fontSize: '14px',
-         zIndex: 15,
-       }}>
-         🎮 Игра готова
-       </div>
-     )}
+
    </div>
  );
 }

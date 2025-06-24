@@ -105,7 +105,7 @@ export class AnimatedSprite extends Container {
     // Добавляем спрайт как дочерний объект
     this.addChild(this.sprite);
     
-    console.log('🎭 Создан AnimatedSprite');
+
   }
 
   /**
@@ -123,7 +123,7 @@ export class AnimatedSprite extends Container {
     // Сохраняем анимацию в коллекции
     this.animations.set(config.name, config);
     
-    console.log(`✅ Добавлена анимация: ${config.name} (${config.textures.length} кадров)`);
+
   }
 
   /**
@@ -168,7 +168,7 @@ export class AnimatedSprite extends Container {
       animation.onStart();
     }
     
-    console.log(`🎬 Запущена анимация: ${animationName}`);
+
   }
 
   /**
@@ -179,7 +179,7 @@ export class AnimatedSprite extends Container {
     
     this.animationState.isPlaying = false;
     
-    console.log(`⏹️ Остановлена анимация: ${this.currentAnimation.name}`);
+
   }
 
   /**
@@ -298,6 +298,6 @@ export class AnimatedSprite extends Container {
     // Вызываем родительский метод destroy
     super.destroy();
     
-    console.log('🗑️ AnimatedSprite уничтожен');
+
   }
 }

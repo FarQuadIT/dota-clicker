@@ -38,7 +38,7 @@ export abstract class GameEntity extends AnimatedSprite {
   constructor(initialTexture?: Texture) {
     super(initialTexture);
     
-    console.log(`🎯 Создана игровая сущность`);
+
   }
 
   // ==================================================================================
@@ -56,7 +56,7 @@ export abstract class GameEntity extends AnimatedSprite {
     const oldState = this.currentState;
     this.currentState = newState;
     
-    console.log(`🔄 Смена состояния: ${oldState} → ${newState}`);
+
     
     // Обрабатываем смену состояния
     this.onStateChange();
@@ -138,7 +138,7 @@ export abstract class GameEntity extends AnimatedSprite {
     // Вызываем родительский метод
     super.destroy();
     
-    console.log('🗑️ GameEntity уничтожена');
+
   }
 }
 

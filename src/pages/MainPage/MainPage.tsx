@@ -10,6 +10,8 @@ import { useHeroStore } from '../../contexts/heroStore';
 export default function MainPage() {
   // Получаем характеристики героя из хранилища
   const stats = useHeroStore((state) => state.stats);
+  
+
 
   return (
     <div style={{ 

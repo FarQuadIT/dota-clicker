@@ -39,12 +39,15 @@ function AppContent() {
           // Устанавливаем характеристики героя в хранилище
           setStats(result.stats);
           
+
+          
           // Инициализируем золото и доход
           if (result.gold !== undefined && result.income !== undefined) {
             // Инициализируем контекст золота
             if ((window as any).initializeGoldContext) {
               (window as any).initializeGoldContext(result.gold, result.income);
             }
+
           }
         } else {
             // Обрабатываем ошибку при загрузке данных
@@ -86,10 +89,19 @@ function AppContent() {
       "vampirism": 0,
       "movement-speed": 5,
       "income": 5,
+      
+      // Новые поля для интеграции с игрой
+      "level": 1,
+      "coins": 0,
+      "current-health": 100, // Изначально = максимальному здоровью
+      "current-mana": 50,    // Изначально = максимальной мане
+      
       heroId: TEST_HERO_ID
     };
     
     setStats(initialStats);
+    
+
   };
 
   return (

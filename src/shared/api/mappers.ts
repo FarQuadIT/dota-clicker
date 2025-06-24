@@ -96,6 +96,12 @@ export function mapHeroData(data: RawHeroData): HeroStats {
     "vampirism": data.vampirism ?? 0,
     "movement-speed": data.movementSpeed ?? 5,
     "income": data.currentIncome ?? 5,
+    
+    // Новые поля для интеграции с игрой
+    "level": data.level ?? 1,
+    "coins": data.coins ?? 0,
+    "current-health": data.maxHealth ?? 100, // Изначально = максимальному здоровью
+    "current-mana": data.maxEnergy ?? 50,    // Изначально = максимальной мане
   };
 }
 

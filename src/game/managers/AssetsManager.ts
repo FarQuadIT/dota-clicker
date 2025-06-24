@@ -167,7 +167,7 @@ class AssetsManager {
    * Приватный доступ гарантирует, что класс можно инстанцировать только через getInstance()
    */
   private constructor() {
-    console.log('🎨 Создание менеджера ресурсов');
+    // Менеджер ресурсов создан
   }
 
   /**
@@ -179,7 +179,7 @@ class AssetsManager {
    */
   public async loadGameAssets(): Promise<void> {
     try {
-      console.log('📦 Начинаем загрузку игровых ресурсов...');
+
       
       // Создаем манифест - структуру, описывающую все ресурсы для загрузки
       const assetManifest = this.createAssetManifest();
@@ -202,7 +202,7 @@ class AssetsManager {
 
       // Устанавливаем флаг завершения загрузки
       this.isLoaded = true;
-      console.log('✅ Все ресурсы загружены успешно');
+
       
     } catch (error) {
       // Обработка ошибок загрузки
@@ -278,6 +278,136 @@ class AssetsManager {
             framesY: 5,
             totalFrames: 29
           }
+        },
+        medved: {
+          idle: {
+            path: '/media/game/assets/creeps/medved_idle.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 6,
+            framesY: 5,
+            totalFrames: 27
+          },
+          attack: {
+            path: '/media/game/assets/creeps/medved_attack.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 5,
+            framesY: 5,
+            totalFrames: 21
+          },
+          death: {
+            path: '/media/game/assets/creeps/medved_death.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 5,
+            framesY: 5,
+            totalFrames: 21
+          }
+        },
+        satyr: {
+          idle: {
+            path: '/media/game/assets/creeps/satyr_idle.png',
+            frameWidth: 512,
+            frameHeight: 512,
+            framesX: 7,
+            framesY: 6,
+            totalFrames: 40
+          },
+          attack: {
+            path: '/media/game/assets/creeps/satyr_attack.png',
+            frameWidth: 512,
+            frameHeight: 512,
+            framesX: 5,
+            framesY: 5,
+            totalFrames: 23
+          },
+          death: {
+            path: '/media/game/assets/creeps/satyr_death.png',
+            frameWidth: 512,
+            frameHeight: 512,
+            framesX: 6,
+            framesY: 5,
+            totalFrames: 30
+          }
+        },
+        shishka: {
+          idle: {
+            path: '/media/game/assets/creeps/shishka_idle.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 5,
+            framesY: 5,
+            totalFrames: 24
+          },
+          attack: {
+            path: '/media/game/assets/creeps/shishka_attack.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 6,
+            framesY: 5,
+            totalFrames: 27
+          },
+          death: {
+            path: '/media/game/assets/creeps/shishka_death.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 5,
+            framesY: 6,
+            totalFrames: 27
+          }
+        },
+        voul: {
+          idle: {
+            path: '/media/game/assets/creeps/voul_idle.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 5,
+            framesY: 7,
+            totalFrames: 34
+          },
+          attack: {
+            path: '/media/game/assets/creeps/voul_attack.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 5,
+            framesY: 5,
+            totalFrames: 25
+          },
+          death: {
+            path: '/media/game/assets/creeps/voul_death.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 4,
+            framesY: 8,
+            totalFrames: 31
+          }
+        },
+        wolf: {
+          idle: {
+            path: '/media/game/assets/creeps/wolf_idle.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 5,
+            framesY: 5,
+            totalFrames: 23
+          },
+          attack: {
+            path: '/media/game/assets/creeps/wolf_attack.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 7,
+            framesY: 3,
+            totalFrames: 21
+          },
+          death: {
+            path: '/media/game/assets/creeps/wolf_death.png',
+            frameWidth: 1024,
+            frameHeight: 1024,
+            framesX: 3,
+            framesY: 6,
+            totalFrames: 18
+          }
         }
       },
       
@@ -332,8 +462,7 @@ class AssetsManager {
    */
   private createFrameTextures(spritesheet: Texture, config: SpriteSheetConfig): Texture[] {
     const frames: Texture[] = [];
-    
-    console.log(`🎬 Создание кадров из спрайтшита: ${config.totalFrames} кадров (${config.framesX}x${config.framesY})`);
+
     
     // Создаем текстуру для каждого кадра
     for (let i = 0; i < config.totalFrames; i++) {
@@ -350,7 +479,7 @@ class AssetsManager {
       frames.push(frameTexture);
     }
     
-    console.log(`✅ Создано ${frames.length} кадров анимации`);
+
     return frames;
   }
 
@@ -360,7 +489,7 @@ class AssetsManager {
    * @param heroManifest - Объект с конфигурациями спрайтшитов героев
    */
   private async loadHeroAssets(heroManifest: any): Promise<void> {
-    console.log('🦸 Загружаем ресурсы героев...');
+
     
     // Инициализируем объект для хранения ресурсов героев
     this.assets.heroes = {};
@@ -390,7 +519,7 @@ class AssetsManager {
           // Увеличиваем счетчик загруженных ресурсов
           this.incrementProgress();
           
-          console.log(`✅ Загружена анимация ${animName} для героя ${heroName} (${frames.length} кадров)`);
+  
           
         } catch (error) {
           // В случае ошибки загрузки, используем белую текстуру как запасной вариант
@@ -412,7 +541,7 @@ class AssetsManager {
    * @param creepManifest - Объект с конфигурациями спрайтшитов врагов
    */
   private async loadCreepAssets(creepManifest: any): Promise<void> {
-    console.log('👹 Загружаем ресурсы врагов...');
+
     
     // Инициализируем объект для хранения ресурсов врагов
     this.assets.creeps = {};
@@ -438,7 +567,7 @@ class AssetsManager {
           
           this.incrementProgress();
           
-          console.log(`✅ Загружена анимация ${animName} для врага ${creepName} (${frames.length} кадров)`);
+  
           
         } catch (error) {
           console.error(`❌ Ошибка загрузки ${(config as SpriteSheetConfig).path}:`, error);
@@ -458,7 +587,7 @@ class AssetsManager {
    * @param bgManifest - Объект с путями к фоновым изображениям
    */
   private async loadBackgroundAssets(bgManifest: any): Promise<void> {
-    console.log('🌲 Загружаем фоновые изображения...');
+
     
     // Инициализируем объект для хранения фоновых изображений
     this.assets.backgrounds = {} as GameAssets['backgrounds'];
@@ -475,7 +604,7 @@ class AssetsManager {
         
         this.incrementProgress();
         
-        console.log(`✅ Загружен фон ${bgName}`);
+
         
       } catch (error) {
         // При ошибке используем белую текстуру как запасной вариант
@@ -492,7 +621,7 @@ class AssetsManager {
    * @param uiManifest - Объект с путями к UI элементам
    */
   private async loadUIAssets(uiManifest: any): Promise<void> {
-    console.log('🎮 Загружаем UI элементы...');
+
     
     // Инициализируем объект для хранения UI элементов
     this.assets.ui = {} as GameAssets['ui'];
@@ -509,7 +638,7 @@ class AssetsManager {
         
         this.incrementProgress();
         
-        console.log(`✅ Загружен UI элемент ${uiName}`);
+
         
       } catch (error) {
         console.error(`❌ Ошибка загрузки UI ${path}:`, error);
