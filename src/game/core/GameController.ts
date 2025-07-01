@@ -79,6 +79,9 @@ export class GameController {
   private spawnTimer: number = 0;
   private isSpawnBlocked: boolean = false;
   
+  // Флаг для предотвращения немедленной проверки смерти при создании героя
+  private initializationFrames: number = 0;
+  
   // Менеджер визуальных эффектов урона
   private damageEffectManager: DamageEffectManager;
   
@@ -112,6 +115,10 @@ export class GameController {
     
     // Добавляем ссылку на себя в app для доступа из других компонентов
     (this.app as any).gameController = this;
+    
+    // ИСПРАВЛЕНИЕ: Принудительно восстанавливаем здоровье героя СИНХРОННО при создании
+    // Это предотвращает немедленную смерть героя при входе в игру
+    this.restoreHeroToFullHealth();
     
     // Обновляем все характеристики героя с сервера при входе в игру
     // Это асинхронная операция, но не блокирует создание контроллера
@@ -325,6 +332,16 @@ export class GameController {
     // СИСТЕМА ПАУЗЫ: Пропускаем обновление если игра на паузе
     if (!this.isGameRunning || this.isPausedByUser) {
       return; // Останавливаем игровой цикл при паузе
+    }
+    
+    // Отсчитываем кадры инициализации
+    this.initializationFrames++;
+    
+    // ПРОВЕРКА СМЕРТИ ГЕРОЯ: Завершаем игру если здоровье равно 0
+    // НО только после нескольких кадров инициализации, чтобы дать время на восстановление здоровья
+    if (this.initializationFrames > 5 && this.hero && this.hero.getCurrentHealth() <= 0) {
+      this.endGame(); // Завершаем игру при смерти героя
+      return; // Останавливаем игровой цикл
     }
     
     // ЧАСТЬ 3: Обновляем регенерацию героя (здоровье и мана)
@@ -786,6 +803,37 @@ export class GameController {
     }
   }
   
+  /**
+   * Перезапустить игру (используется при возврате из других вкладок)
+   */
+  public restartGame(): void {
+    console.log('🔄 Перезапуск игры...');
+    
+    // Восстанавливаем флаги работы игры
+    this.isGameRunning = true;
+    this.isPausedByUser = false;
+    
+    // Очищаем текущего крипа если есть
+    this.cleanupCreep();
+    
+    // Сбрасываем состояние игры
+    this.currentState = GameState.RUNNING;
+    this.spawnTimer = 0;
+    this.isSpawnBlocked = false;
+    this.initializationFrames = 0; // Сбрасываем счетчик кадров инициализации
+    
+    // Восстанавливаем здоровье и ману героя
+    this.restoreHeroToFullHealth();
+    
+    // Сбрасываем счетчик золота за сессию
+    this.resetSessionGold();
+    
+    // Запускаем игровой цикл заново
+    this.startGameLoop();
+    
+    console.log('✅ Игра перезапущена');
+  }
+  
   // =======================================
 
   // ======= СИСТЕМА ЗОЛОТА =======
@@ -867,6 +915,51 @@ export class GameController {
    */
   public resetSessionGold(): void {
     this.sessionGoldEarned = 0;
+  }
+
+  // =======================================
+
+  // ======= СИСТЕМА СМЕРТИ ГЕРОЯ =======
+  
+  /**
+   * Завершение игры при смерти героя
+   * Ставит игру на паузу (не останавливает полностью) и запускает Game Over последовательность
+   */
+  private endGame(): void {
+    console.log('☠️ Герой погиб! Игра поставлена на паузу...');
+    
+    // ИСПРАВЛЕНИЕ: Ставим игру на паузу, а не останавливаем полностью
+    // Это заморозит игру в текущем состоянии, сохранив позиции героя и крипа
+    this.isPausedByUser = true;
+    
+    // Останавливаем все анимации (заморозка текущего кадра)
+    if (this.hero) {
+      this.hero.pauseAnimations();
+    }
+    if (this.currentCreep) {
+      this.currentCreep.pauseAnimations();
+    }
+    
+    // Останавливаем фон
+    if ((this.app as any).setBackgroundMoving) {
+      (this.app as any).setBackgroundMoving(false);
+    }
+    
+    // Уведомляем о Game Over через callback (устанавливается из GamePage)
+    if (this.onGameOverCallback) {
+      this.onGameOverCallback(this.sessionGoldEarned);
+    }
+  }
+
+  // Callback для уведомления о Game Over (устанавливается из GamePage)
+  private onGameOverCallback?: (sessionGold: number) => void;
+
+  /**
+   * Установка callback для уведомления о Game Over
+   * Вызывается из GamePage.tsx при создании GameController
+   */
+  public setGameOverCallback(callback: (sessionGold: number) => void): void {
+    this.onGameOverCallback = callback;
   }
   
   // ===============================

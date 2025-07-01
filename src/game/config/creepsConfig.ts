@@ -146,7 +146,7 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     collisionZone: 0.9,  // Уменьшенная зона (нужно подойти ближе)
     // Боевые характеристики из старого проекта
     maxHealth: 10000,    // creepHealthTotal: 10000 (для тестирования регенерации)
-    damage: 100,        // creepDamage: 1000 (для тестирования регенерации)
+    damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 4, // unlockedLevel: 4
     specialAbilities: ["manaburn"], // Лишение маны при ударе

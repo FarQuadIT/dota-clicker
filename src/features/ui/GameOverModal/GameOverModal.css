@@ -1,0 +1,238 @@
+/* Overlay для модального окна - затемненный фон */
+.game-over-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000; /* Выше Footer (z-index: 1000) */
+  backdrop-filter: blur(2px);
+}
+
+/* Само модальное окно */
+.game-over-modal {
+  background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+  border: 2px solid #2b2f33;
+  border-style: ridge;
+  box-shadow: 
+    inset 0 0 1px rgba(255, 255, 255, 0.3), 
+    inset 0 0 3px rgba(255, 255, 255, 0.2),
+    0 0 20px rgba(0, 0, 0, 0.8);
+  padding: 25px;
+  border-radius: 0; /* Без закругленных углов как в плане */
+  max-width: 400px;
+  width: 90%;
+  color: white;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Заголовок модального окна */
+.game-over-modal-header {
+  margin-bottom: 20px;
+}
+
+.game-over-modal-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #b62f2f;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Основной текст */
+.game-over-modal-content {
+  margin-bottom: 25px;
+}
+
+.game-over-modal-text {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+  color: #ccc;
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* Информационные блоки */
+.game-over-modal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.game-over-modal-info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  border: 1px solid rgba(136, 136, 136, 0.3);
+  background: rgba(136, 136, 136, 0.1);
+}
+
+.game-over-modal-info-item.positive {
+  background: rgba(0, 255, 0, 0.1);
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  color: #90EE90;
+}
+
+.game-over-modal-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.game-over-modal-gold {
+  color: #FFD700;
+  font-weight: bold;
+  margin-left: auto;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  gap: 8px;
+}
+
+.game-over-modal-total-gold {
+  color: #FFA500;
+  font-weight: bold;
+  margin-left: auto;
+  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  gap: 8px;
+}
+
+.game-over-modal-gold-icon {
+  flex-shrink: 0;
+}
+
+/* Кнопки действий */
+.game-over-modal-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.game-over-modal-btn {
+  padding: 12px 20px;
+  border: 2px solid;
+  background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
+  box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  min-width: 120px;
+  border-radius: 0; /* Без закругленных углов */
+}
+
+/* Кнопка "Начать заново" */
+.game-over-modal-btn-restart {
+  color: #4CAF50;
+  border-color: #4CAF50;
+}
+
+.game-over-modal-btn-restart:hover {
+  background: linear-gradient(to bottom, rgba(76, 175, 80, 0.2), rgba(255, 255, 255, 0)), #1c2028;
+  box-shadow: 
+    inset 0 0 1px rgba(255, 255, 255, 0.4), 
+    inset 0 0 3px rgba(255, 255, 255, 0.3),
+    0 0 10px rgba(76, 175, 80, 0.3);
+  transform: translateY(-1px);
+}
+
+.game-over-modal-btn-restart:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Кнопка "Главное меню" */
+.game-over-modal-btn-menu {
+  color: #888;
+  border-color: #888;
+}
+
+.game-over-modal-btn-menu:hover {
+  color: #aaa;
+  border-color: #aaa;
+  background: linear-gradient(to bottom, rgba(136, 136, 136, 0.15), rgba(255, 255, 255, 0)), #1c2028;
+  box-shadow: 
+    inset 0 0 1px rgba(255, 255, 255, 0.4), 
+    inset 0 0 3px rgba(255, 255, 255, 0.3),
+    0 0 10px rgba(136, 136, 136, 0.2);
+  transform: translateY(-1px);
+}
+
+.game-over-modal-btn-menu:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Адаптивность для маленьких экранов */
+@media (max-width: 480px) {
+  .game-over-modal {
+    padding: 20px;
+    max-width: 350px;
+  }
+  
+  .game-over-modal-title {
+    font-size: 1.5rem;
+  }
+  
+  .game-over-modal-text {
+    font-size: 1rem;
+  }
+  
+  .game-over-modal-actions {
+    flex-direction: column;
+  }
+  
+  .game-over-modal-btn {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .game-over-modal-info-item {
+    font-size: 0.85rem;
+  }
+}
+
+/* Анимация появления модального окна */
+.game-over-modal-overlay {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.game-over-modal {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+} 

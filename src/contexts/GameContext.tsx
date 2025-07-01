@@ -17,6 +17,7 @@ interface GameActions {
   resumeGame: () => void;
   setGameActive: (active: boolean) => void;
   setGameController: (controller: any) => void;
+  gameController: any; // Добавляем доступ к GameController
 }
 
 /**
@@ -90,8 +91,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // Установка игрового контроллера
   const setGameControllerWrapper = useCallback((controller: any) => {
     setGameController(controller);
+    
+    // При установке нового GameController сбрасываем состояние паузы
+    if (controller && isPaused) {
+      setIsPaused(false);
+      console.log('🔄 Состояние паузы сброшено при установке нового GameController');
+    }
+    
     console.log('🎮 GameController установлен в контекст');
-  }, []);
+  }, [isPaused]);
 
   const value: GameContextType = {
     // Состояние
@@ -104,6 +112,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     resumeGame,
     setGameActive: setGameActiveWrapper,
     setGameController: setGameControllerWrapper,
+    gameController, // Добавляем доступ к GameController
   };
 
   return (

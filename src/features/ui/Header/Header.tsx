@@ -3,6 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useGold } from '../../../contexts/GoldContext'; // Импортируем хук для золота
 import { useGame } from '../../../contexts/GameContext'; // Импортируем хук для игры
+import SettingsModal from '../SettingsModal'; // Импортируем модальное окно настроек
 import './Header.css';
 
 /**
@@ -37,30 +38,25 @@ export default function Header() {
   const formattedGold = useMemo(() => formatNumber(gold), [gold]);
   const formattedIncome = useMemo(() => formatNumber(passiveIncome), [passiveIncome]);
   
-  // Оптимизированный обработчик для кнопки настроек
-  // При открытии настроек - ставим игру на паузу, при закрытии - снимаем с паузы
-  const toggleSettings = useCallback(() => {
-    setIsSettingsOpen(prev => {
-      const newSettingsState = !prev;
-      
-      // Если игра активна, управляем паузой в зависимости от состояния настроек
-      if (isGameActive) {
-        if (newSettingsState) {
-          // Открываем настройки - ставим игру на паузу
-          if (!isPaused) {
-            pauseGame();
-          }
-        } else {
-          // Закрываем настройки - снимаем игру с паузы
-          if (isPaused) {
-            resumeGame();
-          }
-        }
-      }
-      
-      return newSettingsState;
-    });
-  }, [isGameActive, isPaused, pauseGame, resumeGame]);
+  // Обработчик для открытия настроек
+  const openSettings = useCallback(() => {
+    setIsSettingsOpen(true);
+    
+    // При открытии настроек - ставим игру на паузу
+    if (isGameActive && !isPaused) {
+      pauseGame();
+    }
+  }, [isGameActive, isPaused, pauseGame]);
+
+  // Обработчик для закрытия настроек
+  const closeSettings = useCallback(() => {
+    setIsSettingsOpen(false);
+    
+    // При закрытии настроек - снимаем игру с паузы
+    if (isGameActive && isPaused) {
+      resumeGame();
+    }
+  }, [isGameActive, isPaused, resumeGame]);
 
   return (
     <header className="top-bar">
@@ -106,13 +102,19 @@ export default function Header() {
       <div id="pause-button" className="right-icon">
         <button
           className={`settings-icon ${isSettingsOpen ? 'active' : ''}`}
-          onClick={toggleSettings}
+          onClick={openSettings}
           aria-label="Настройки"
           title="Настройки"
         >
           <i className="fas fa-cog"></i>
         </button>
       </div>
+
+      {/* Модальное окно настроек */}
+      <SettingsModal
+        isVisible={isSettingsOpen}
+        onClose={closeSettings}
+      />
     </header>
   );
 }

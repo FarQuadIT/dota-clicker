@@ -1,9 +1,12 @@
 // src/pages/GamePage/GamePage.tsx
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Application, Graphics, TilingSprite } from 'pixi.js';
 import { assetsManager, type LoadingProgress } from '../../game/managers/AssetsManager';
 import { GAME_CONFIG } from '../../game/config/GameConfig';
 import { useGame } from '../../contexts/GameContext';
+import { useHeroStore } from '../../contexts/heroStore';
+import GameOverModal from '../../features/ui/GameOverModal';
 
 /**
 * Компонент игровой страницы с полноэкранным Pixi.js канвасом
@@ -41,8 +44,18 @@ export default function GamePage() {
  // Состояние для отслеживания готовности DOM
  const [isDOMReady, setIsDOMReady] = useState(false);
 
+ // Состояние для Game Over модального окна
+ const [isGameOver, setIsGameOver] = useState(false);
+ const [sessionGold, setSessionGold] = useState(0);
+
  // Используем контекст игры для управления паузой
- const { isPaused, setGameActive, setGameController } = useGame();
+ const { isPaused, setGameActive, setGameController, gameController, isGameActive } = useGame();
+ 
+ // Используем героя для получения общего золота
+ const { stats } = useHeroStore();
+ 
+ // Навигация для переходов между страницами
+ const navigate = useNavigate();
 
  // Эффект для проверки готовности DOM
  useEffect(() => {
@@ -60,6 +73,9 @@ export default function GamePage() {
  // Эффект для инициализации Pixi.js когда DOM готов
  useEffect(() => {
    if (!isDOMReady) return;
+   
+   let isMounted = true; // Флаг для предотвращения race conditions
+   
    /**
     * Основная функция инициализации игры
     * 
@@ -70,8 +86,8 @@ export default function GamePage() {
     */
    async function initializeGame() {
      try {
-       // Проверяем что приложение еще не создано
-       if (pixiApp) {
+       // Проверяем что приложение еще не создано и компонент все еще mounted
+       if (pixiApp || !isMounted) {
          return;
        }
        
@@ -81,21 +97,34 @@ export default function GamePage() {
 
        // Шаг 1: Создание и настройка Pixi Application
        const app = await initializePixiApp();
+       
+       // Проверяем что компонент все еще mounted перед установкой состояния
+       if (!isMounted) {
+         // Если компонент размонтирован во время инициализации - уничтожаем приложение
+         app.destroy(true, { children: true, texture: true });
+         return;
+       }
+       
        setPixiApp(app);
        setIsInitializing(false);
 
        // Шаг 2: Загрузка игровых ресурсов
+       if (!isMounted) return;
        setIsLoadingAssets(true);
        await loadGameAssets();
+       
+       if (!isMounted) return;
        setIsLoadingAssets(false);
 
        // Шаг 3: Создание игровой сцены
+       if (!isMounted) return;
        await createGameScene(app);
        
 
 
 
      } catch (err) {
+       if (!isMounted) return;
        console.error('❌ Ошибка инициализации игры:', err);
        setError(`Ошибка инициализации: ${err instanceof Error ? err.message : String(err)}`);
        setIsInitializing(false);
@@ -159,7 +188,10 @@ export default function GamePage() {
      }
      
      // Очищаем контейнер от предыдущих элементов (если есть)
-     container.innerHTML = '';
+     // ИСПРАВЛЕНИЕ: Используем более безопасную очистку
+     while (container.firstChild) {
+       container.removeChild(container.firstChild);
+     }
      
      // Добавляем canvas
      container.appendChild(app.canvas);
@@ -390,8 +422,20 @@ export default function GamePage() {
        // Передаем контроллер в игровой контекст
        setGameController(gameController);
        
-       // Устанавливаем игру как активную
-       setGameActive(true);
+             // Устанавливаем callback для Game Over
+      gameController.setGameOverCallback((sessionGoldEarned: number) => {
+        setSessionGold(sessionGoldEarned);
+        setIsGameOver(true);
+        setGameActive(false); // Деактивируем игру
+      });
+      
+      // ИСПРАВЛЕНИЕ: Принудительно сбрасываем состояние Game Over при создании новой игры
+      // Это нужно для случая когда пользователь возвращается в игру после смерти героя
+      setIsGameOver(false);
+      setSessionGold(0);
+      
+      // Устанавливаем игру как активную
+      setGameActive(true);
        
        // Запускаем игровой цикл
        gameController.startGameLoop();
@@ -409,26 +453,78 @@ export default function GamePage() {
 
    // Функция очистки при размонтировании компонента
    return () => {
-     // Деактивируем игру при размонтировании
-     setGameActive(false);
-     setGameController(null);
+     // Отмечаем что компонент размонтирован
+     isMounted = false;
+     
+     console.log('🔄 Очистка GamePage при размонтировании');
      
      if (pixiApp) {
-       // Очищаем обработчик изменения размера
-       if ((pixiApp as any).removeResizeListener) {
-         (pixiApp as any).removeResizeListener();
+       try {
+         // Очищаем обработчик изменения размера
+         if ((pixiApp as any).removeResizeListener) {
+           (pixiApp as any).removeResizeListener();
+         }
+         
+         // Останавливаем все анимации
+         if (pixiApp.ticker) {
+           pixiApp.ticker.stop();
+         }
+         
+         // Очищаем контейнер перед уничтожением приложения
+         if (gameContainerRef.current && pixiApp.canvas) {
+           try {
+             gameContainerRef.current.removeChild(pixiApp.canvas);
+           } catch (e) {
+             // Игнорируем ошибки если canvas уже удален
+             console.warn('Canvas уже удален из контейнера:', e);
+           }
+         }
+         
+         // Уничтожаем приложение и освобождаем ресурсы
+         pixiApp.destroy(true, { children: true, texture: true });
+         
+       } catch (error) {
+         console.warn('Ошибка при очистке PixiJS приложения:', error);
        }
-       
-       // Останавливаем все анимации
-       pixiApp.ticker.stop();
-       
-       // Уничтожаем приложение и освобождаем ресурсы
-       pixiApp.destroy(true);
-       
-       setPixiApp(null);
+     }
+     
+     // Очищаем контейнер на всякий случай
+     if (gameContainerRef.current) {
+       gameContainerRef.current.innerHTML = '';
      }
    };
  }, [isDOMReady]); // Зависит от готовности DOM
+
+ // Эффект для перезапуска игры при возврате из других вкладок
+ useEffect(() => {
+   // Проверяем нужно ли перезапустить игру
+   const checkAndRestartGame = () => {
+     // Если есть GameController, но игра неактивна или остановлена
+     if (gameController && 
+         typeof gameController.isRunning === 'function' && 
+         typeof gameController.restartGame === 'function') {
+       
+       const isRunning = gameController.isRunning();
+       
+             // Если игра остановлена, но мы на странице игры - перезапускаем
+      if (!isRunning && !isGameActive) {
+        console.log('🔄 Обнаружена остановленная игра при возврате на GamePage');
+        
+        // Сбрасываем состояние Game Over перед перезапуском
+        setIsGameOver(false);
+        setSessionGold(0);
+        
+        gameController.restartGame();
+        setGameActive(true);
+      }
+     }
+   };
+
+   // Запускаем проверку через небольшую задержку для корректной инициализации
+   const timeoutId = setTimeout(checkAndRestartGame, 100);
+   
+   return () => clearTimeout(timeoutId);
+ }, [gameController, isGameActive, setGameActive]); // Зависит от состояния игры
 
  // Обработчик для перезагрузки при ошибке
    const handleRetry = () => {
@@ -437,6 +533,49 @@ export default function GamePage() {
     setIsLoadingAssets(false);
     // Перезагружаем страницу для повторной инициализации
     window.location.reload();
+  };
+
+  // Обработчики для Game Over модального окна
+  const handleGameRestart = () => {
+    if (gameController) {
+      // ИСПРАВЛЕНИЕ: НЕ вызываем stopGame() чтобы избежать конфликта с setGameActive
+      // Используем только логику сброса характеристик + перезапуск через контекст
+      
+      // 1. Восстанавливаем здоровье и ману героя до полных значений
+      if (typeof gameController.restoreHeroToFullHealth === 'function') {
+        gameController.restoreHeroToFullHealth();
+      }
+      
+      // 2. Сбрасываем счетчик золота за сессию
+      if (typeof gameController.resetSessionGold === 'function') {
+        gameController.resetSessionGold();
+      }
+      
+      // 3. Перезапускаем игру напрямую через GameController (безопасный метод)
+      if (typeof gameController.restartGame === 'function') {
+        gameController.restartGame();
+      }
+      
+      // 4. Убеждаемся что игра активна в контексте
+      setGameActive(true);
+    }
+    
+    // Закрываем модалку
+    setIsGameOver(false);
+    setSessionGold(0);
+    
+    console.log('🔄 Игра перезапущена после смерти героя (безопасный метод)');
+  };
+
+  const handleMainMenu = () => {
+    // Закрываем модалку
+    setIsGameOver(false);
+    setSessionGold(0);
+    
+    // Переходим на главную страницу
+    navigate('/main');
+    
+    console.log('🏠 Переход в главное меню после смерти героя');
   };
 
   // Функции управления паузой теперь находятся в GameContext
@@ -630,6 +769,14 @@ export default function GamePage() {
        </div>
      )}
 
+     {/* Game Over модальное окно */}
+     <GameOverModal
+       isVisible={isGameOver}
+       sessionGold={sessionGold}
+       totalGold={stats?.coins || 0}
+       onRestart={handleGameRestart}
+       onMainMenu={handleMainMenu}
+     />
 
    </div>
  );
