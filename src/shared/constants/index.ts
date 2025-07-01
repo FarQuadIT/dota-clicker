@@ -18,7 +18,7 @@ export const API_BASE_URL = 'http://176.124.212.234:5000' as const;
  * ID тестового пользователя
  * Используется во всех запросах к API для идентификации пользователя
  */
-export const TEST_USER_ID = "222" as const;
+export const TEST_USER_ID = "6969" as const;
 
 /**
  * ID тестового героя

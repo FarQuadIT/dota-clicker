@@ -1,13 +1,12 @@
 .shop-page {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 90px);
+    height: calc(100vh - 40px);
     width: 100vw;
     position: relative;
     left: 50%;
     transform: translateX(-50%);
-    margin-top: 40px;
-    overflow: hidden; /* ДОБАВИТЬ ЭТУ СТРОКУ */
+    overflow: hidden;
 }
 
 .shop-top {
@@ -30,9 +29,9 @@
     background-color: #222;
     color: white;
     display: block;
-    padding: 60px 0px 0px 0px;
-    overflow: hidden; /* ИЗМЕНИТЬ С overflow-y: auto НА overflow: hidden */
-    position: relative; /* ДОБАВИТЬ ЭТУ СТРОКУ */
+    padding: 20px 0px 0px 0px;
+    overflow: hidden;
+    position: relative;
 }
 
 .menu-container {

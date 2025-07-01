@@ -9,6 +9,7 @@ import Header from './features/ui/Header/Header';
 import Footer from './features/ui/Footer/Footer';
 import { useEffect, useState } from 'react';
 import { useHeroStore } from './contexts/heroStore';
+import { GameProvider } from './contexts/GameContext';
 import type { HeroStats } from './shared/types';
 import { TEST_USER_ID, TEST_HERO_ID } from './shared/constants';
 import { fetchHeroStats } from './shared/api/apiService';
@@ -86,7 +87,7 @@ function AppContent() {
       "max-mana": 50,
       "mana-regen": 0.5,
       "damage": 10,
-      "vampirism": 0,
+      "vampirism": 5,  // Тестовое значение для проверки вампиризма (восстанавливает 5 HP за атаку)
       "movement-speed": 5,
       "income": 5,
       
@@ -105,9 +106,10 @@ function AppContent() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#242424' }}>
-      <Header />
-      <Footer />
+    <GameProvider>
+      <div style={{ minHeight: '100vh', backgroundColor: '#242424' }}>
+        <Header />
+        <Footer />
       
       <main style={{
         paddingTop: '40px',
@@ -155,6 +157,7 @@ function AppContent() {
         )}
       </main>
     </div>
+    </GameProvider>
   );
 }
 

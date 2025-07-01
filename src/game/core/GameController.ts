@@ -14,9 +14,13 @@ import { Hero } from '../entities/Hero';
 import { Creep } from '../entities/Creep';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { GameState } from './GameStates';
+import { EntityState } from './GameEntity';
 import { getAllCreepTypes, getCreepConfig } from '../config/creepsConfig';
 import { useHeroStore } from '../../contexts/heroStore';
 import type { HeroStats } from '../../shared/types';
+import { DamageEffectManager } from '../components/DamageEffect';
+import { CoinAnimationManager } from '../components/CoinAnimation';
+import { TEST_USER_ID, TEST_HERO_ID, API_BASE_URL } from '../../shared/constants';
 
 /**
  * Конфигурация игры
@@ -44,11 +48,20 @@ export class GameController {
   private currentCreep: Creep | null = null;
   private currentState: GameState = GameState.RUNNING;
   
+  // ======= СИСТЕМА ПАУЗЫ =======
+  private isGameRunning: boolean = true; // Флаг работы игры
+  private isPausedByUser: boolean = false; // Флаг паузы пользователем
+  // ============================
+  
+  // ======= СИСТЕМА ЗОЛОТА =======
+  private sessionGoldEarned: number = 0; // Золото заработанное за текущую сессию
+  // ==============================
+  
   // ======= НАСТРОЙКА КРИПОВ =======
   // Измените эту переменную чтобы выбрать конкретного крипа:
   // 'random' - случайные крипы
   // 'direCreep', 'wolf', 'satyr', 'shishka', 'voul', 'medved' - конкретный крип
-  private selectedCreepType: string = 'wolf'; // <-- ИЗМЕНИТЕ ЗДЕСЬ
+  private selectedCreepType: string = 'satyr'; // <-- ИЗМЕНИТЕ ЗДЕСЬ
   // ================================
   
   // Доступные типы крипов для рандомного выбора (используется только если selectedCreepType = 'random')
@@ -65,6 +78,12 @@ export class GameController {
   // Таймеры и флаги
   private spawnTimer: number = 0;
   private isSpawnBlocked: boolean = false;
+  
+  // Менеджер визуальных эффектов урона
+  private damageEffectManager: DamageEffectManager;
+  
+  // Менеджер анимации монет
+  private coinAnimationManager: CoinAnimationManager;
   
   /**
    * Конструктор контроллера
@@ -84,6 +103,15 @@ export class GameController {
     
     // Добавляем полоски здоровья на сцену (поверх всех элементов)
     this.setupHealthBars();
+    
+    // Инициализируем менеджер эффектов урона
+    this.damageEffectManager = new DamageEffectManager(this.app);
+    
+    // Инициализируем менеджер анимации монет
+    this.coinAnimationManager = new CoinAnimationManager(this.app);
+    
+    // Добавляем ссылку на себя в app для доступа из других компонентов
+    (this.app as any).gameController = this;
     
     // Обновляем все характеристики героя с сервера при входе в игру
     // Это асинхронная операция, но не блокирует создание контроллера
@@ -118,6 +146,11 @@ export class GameController {
       this.syncWorldMovement(isMoving);
     });
     
+    // Устанавливаем callback для создания эффектов урона герою
+    this.hero.setDamageCallback((x: number, y: number) => {
+      this.damageEffectManager.createHeroDamageEffect(x, y);
+    });
+    
 
   }
   
@@ -146,14 +179,19 @@ export class GameController {
       (this.app as any).setBackgroundMoving(isMoving);
     }
     
-    // Синхронизируем крипа с фоном ТОЛЬКО если не в состоянии боя
-    if (this.currentState !== GameState.FIGHTING && this.currentCreep && !this.currentCreep.getIsDead()) {
+    // Синхронизируем крипа с фоном
+    // ИСПРАВЛЕНИЕ: Во время боя (FIGHTING) крип должен стоять, независимо от состояния героя
+    if (this.currentCreep && !this.currentCreep.getIsDead()) {
+      if (this.currentState === GameState.FIGHTING) {
+        // Во время боя крип всегда неподвижен
+        this.currentCreep.setMoveSpeed(0);
+      } else {
+        // Вне боя крип синхронизируется с фоном/героем
       if (isMoving) {
         this.currentCreep.setMoveSpeed(this.config.moveSpeed);
-  
       } else {
         this.currentCreep.setMoveSpeed(0);
-
+        }
       }
     }
   }
@@ -162,10 +200,13 @@ export class GameController {
    * Обработка кликов по канвасу - атака героя
    */
   private onCanvasClick(): void {
-
+    // СИСТЕМА ПАУЗЫ: Блокируем клики если игра на паузе
+    if (!this.isGameRunning || this.isPausedByUser) {
+      return;
+    }
     
-    // Герой может атаковать всегда (даже по воздуху), кроме состояния ожидания после смерти крипа
-    if (this.currentState !== GameState.WAITING) {
+    // Герой может атаковать ТОЛЬКО во время боя с крипом
+    if (this.currentState === GameState.FIGHTING) {
       this.heroAttack();
     }
   }
@@ -174,14 +215,22 @@ export class GameController {
    * Атака героя - новая логика с остановкой мира
    */
   private heroAttack(): void {
+    // ЧАСТЬ 2: Проверяем есть ли мана для атаки ПЕРЕД запуском анимации
+    const manaCost = 1; // Как в старом проекте - 1 мана за атаку
+    if (!this.hero.canAttack(manaCost)) {
+      // Сбрасываем ману до нуля чтобы игрок понял что нужно ждать восстановления
+      this.hero.setCurrentMana(0);
+      // Показываем визуальное предупреждение над полосками героя
+      this.hero.getHealthBar().showManaWarning();
+      return; // Блокируем атаку и анимацию если нет маны
+    }
 
     // Герой переходит в режим атаки (это автоматически остановит фон и крип через callback)
     this.hero.setAttacking();
   }
   
   /**
-   * Нанесение урона крипу (вызывается после завершения анимации атаки)
-   * Если крипа нет - атака проходит по воздуху
+   * Нанесение урона крипу (вызывается при клике или автоматической атаке)
    */
   public dealDamageToCreep(): void {
     if (!this.currentCreep || this.currentCreep.getIsDead()) {
@@ -190,18 +239,31 @@ export class GameController {
     
     // Проверяем, находится ли крип в зоне коллизии
     if (this.currentState === GameState.FIGHTING) {
-      // Получаем урон героя
+      // ЧАСТЬ 2: Тратим ману на атаку (проверка уже сделана в heroAttack())
+      const manaCost = 1; // Как в старом проекте - 1 мана за атаку
+      this.hero.spendMana(manaCost);
+      
+      // ЧАСТЬ 1: Получаем урон героя (уже работает корректно)
       const heroDamage = this.getHeroDamage();
       
       // Наносим урон крипу
       const creepDied = this.currentCreep.takeDamage(heroDamage);
+      
+      // ЧАСТЬ 4: Применяем вампиризм после успешной атаки
+      this.hero.applyVampirism();
+      
+      // Создаем визуальный эффект урона в центре крипа
+      this.damageEffectManager.createCreepDamageEffect(
+        this.currentCreep.x,
+        this.currentCreep.y
+      );
       
       if (creepDied) {
         this.onCreepKilled();
       }
       
       // Герой автоматически вернется к бегу через callback в Hero.ts
-      // Это запустит синхронизацию мира через syncWorldMovement()
+      // Это запустит синхронизацию мира через syncWorldMovement
     }
   }
   
@@ -210,6 +272,14 @@ export class GameController {
    */
   private onCreepKilled(): void {
     if (!this.currentCreep) return;
+    
+    // СИСТЕМА ЗОЛОТА: Награждаем игрока золотом за убийство крипа (только логика)
+    const creepType = this.currentCreep.getCreepType();
+    const creepConfig = getCreepConfig(creepType);
+    if (creepConfig) {
+      // Начисляем золото (анимация уже показана через callback в takeDamage)
+      this.awardGoldForKill(creepConfig.goldReward);
+    }
     
     // Восстанавливаем скорость движения крипа чтобы он продолжал двигаться во время смерти
     this.currentCreep.setMoveSpeed(this.config.moveSpeed);
@@ -252,6 +322,16 @@ export class GameController {
    * Обновление игрового цикла (вызывается каждый кадр)
    */
   public update(deltaTime: number): void {
+    // СИСТЕМА ПАУЗЫ: Пропускаем обновление если игра на паузе
+    if (!this.isGameRunning || this.isPausedByUser) {
+      return; // Останавливаем игровой цикл при паузе
+    }
+    
+    // ЧАСТЬ 3: Обновляем регенерацию героя (здоровье и мана)
+    if (this.hero) {
+      this.hero.updateRegeneration(deltaTime);
+    }
+    
     // Обновляем таймер спавна если ждем
     if (this.currentState === GameState.WAITING) {
       this.updateSpawnTimer(deltaTime);
@@ -262,10 +342,28 @@ export class GameController {
       this.checkCollisions();
     }
     
+    // ИСПРАВЛЕНИЕ БАГА: Проверяем состояние героя после завершения атаки
+    // Если герой в idle но еще в зоне боя - он должен остаться в idle для продолжения атак
+    // Если герой в idle но НЕ в зоне боя - он должен начать бежать
+    if (this.currentState === GameState.FIGHTING && 
+        this.hero.getState() === EntityState.IDLE && 
+        this.currentCreep && 
+        !this.currentCreep.getIsDead()) {
+      // Герой завершил атаку, но крип еще жив и они в коллизии
+      // Оставляем героя в idle, чтобы игрок мог продолжать кликать
+      // Ничего не делаем - герой остается в idle
+    }
+    
     // Обновляем крипа если он есть
     if (this.currentCreep) {
-      this.currentCreep.updateCreep(deltaTime);
+      this.currentCreep.updateCreep(deltaTime, this.hero);
     }
+    
+    // Обновляем все визуальные эффекты урона
+    this.damageEffectManager.update(deltaTime);
+    
+    // Обновляем анимации монет
+    this.coinAnimationManager.update(deltaTime);
   }
   
   /**
@@ -398,6 +496,15 @@ export class GameController {
       collisionZone: creepCollisionZone
     });
     
+    // СВЯЗЬ КРИПА С GAMECONTROLLER: Устанавливаем ссылку на GameController для доступа к менеджерам эффектов
+    (this.app as any).gameController = this;
+    
+    // Устанавливаем callback для анимации золота у крипа
+    this.currentCreep.setGoldAnimationCallback((x: number, y: number, goldAmount: number) => {
+      // Используем новый метод который показывает анимацию точно на месте полоски здоровья
+      this.coinAnimationManager.showCoinAnimationOnCreep(this.currentCreep!, goldAmount);
+    });
+    
     this.app.stage.addChild(this.currentCreep);
     
     // Создаем полоску здоровья после добавления крипа к сцене
@@ -457,18 +564,32 @@ export class GameController {
    * Обновление скорости движения (синхронизация с фоном)
    */
   public updateMoveSpeed(): void {
-    // Синхронизируем скорость крипа со скоростью фона
-    // Используем общий коэффициент скорости из конфигурации
+    // Базовая скорость зависит от ширины экрана
     const baseSpeed = this.app.screen.width / 200;
-    const speedMultiplier = GAME_CONFIG.BACKGROUND.scroll.speedMultiplier;
-    const newMoveSpeed = baseSpeed * speedMultiplier;
-    this.config.moveSpeed = newMoveSpeed;
+    
+    // Рассчитываем скорость фона
+    const backgroundSpeedMultiplier = GAME_CONFIG.BACKGROUND.scroll.speedMultiplier;
+    const backgroundSpeed = baseSpeed * backgroundSpeedMultiplier;
+    
+    // Рассчитываем скорость крипа (может быть отличной от фона)
+    const creepSpeedMultiplier = GAME_CONFIG.CREEP.movement.speedMultiplier;
+    const creepSyncRatio = GAME_CONFIG.BACKGROUND.scroll.creepSyncRatio;
+    const creepSpeed = baseSpeed * creepSpeedMultiplier * creepSyncRatio;
+    
+    // Сохраняем скорость крипа в config
+    this.config.moveSpeed = creepSpeed;
+    
+
+    
+    // Обновляем скорость фона если доступно
+    if ((this.app as any).updateBackgroundSpeed) {
+      (this.app as any).updateBackgroundSpeed(baseSpeed);
+    }
     
     // Обновляем скорость текущего крипа если он есть и движется
     if (this.currentCreep && !this.currentCreep.getIsDead() && this.currentState !== GameState.FIGHTING) {
-      this.currentCreep.setMoveSpeed(newMoveSpeed);
+      this.currentCreep.setMoveSpeed(creepSpeed);
     }
-
   }
 
   /**
@@ -577,6 +698,179 @@ export class GameController {
     }
   }
 
+  // ======= МЕТОДЫ УПРАВЛЕНИЯ ПАУЗОЙ =======
+  
+  /**
+   * Поставить игру на паузу
+   */
+  public pauseGame(): void {
+    this.isPausedByUser = true;
+    
+    // Останавливаем анимации героя
+    if (this.hero) {
+      this.hero.pauseAnimations();
+    }
+    
+    // Останавливаем анимации крипа
+    if (this.currentCreep && !this.currentCreep.getIsDead()) {
+      this.currentCreep.pauseAnimations();
+    }
+    
+    // Останавливаем движение фона через app
+    if ((this.app as any).setBackgroundMoving) {
+      (this.app as any).setBackgroundMoving(false);
+    }
+    
+    // TODO: Остановить звуки (когда будет система звуков)
+  }
+  
+  /**
+   * Снять игру с паузы
+   */
+  public resumeGame(): void {
+    this.isPausedByUser = false;
+    
+    // Возобновляем анимации героя
+    if (this.hero) {
+      this.hero.resumeAnimations();
+    }
+    
+    // Возобновляем анимации крипа
+    if (this.currentCreep && !this.currentCreep.getIsDead()) {
+      this.currentCreep.resumeAnimations();
+    }
+    
+    // Восстанавливаем движение фона в зависимости от состояния игры
+    const shouldMoveBackground = this.currentState !== GameState.FIGHTING && 
+                                this.hero.getState() !== EntityState.IDLE;
+    
+    if ((this.app as any).setBackgroundMoving) {
+      (this.app as any).setBackgroundMoving(shouldMoveBackground);
+    }
+    
+    // TODO: Возобновить звуки (когда будет система звуков)
+  }
+  
+  /**
+   * Проверить находится ли игра на паузе
+   */
+  public isPaused(): boolean {
+    return this.isPausedByUser;
+  }
+  
+  /**
+   * Получить состояние игры (работает/остановлена)
+   */
+  public isRunning(): boolean {
+    return this.isGameRunning;
+  }
+  
+  /**
+   * Остановить игру полностью (для завершения/выхода)
+   */
+  public stopGame(): void {
+    this.isGameRunning = false;
+    this.isPausedByUser = false;
+    
+    // Останавливаем все анимации
+    if (this.hero) {
+      this.hero.pauseAnimations();
+    }
+    if (this.currentCreep) {
+      this.currentCreep.pauseAnimations();
+    }
+    
+    // Останавливаем фон
+    if ((this.app as any).setBackgroundMoving) {
+      (this.app as any).setBackgroundMoving(false);
+    }
+  }
+  
+  // =======================================
+
+  // ======= СИСТЕМА ЗОЛОТА =======
+  
+  /**
+   * Награждение игрока золотом за убийство крипа (логика начисления + отправка на сервер)
+   * @param goldAmount - количество золота для награждения
+   */
+  private awardGoldForKill(goldAmount: number): void {
+    // Увеличиваем счетчик золота за сессию
+    this.sessionGoldEarned += goldAmount;
+    
+    // Обновляем heroStore.stats["coins"]
+    const heroStoreState = useHeroStore.getState();
+    if (heroStoreState.stats) {
+      const currentCoins = heroStoreState.stats["coins"];
+      const newCoins = currentCoins + goldAmount;
+      
+      // Обновляем heroStore
+      heroStoreState.updateStat("coins", newCoins);
+      
+      // Синхронизируем с GoldContext для мгновенного обновления UI
+      if ((window as any).updateGoldFromGameController) {
+        (window as any).updateGoldFromGameController(newCoins);
+      } else {
+        console.warn(`⚠️ updateGoldFromGameController не найден в window`);
+      }
+      
+      // ОТПРАВКА НА СЕРВЕР (как в старом проекте)
+      this.sendGoldToServer(goldAmount);
+    } else {
+      console.error(`❌ heroStore.stats === null, не можем начислить золото`);
+    }
+  }
+  
+  /**
+   * Отправка золота на сервер (как в старом проекте)
+   * @param goldAmount - количество золота для отправки
+   */
+  private async sendGoldToServer(goldAmount: number): Promise<void> {
+    // Fire-and-forget запрос как в старом проекте - не ждем ответа
+    try {
+      const payload = {
+        userId: TEST_USER_ID,
+        heroId: TEST_HERO_ID,
+        income: goldAmount
+      };
+      
+      // Отправляем запрос без ожидания ответа (fire-and-forget)
+      fetch(`${API_BASE_URL}/update_user_money`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      }).then(response => {
+        if (!response.ok) {
+          console.warn(`⚠️ Сервер вернул ошибку при отправке золота:`, response.status);
+        }
+      }).catch(error => {
+        console.warn(`⚠️ Ошибка при отправке золота на сервер:`, error);
+      });
+      
+    } catch (error) {
+      console.warn(`⚠️ Исключение при отправке золота на сервер:`, error);
+    }
+  }
+  
+  /**
+   * Получить количество золота заработанного за текущую сессию
+   * @returns количество золота за сессию
+   */
+  public getSessionGoldEarned(): number {
+    return this.sessionGoldEarned;
+  }
+  
+  /**
+   * Сбросить счетчик золота за сессию (используется при рестарте игры)
+   */
+  public resetSessionGold(): void {
+    this.sessionGoldEarned = 0;
+  }
+  
+  // ===============================
+
   /**
    * Очистка ресурсов
    */
@@ -587,6 +881,20 @@ export class GameController {
     // Очищаем крипа
     this.cleanupCreep();
     
+    // Очищаем все эффекты урона
+    if (this.damageEffectManager) {
+      this.damageEffectManager.cleanup();
+    }
+    
+    // Уничтожаем менеджер анимации монет
+    if (this.coinAnimationManager) {
+      this.coinAnimationManager.destroy();
+    }
+    
+    // Убираем ссылку на себя из app
+    if ((this.app as any).gameController === this) {
+      delete (this.app as any).gameController;
+    }
 
   }
 }

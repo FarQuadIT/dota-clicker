@@ -55,6 +55,11 @@ type MovementCallback = (isMoving: boolean) => void;
  */
 type AttackCallback = () => void;
 
+/**
+ * Тип коллбэка для получения урона (x, y - позиция героя)
+ */
+type DamageCallback = (x: number, y: number) => void;
+
 // ==================================================================================
 // КЛАСС ГЕРОЯ
 // ==================================================================================
@@ -79,6 +84,9 @@ export class Hero extends GameEntity {
   
   // Коллбэк для нанесения урона после завершения атаки
   private attackCallback?: AttackCallback;
+  
+  // Коллбэк для получения урона (визуальные эффекты)
+  private damageCallback?: DamageCallback;
   
   // Флаг для отслеживания нанесения урона в атаке
   private hasDealtDamage: boolean = false;
@@ -181,9 +189,10 @@ export class Hero extends GameEntity {
         frameRate: GAME_CONFIG.HERO.animations.attackFrameRate,
         loop: false, // Атака не зацикливается
         onComplete: () => {
-          // После завершения атаки возвращаемся к бегу
+          // После завершения атаки переходим в idle и ждем решения GameController
+          // GameController сам решит: продолжить бой (остаться в idle) или начать бег
           
-          this.setMoving();
+          this.setIdle();
         }
       });
       
@@ -268,6 +277,15 @@ export class Hero extends GameEntity {
   public setAttackCallback(callback: AttackCallback): void {
     this.attackCallback = callback;
 
+  }
+
+  /**
+   * Установка коллбэка для получения урона
+   * 
+   * @param callback - функция, которая будет вызвана при получении урона с позицией героя
+   */
+  public setDamageCallback(callback: DamageCallback): void {
+    this.damageCallback = callback;
   }
 
   /**
@@ -414,6 +432,28 @@ export class Hero extends GameEntity {
   }
 
   // ==================================================================================
+  // УПРАВЛЕНИЕ ПАУЗОЙ АНИМАЦИЙ
+  // ==================================================================================
+  
+  /**
+   * Поставить анимации на паузу
+   */
+  public pauseAnimations(): void {
+    // Используем метод из базового класса AnimatedSprite
+    this.pauseAnimation();
+    console.log('⏸️ Анимации героя поставлены на паузу');
+  }
+  
+  /**
+   * Возобновить анимации
+   */
+  public resumeAnimations(): void {
+    // Используем метод из базового класса AnimatedSprite
+    this.resumeAnimation();
+    console.log('▶️ Анимации героя возобновлены');
+  }
+
+  // ==================================================================================
   // ПУБЛИЧНЫЕ ГЕТТЕРЫ
   // ==================================================================================
 
@@ -433,16 +473,165 @@ export class Hero extends GameEntity {
   }
   
   /**
-   * Получение полосок здоровья для добавления на сцену
+   * Получение полоски здоровья героя
    */
   public getHealthBar(): HeroHealthBar {
     return this.healthBar;
+  }
+
+  // ==================================================================================
+  // СИСТЕМА ПОЛУЧЕНИЯ УРОНА И СОСТОЯНИЯ (Микрошаг 2.5.3)
+  // ==================================================================================
+
+  // Флаг отравления (для способности voul)
+  private poisonTimer: number = 0;
+
+  /**
+   * Получение урона героем
+   * Уменьшает current-health в heroStore и обновляет полоски здоровья
+   * 
+   * @param damage количество урона
+   */
+  public takeDamage(damage: number): void {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return;
+    
+    const currentHealth = heroStore.stats["current-health"];
+    const newHealth = Math.max(0, currentHealth - damage);
+    
+    // Обновляем статистики в heroStore
+    heroStore.updateStat("current-health", newHealth);
+    
+    // Вызываем callback для создания визуального эффекта урона (если задан)
+    if (this.damageCallback) {
+      this.damageCallback(this.x, this.y);
+    }
+    
+    console.log(`🗡️ Герой получил ${damage} урона. HP: ${currentHealth} → ${newHealth}`);
+  }
+
+  /**
+   * Получение урона по мане (способность satyr - manaburn)
+   * Уменьшает current-mana in heroStore
+   * 
+   * @param damage количество урона по мане
+   */
+  public takeManaburn(damage: number): void {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return;
+    
+    const currentMana = heroStore.stats["current-mana"];
+    const newMana = Math.max(0, currentMana - damage);
+    
+    // Обновляем статистики в heroStore
+    heroStore.updateStat("current-mana", newMana);
+    
+    console.log(`💙 Герой потерял ${damage} маны от manaburn. Мана: ${currentMana} → ${newMana}`);
+  }
+
+  /**
+   * Применение отравления (способность voul - poison)
+   * Устанавливает флаг отравления на указанное время
+   * При отравлении БЛОКИРУЕТСЯ регенерация здоровья и маны
+   * 
+   * @param duration длительность отравления в миллисекундах
+   */
+  public applyPoison(duration: number): void {
+    // Сбрасываем предыдущий таймер если он был
+    if (this.poisonTimer > 0) {
+      clearTimeout(this.poisonTimer);
+    }
+    
+    // Устанавливаем новый таймер
+    this.poisonTimer = setTimeout(() => {
+      this.poisonTimer = 0;
+      console.log(`💚 Отравление прошло`);
+    }, duration) as unknown as number;
+    
+    console.log(`💚 Герой отравлен на ${duration}мс`);
+  }
+
+  /**
+   * Проверка жив ли герой
+   * 
+   * @returns true если здоровье больше 0
+   */
+  public isAlive(): boolean {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return true; // Считаем живым если нет данных
+    return heroStore.stats["current-health"] > 0;
+  }
+
+  /**
+   * Проверка отравлен ли герой
+   * 
+   * @returns true если активен эффект отравления
+   */
+  public isPoisoned(): boolean {
+    return this.poisonTimer > 0;
+  }
+
+  /**
+   * Получение текущего здоровья из heroStore
+   * 
+   * @returns текущее здоровье героя
+   */
+  public getCurrentHealth(): number {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return 100; // Значение по умолчанию
+    return heroStore.stats["current-health"];
+  }
+
+  /**
+   * Получение текущей маны из heroStore
+   * 
+   * @returns текущая мана героя
+   */
+  public getCurrentMana(): number {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return 50; // Значение по умолчанию
+    return heroStore.stats["current-mana"];
+  }
+
+  /**
+   * Получение максимальной маны из heroStore
+   * 
+   * @returns максимальная мана героя
+   */
+  public getMaxMana(): number {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return 50; // Значение по умолчанию
+    return heroStore.stats["max-mana"];
+  }
+
+  /**
+   * Установка текущей маны в heroStore
+   * 
+   * @param amount новое значение текущей маны
+   */
+  public setCurrentMana(amount: number): void {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return;
+    
+    const maxMana = heroStore.stats["max-mana"];
+    const newMana = Math.max(0, Math.min(maxMana, amount));
+    
+    // Обновляем статистики в heroStore
+    heroStore.updateStat("current-mana", newMana);
+    
+    console.log(`💙 Мана героя установлена: ${amount} → ${newMana}`);
   }
   
   /**
    * Очистка ресурсов героя
    */
   public destroy(): void {
+    // Очищаем таймер отравления
+    if (this.poisonTimer > 0) {
+      clearTimeout(this.poisonTimer);
+      this.poisonTimer = 0;
+    }
+    
     // Очищаем полоски здоровья
     if (this.healthBar) {
       this.healthBar.destroy();
@@ -450,7 +639,143 @@ export class Hero extends GameEntity {
     
     // Вызываем родительский метод destroy
     super.destroy();
-    
+  }
 
+  // ==================================================================================
+  // СИСТЕМА УПРАВЛЕНИЯ МАНОЙ (Микрошаг 2.5.4 Часть 2)
+  // ==================================================================================
+
+  /**
+   * Трата маны на атаку
+   * Уменьшает current-mana in heroStore на указанное количество
+   * 
+   * @param amount количество маны для траты
+   */
+  public spendMana(amount: number): void {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return;
+    
+    const currentMana = heroStore.stats["current-mana"];
+    const newMana = Math.max(0, currentMana - amount);
+    
+    // Обновляем статистики в heroStore
+    heroStore.updateStat("current-mana", newMana);
+    
+    console.log(`💙 Герой потратил ${amount} маны на атаку. Мана: ${currentMana} → ${newMana}`);
+  }
+
+  /**
+   * Проверяет есть ли достаточно маны для атаки
+   * 
+   * @param manaCost стоимость атаки в мане
+   * @returns true если хватает маны
+   */
+  public canAttack(manaCost: number = 1): boolean {
+    const currentMana = this.getCurrentMana();
+    return currentMana >= manaCost;
+  }
+
+  // ==================================================================================
+  // СИСТЕМА РЕГЕНЕРАЦИИ (Микрошаг 2.5.4 Часть 3)
+  // ==================================================================================
+
+  /**
+   * Основной метод обновления регенерации (вызывается каждый кадр из GameController)
+   * 
+   * @param deltaTime время с последнего кадра в миллисекундах
+   */
+  public updateRegeneration(deltaTime: number): void {
+    if (!this.isRegenerationActive()) {
+      return; // Регенерация заблокирована (например, отравлением)
+    }
+    
+    // Обновляем регенерацию здоровья и маны
+    this.regenerateHealth(deltaTime);
+    this.regenerateMana(deltaTime);
+  }
+
+  /**
+   * Восстановление здоровья героя со временем
+   * Формула из старого проекта: health += healthRegen * deltaTime / 1000
+   * 
+   * @param deltaTime время с последнего кадра в миллисекундах
+   */
+  private regenerateHealth(deltaTime: number): void {
+    const heroStats = useHeroStore.getState().stats;
+    if (!heroStats) return;
+    
+    const currentHealth = heroStats["current-health"];
+    const maxHealth = heroStats["max-health"];
+    const healthRegen = heroStats["health-regen"];
+    
+    // Восстанавливаем здоровье только если оно не полное
+    if (currentHealth < maxHealth && healthRegen > 0) {
+      const healthGain = healthRegen * deltaTime / 1000; // В секунду
+      const newHealth = Math.min(maxHealth, currentHealth + healthGain);
+      
+      useHeroStore.getState().updateStat("current-health", newHealth);
+    }
+  }
+
+  /**
+   * Восстановление маны героя со временем
+   * Формула из старого проекта: energy += energyRegen * deltaTime / 1000
+   * 
+   * @param deltaTime время с последнего кадра в миллисекундах
+   */
+  private regenerateMana(deltaTime: number): void {
+    const heroStats = useHeroStore.getState().stats;
+    if (!heroStats) return;
+    
+    const currentMana = heroStats["current-mana"];
+    const maxMana = heroStats["max-mana"];
+    const manaRegen = heroStats["mana-regen"];
+    
+    // Восстанавливаем ману только если она не полная
+    if (currentMana < maxMana && manaRegen > 0) {
+      const manaGain = manaRegen * deltaTime / 1000; // В секунду
+      const newMana = Math.min(maxMana, currentMana + manaGain);
+      
+      useHeroStore.getState().updateStat("current-mana", newMana);
+    }
+  }
+
+  /**
+   * Проверяет активна ли регенерация
+   * Регенерация блокируется при отравлении (poison)
+   * 
+   * @returns true если регенерация разрешена
+   */
+  private isRegenerationActive(): boolean {
+    return !this.isPoisoned();
+  }
+
+  // ==================================================================================
+  // СИСТЕМА ВАМПИРИЗМА (Микрошаг 2.5.4 Часть 4)
+  // ==================================================================================
+
+  /**
+   * Применение вампиризма после успешной атаки
+   * Восстанавливает здоровье героя равное значению vampirism из stats
+   * Формула из старого проекта: health = Math.min(health + vampirism, maxHealth)
+   */
+  public applyVampirism(): void {
+    const heroStats = useHeroStore.getState().stats;
+    if (!heroStats) return;
+    
+    const currentHealth = heroStats["current-health"];
+    const maxHealth = heroStats["max-health"];
+    const vampirism = heroStats["vampirism"];
+    
+    // Восстанавливаем здоровье только если vampirism > 0
+    if (vampirism > 0) {
+      const newHealth = Math.min(currentHealth + vampirism, maxHealth);
+      const healAmount = newHealth - currentHealth;
+      
+      if (healAmount > 0) {
+        useHeroStore.getState().updateStat("current-health", newHealth);
+        console.log(`🩸 Вампиризм: восстановлено ${healAmount.toFixed(1)} HP. Здоровье: ${currentHealth.toFixed(1)} → ${newHealth.toFixed(1)}`);
+      }
+    }
   }
 }

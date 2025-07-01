@@ -183,6 +183,26 @@ export class AnimatedSprite extends Container {
   }
 
   /**
+   * Поставить анимацию на паузу
+   */
+  public pauseAnimation(): void {
+    if (!this.currentAnimation) return;
+    
+    this.animationState.isPlaying = false;
+    console.log(`⏸️ Анимация '${this.currentAnimation.name}' поставлена на паузу`);
+  }
+
+  /**
+   * Возобновить анимацию
+   */
+  public resumeAnimation(): void {
+    if (!this.currentAnimation) return;
+    
+    this.animationState.isPlaying = true;
+    console.log(`▶️ Анимация '${this.currentAnimation.name}' возобновлена`);
+  }
+
+  /**
    * Обновление анимации (вызывается каждый кадр из игрового цикла)
    * 
    * @param deltaTime - время, прошедшее с последнего кадра (в миллисекундах)

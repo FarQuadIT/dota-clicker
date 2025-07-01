@@ -1,10 +1,10 @@
 // src/contexts/GoldContext.tsx
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import { TEST_USER_ID, TEST_HERO_ID, API_BASE_URL } from '../shared/constants';
 
 /**
- * Интерфейс для свойств контекста золота
+ * Интерфейс для контекста золота
  */
 interface GoldContextProps {
   gold: number;                  // Текущее количество золота
@@ -16,14 +16,14 @@ interface GoldContextProps {
   syncGoldWithServer: (forceUpdateIncome?: boolean) => Promise<void>; // Функция для синхронизации золота с сервером
 }
 
-// Создаем контекст с undefined как начальное значение
+// Создаем контекст
 const GoldContext = createContext<GoldContextProps | undefined>(undefined);
 
 // Константы для синхронизации
-const SYNC_INTERVAL_MS = 15000; // 15 секунд
+const SYNC_INTERVAL_MS = 30000; // 30 секунд
 const GOLD_UPDATE_INTERVAL_MS = 1000; // 1 секунда
 const GOLD_DIFFERENCE_THRESHOLD = 0.1; // Порог для обновления золота
-const INCOME_DIFFERENCE_THRESHOLD = 0.01; // Порог для обновления дохода
+const INCOME_DIFFERENCE_THRESHOLD = 0.001; // Порог для обновления дохода
 
 /**
  * Провайдер контекста золота
@@ -44,14 +44,37 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
   // Флаг для проверки, была ли первая синхронизация дохода
   const [wasIncomeUpdated, setWasIncomeUpdated] = useState(false);
 
+  // Ref для хранения актуального значения пассивного дохода
+  const passiveIncomeRef = useRef(passiveIncome);
+
+  // Синхронизируем ref с состоянием
+  useEffect(() => {
+    passiveIncomeRef.current = passiveIncome;
+  }, [passiveIncome]);
+
   /**
    * Функция для синхронизации золота с сервером
    * @param forceUpdateIncome - Если true, отправляет текущий доход на сервер
    */
   const syncGoldWithServer = useCallback(async (forceUpdateIncome = false) => {
+    // Получаем текущие значения через callback и ref
+    let currentGold = 0;
+    let currentWasIncomeUpdated = false;
+    
+    setGold((g) => {
+      currentGold = g;
+      return g;
+    });
+    setWasIncomeUpdated((wiu) => {
+      currentWasIncomeUpdated = wiu;
+      return wiu;
+    });
+    
+    const currentPassiveIncome = passiveIncomeRef.current;
+    
     try {
       // При первой синхронизации или при принудительном обновлении отправляем актуальный доход
-      const incomeToSend = (!wasIncomeUpdated || forceUpdateIncome) ? passiveIncome : 0;
+      const incomeToSend = (!currentWasIncomeUpdated || forceUpdateIncome) ? currentPassiveIncome : 0;
       
       // 1. Отправляем запрос на сервер для обновления золота
       const response = await fetch(`${API_BASE_URL}/update_user_money`, {
@@ -62,12 +85,12 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
         body: JSON.stringify({
           userId: TEST_USER_ID,
           heroId: TEST_HERO_ID,
-          income: incomeToSend // Отправляем реальный доход при первой синхронизации
+          income: incomeToSend
         })
       });
       
       // Отмечаем, что доход был обновлен
-      if (!wasIncomeUpdated && incomeToSend > 0) {
+      if (!currentWasIncomeUpdated && incomeToSend > 0) {
         setWasIncomeUpdated(true);
       }
       
@@ -77,7 +100,7 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // 3. Извлекаем данные из ответа
-      await response.json();
+      const updateResponse = await response.json();
 
       // 4. Запрашиваем актуальные данные героя
       const heroDataResponse = await fetch(`${API_BASE_URL}/hero_data?userId=${TEST_USER_ID}&heroId=${TEST_HERO_ID}`);
@@ -92,23 +115,22 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
       // 6. Обновляем золото, если оно изменилось
       if (heroData.coins !== undefined) {
         const serverGold = heroData.coins;
-        const goldDifference = Math.abs(serverGold - gold);
+        const goldDifference = Math.abs(serverGold - currentGold);
         
-        if (goldDifference > GOLD_DIFFERENCE_THRESHOLD) { // Порог для избежания проблем с округлением
-          // Обновляем локальное значение золота
+        if (goldDifference > GOLD_DIFFERENCE_THRESHOLD) {
           setGold(serverGold);
         }
       }
       
       // 7. Обновляем пассивный доход, если он изменился
       if (heroData.currentIncome !== undefined) {
-        const incomeDifference = Math.abs(heroData.currentIncome - passiveIncome);
+        const incomeDifference = Math.abs(heroData.currentIncome - currentPassiveIncome);
         
         if (incomeDifference > INCOME_DIFFERENCE_THRESHOLD) {
           setPassiveIncome(heroData.currentIncome);
           
           // Если доход изменился, делаем принудительное обновление на сервере
-          if (wasIncomeUpdated && heroData.currentIncome !== passiveIncome) {
+          if (currentWasIncomeUpdated && heroData.currentIncome !== currentPassiveIncome) {
             setTimeout(() => syncGoldWithServer(true), 100);
           }
         }
@@ -116,32 +138,29 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
       
       // 8. Обновляем время последней синхронизации
       setLastServerSyncTime(Date.now());
+      
     } catch (error) {
-      // Логируем ошибку в консоль только в режиме разработки
-      if (import.meta.env.DEV) {
-        console.error('Ошибка синхронизации золота:', error);
-      }
+      console.error('❌ Ошибка синхронизации с сервером:', error);
     }
-  }, [gold, passiveIncome, wasIncomeUpdated]);
+  }, []);
 
   /**
    * Функция для увеличения золота на величину пассивного дохода
    */
   const updateGold = useCallback(() => {
-    setGold((prev) => prev + passiveIncome);
-  }, [passiveIncome]);
+    const currentIncome = passiveIncomeRef.current;
+    if (currentIncome > 0) {
+      setGold((prev) => prev + currentIncome);
+    }
+  }, []);
 
   /**
    * Эффект для увеличения золота каждую секунду и периодической синхронизации с сервером
    */
   useEffect(() => {
     // Запускаем интервал только если система инициализирована
-    if (!isInitialized) return;
-    
-    // Если это первый запуск после инициализации, немедленно синхронизируем с сервером
-    // для установки правильного значения пассивного дохода
-    if (!wasIncomeUpdated && passiveIncome > 0) {
-      syncGoldWithServer(true);
+    if (!isInitialized) {
+      return;
     }
     
     // Создаем интервал, который будет выполняться каждую секунду
@@ -157,7 +176,18 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
       clearInterval(interval);
       clearInterval(syncInterval);
     };
-  }, [passiveIncome, isInitialized, wasIncomeUpdated, syncGoldWithServer, updateGold]);
+  }, [isInitialized, updateGold]);
+
+  /**
+   * Отдельный эффект для первичной синхронизации при изменении дохода
+   */
+  useEffect(() => {
+    // Если это первый запуск после инициализации, немедленно синхронизируем с сервером
+    // для установки правильного значения пассивного дохода
+    if (isInitialized && !wasIncomeUpdated && passiveIncome > 0) {
+      syncGoldWithServer(true);
+    }
+  }, [passiveIncome, wasIncomeUpdated, isInitialized]);
 
   /**
    * Функция инициализации контекста с данными с сервера
@@ -178,17 +208,35 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   /**
-   * Глобальная функция инициализации, доступная извне компонента
-   * Используется в App.tsx для инициализации контекста золота после загрузки данных героя
+   * Функция для обновления золота из GameController (мгновенная синхронизация UI)
+   * @param newGoldAmount - новое количество золота
+   */
+  const updateGoldFromGame = useCallback((newGoldAmount: number) => {
+    setGold((currentGold) => {
+      const goldDifference = Math.abs(newGoldAmount - currentGold);
+    
+    if (goldDifference > GOLD_DIFFERENCE_THRESHOLD) {
+        return newGoldAmount;
+    } else {
+        return currentGold;
+    }
+    });
+  }, []);
+
+  /**
+   * Глобальные функции, доступные извне компонента
+   * Используются для интеграции с игрой и инициализации
    */
   useEffect(() => {
     (window as any).initializeGoldContext = initializeGoldFromServer;
+    (window as any).updateGoldFromGameController = updateGoldFromGame;
     
-    // Очищаем глобальную функцию при размонтировании компонента
+    // Очищаем глобальные функции при размонтировании компонента
     return () => {
       delete (window as any).initializeGoldContext;
+      delete (window as any).updateGoldFromGameController;
     };
-  }, [initializeGoldFromServer]);
+  }, [initializeGoldFromServer, updateGoldFromGame]);
 
   // Мемоизируем значение контекста, чтобы избежать лишних ре-рендеров
   const contextValue = useMemo(() => ({ 

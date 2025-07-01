@@ -3,7 +3,11 @@ import { assetsManager } from '../managers/AssetsManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { EntityState } from '../core/GameStates';
 import { CreepHealthBar } from '../components/CreepHealthBar';
-import { CREEP_TYPES, type CreepTypeConfig } from '../config/creepsConfig';
+import { CREEP_TYPES } from '../config/creepsConfig';
+import { Hero } from './Hero';
+
+// Тип callback функции для анимации золота
+type GoldAnimationCallback = (x: number, y: number, goldAmount: number) => void;
 
 /**
  * Конфигурация крипа
@@ -46,9 +50,15 @@ export class Creep extends AnimatedSprite {
   private currentHealth!: number;
   private healthBar!: CreepHealthBar;
   
+  // Система паузы анимаций
+  private originalAnimationSpeed: number = GAME_CONFIG.CREEP.animations.speed;
+  
   // Адаптивная система
   private app: Application;
   private config: CreepConfig;
+  
+  // Callback для анимации золота
+  private goldAnimationCallback?: GoldAnimationCallback;
 
   constructor(app: Application, config: CreepConfig = {}) {
     // Определяем тип крипа (по умолчанию direCreep)
@@ -125,8 +135,10 @@ export class Creep extends AnimatedSprite {
     this.updatePosition();
     this.updateScale();
     
-    // Обновляем полоску здоровья при изменении размера экрана
-    this.updateHealthBar();
+    // Обновляем полоску здоровья при изменении размера экрана с адаптивными параметрами
+    if (this.healthBar) {
+      this.healthBar.onResize(this.x, this.y, this.width, this.scale.x);
+    }
   }
 
   /**
@@ -179,6 +191,9 @@ export class Creep extends AnimatedSprite {
   public startAttack(): void {
     if (this.isDead) return;
     
+    // Сбрасываем флаг нанесения урона для новой атаки
+    this.hasDealtDamageToHero = false;
+    
     // Сохраняем текущую позицию перед переключением анимации
     const currentX = this.x;
     const currentY = this.y;
@@ -195,8 +210,6 @@ export class Creep extends AnimatedSprite {
     this.y = currentY;
     
     this.currentState = EntityState.ATTACKING;
-    
-
   }
 
   /**
@@ -252,12 +265,16 @@ export class Creep extends AnimatedSprite {
   /**
    * Обновление крипа (движение)
    */
-  public updateCreep(deltaTime: number): void {
+  public updateCreep(_deltaTime: number, hero?: Hero): void {
     // Крип движется в состояниях IDLE и DYING (продолжает двигаться во время смерти)
     // Останавливается только во время атаки
-    // Убираем deltaTime чтобы движение было идентично фону (как в старом проекте)
     if (this.currentState === EntityState.IDLE || this.currentState === EntityState.DYING) {
       this.x -= this.moveSpeed;
+    }
+
+    // Проверяем кадр атаки если герой передан и крип атакует
+    if (hero && this.currentState === EntityState.ATTACKING) {
+      this.checkAttackFrame(hero);
     }
 
     // Обновляем полоску здоровья каждый кадр
@@ -383,6 +400,21 @@ export class Creep extends AnimatedSprite {
   }
 
   /**
+   * Получение полоски здоровья крипа
+   */
+  public getHealthBar(): CreepHealthBar | null {
+    return this.healthBar || null;
+  }
+
+  /**
+   * Установить callback для анимации золота
+   * @param callback - функция для вызова анимации золота
+   */
+  public setGoldAnimationCallback(callback: GoldAnimationCallback): void {
+    this.goldAnimationCallback = callback;
+  }
+
+  /**
    * Нанесение урона крипу
    * 
    * @param damage количество урона
@@ -400,6 +432,9 @@ export class Creep extends AnimatedSprite {
 
     // Проверяем смерть
     if (this.currentHealth <= 0 && !this.isDead) {
+      // АНИМАЦИЯ ЗОЛОТА: Вызываем callback для анимации золота
+      this.triggerGoldAnimation();
+      
       this.startDeath();
       return true;
     }
@@ -408,16 +443,180 @@ export class Creep extends AnimatedSprite {
   }
 
   /**
+   * Вызвать анимацию получения золота через callback
+   */
+  private triggerGoldAnimation(): void {
+    if (this.goldAnimationCallback) {
+      // Получаем конфигурацию крипа для определения награды
+      const creepConfig = CREEP_TYPES[this.creepType];
+      if (creepConfig && creepConfig.goldReward) {
+        // Вызываем callback с позицией крипа и количеством золота
+        this.goldAnimationCallback(this.x, this.y, creepConfig.goldReward);
+        console.log(`💰 Вызван callback анимации золота: +${creepConfig.goldReward} в позиции (${this.x}, ${this.y})`);
+      }
+    } else {
+      console.warn(`❌ Callback анимации золота не установлен для крипа ${this.creepType}`);
+    }
+  }
+
+  // ==================================================================================
+  // СИСТЕМА АТАК НА ГЕРОЯ (Микрошаг 2.5.3)
+  // ==================================================================================
+
+  // Флаг для отслеживания нанесения урона в атаке (как у героя)
+  private hasDealtDamageToHero: boolean = false;
+
+  /**
+   * Получение типа крипа для конфигурации
+   */
+  public getCreepType(): string {
+    return this.creepType;
+  }
+
+  /**
+   * Проверка может ли крип атаковать героя
+   * 
+   * @returns true если крип может атаковать
+   */
+  public canAttackHero(): boolean {
+    return !this.isDead && this.currentState === EntityState.ATTACKING;
+  }
+
+  /**
+   * Атака героя крипом (аналог dealDamage из старого проекта)
+   * Наносит урон герою и применяет особые способности
+   * 
+   * @param hero герой для атаки
+   */
+  public attackHero(hero: Hero): void {
+    if (!this.canAttackHero() || !hero.isAlive()) return;
+
+    // Получаем конфигурацию крипа для урона и способностей
+    const creepConfig = CREEP_TYPES[this.creepType];
+    if (!creepConfig) {
+      console.warn(`Не найдена конфигурация для атаки крипа: ${this.creepType}`);
+      return;
+    }
+
+    // Наносим базовый урон
+    hero.takeDamage(creepConfig.damage);
+
+    // Применяем особые способности согласно старому проекту
+    this.applySpecialAbilities(hero, creepConfig);
+
+    console.log(`⚔️ Крип ${this.creepType} атаковал героя, урон: ${creepConfig.damage}`);
+  }
+
+  /**
+   * Применение особых способностей крипа (аналог functions['attack_modifier'] из старого проекта)
+   * 
+   * @param hero герой для применения способностей
+   * @param config конфигурация крипа
+   */
+  private applySpecialAbilities(hero: Hero, config: any): void {
+    if (!config.specialAbilities) return;
+
+    for (const ability of config.specialAbilities) {
+      switch (ability) {
+        case 'manaburn': // Способность сатира
+          if (hero.getCurrentMana() >= 2 && config.manaburnPercent) {
+            // Вычисляем количество маны для отнятия в процентах от максимальной маны
+            const heroMaxMana = hero.getMaxMana();
+            const manaburnAmount = Math.floor(heroMaxMana * (config.manaburnPercent / 100));
+            
+            // Отнимаем вычисленное количество маны
+            hero.takeManaburn(manaburnAmount);
+            console.log(`💙 Satyr использовал manaburn на ${manaburnAmount} маны (${config.manaburnPercent}% от максимальной)`);
+            
+            // Создаем визуальный эффект manaburn (синие частицы)
+            // Получаем GameController через app для доступа к эффектам
+            if ((this.app as any).gameController && (this.app as any).gameController.damageEffectManager) {
+              (this.app as any).gameController.damageEffectManager.createManaburnEffect(hero.x, hero.y);
+            }
+          }
+          break;
+
+        case 'poison': // Способность вула
+          hero.applyPoison(1000); // 1 секунда отравления
+          console.log(`☠️ Voul отравил героя на 1 секунду`);
+          break;
+
+        default:
+          console.warn(`Неизвестная способность крипа: ${ability}`);
+      }
+    }
+  }
+
+  /**
+   * Проверка кадра атаки для нанесения урона (аналог updateAnimation из старого проекта)
+   * Должен вызываться в основном цикле обновления
+   * 
+   * @param hero герой для атаки
+   */
+  public checkAttackFrame(hero: Hero): void {
+    if (this.currentState === EntityState.ATTACKING) {
+      // Сбрасываем флаг урона при начале нового цикла анимации (currentFrame = 0)
+      if (this.currentFrame === 0) {
+        this.hasDealtDamageToHero = false;
+      }
+
+      // Проверяем только если ещё не нанёс урон в этом цикле
+      if (!this.hasDealtDamageToHero) {
+        // Получаем конфигурацию для определения кадра атаки
+        const creepConfig = CREEP_TYPES[this.creepType];
+        if (creepConfig) {
+          // Используем attackFrame из конфигурации или значение по умолчанию (середина анимации)
+          const attackFrame = (creepConfig as any).attackFrame || Math.floor(this.totalFrames / 2);
+          
+          // Проверяем достижение кадра урона (как в старом проекте)
+          if (this.currentFrame >= attackFrame) {
+            this.hasDealtDamageToHero = true;
+            
+            // Наносим урон герою
+            this.attackHero(hero);
+          }
+        }
+      }
+    }
+  }
+
+  // ==================================================================================
+  // УПРАВЛЕНИЕ ПАУЗОЙ АНИМАЦИЙ
+  // ==================================================================================
+  
+  /**
+   * Поставить анимации на паузу
+   */
+  public pauseAnimations(): void {
+    // Сохраняем текущую скорость анимации перед паузой
+    this.originalAnimationSpeed = this.animationSpeed;
+    // Останавливаем анимацию PixiJS AnimatedSprite
+    this.animationSpeed = 0;
+    console.log(`⏸️ Анимации крипа ${this.creepType} поставлены на паузу (скорость: ${this.originalAnimationSpeed})`);
+  }
+  
+  /**
+   * Возобновить анимации
+   */
+  public resumeAnimations(): void {
+    // Восстанавливаем сохраненную скорость анимации
+    this.animationSpeed = this.originalAnimationSpeed;
+    console.log(`▶️ Анимации крипа ${this.creepType} возобновлены (скорость: ${this.originalAnimationSpeed})`);
+  }
+
+  /**
    * Уничтожение крипа и очистка ресурсов
    */
   public destroy(): void {
-    // Удаляем полоску здоровья из сцены
-    if (this.healthBar) {
-      this.app.stage.removeChild(this.healthBar);
+    // Сбрасываем флаги атаки
+    this.hasDealtDamageToHero = false;
+    
+    // Уничтожаем полоску здоровья
+    if (this.healthBar && !this.healthBar.destroyed) {
       this.healthBar.destroy();
     }
 
-    // Вызываем базовый метод уничтожения
+    // Уничтожаем базовый AnimatedSprite
     super.destroy();
   }
 }

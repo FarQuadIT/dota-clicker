@@ -24,10 +24,14 @@ export class CreepHealthBar extends Container {
   private barWidth: number = 0; // Будет вычисляться динамически
   private minBarWidth: number; // Минимальная ширина полоски на маленьких экранах
   
+  // Параметры шрифта (адаптивные как у героя)
+  private baseFontSize: number = 12;       // Базовый размер шрифта (увеличен с 10 до 12)
+  private minFontSize: number = 10;        // Минимальный размер шрифта для читаемости
+  private currentFontSize: number = 12;    // Текущий размер шрифта (динамический)
+  
   // Состояние крипа
   private currentHealth: number = 0;
   private maxHealth: number = 0;
-  private isDying: boolean = false;
   
 
   
@@ -78,12 +82,12 @@ export class CreepHealthBar extends Container {
     this.healthBar = new Graphics();
     this.addChild(this.healthBar);
     
-    // Текст здоровья (белый, 10px Arial, по центру)
+    // Текст здоровья (белый, адаптивный размер Arial, по центру)
     this.healthText = new Text({
       text: '',
       style: {
         fontFamily: 'Arial',
-        fontSize: 10,
+        fontSize: this.currentFontSize,
         fill: '#ffffff',
         align: 'center'
       }
@@ -106,9 +110,17 @@ export class CreepHealthBar extends Container {
     // Пересчитываем ширину полоски для адаптивности
     this.updateBarWidth(creepWidth, scale);
     
-    // Позиционирование с учетом индивидуальных настроек крипа
-    const barX = creepX - this.barWidth / 2 + this.config.healthBarOffsetX; // Центрируем по крипу + смещение
-    const barY = creepY + this.config.healthBarOffsetY; // Позиция с учетом смещения
+    // Обновляем размер шрифта в зависимости от масштаба крипа (аналогично герою)
+    this.updateFontSize(scale);
+    
+    // АДАПТИВНОЕ позиционирование с учетом масштаба (как у героя)
+    // Преобразуем фиксированные смещения в относительные к масштабу крипа
+    const adaptiveOffsetX = this.config.healthBarOffsetX * scale;
+    const adaptiveOffsetY = this.config.healthBarOffsetY * scale;
+    
+    // Позиционирование с учетом адаптивных смещений
+    const barX = creepX - this.barWidth / 2 + adaptiveOffsetX; // Центрируем по крипу + адаптивное смещение
+    const barY = creepY + adaptiveOffsetY; // Позиция с учетом адаптивного смещения
     
     this.x = barX;
     this.y = barY;
@@ -128,6 +140,28 @@ export class CreepHealthBar extends Container {
     if (this.barWidth !== newBarWidth) {
       this.barWidth = newBarWidth;
       this.updateDisplay();
+    }
+  }
+  
+  /**
+   * Обновление размера шрифта в зависимости от масштаба крипа (аналогично герою)
+   * 
+   * @param scale - масштаб крипа
+   */
+  private updateFontSize(scale: number): void {
+    const newFontSize = Math.max(this.minFontSize, this.baseFontSize * scale);
+    
+    // Если размер шрифта изменился, обновляем стиль текста
+    if (this.currentFontSize !== newFontSize) {
+      this.currentFontSize = newFontSize;
+      
+      // Обновляем стиль текста
+      this.healthText.style = {
+        fontFamily: 'Arial',
+        fontSize: this.currentFontSize,
+        fill: '#ffffff',
+        align: 'center'
+      };
     }
   }
   
@@ -153,7 +187,6 @@ export class CreepHealthBar extends Container {
    * @param isDying - true если крип умирает
    */
   public setDying(isDying: boolean): void {
-    this.isDying = isDying;
     
     // Скрываем полоску если крип умирает (как в старом проекте)
     this.visible = !isDying;
@@ -202,5 +235,21 @@ export class CreepHealthBar extends Container {
    */
   public isAlive(): boolean {
     return this.currentHealth > 0;
+  }
+  
+  /**
+   * Обработка изменения размера экрана
+   * 
+   * Обновляет адаптивные параметры полоски здоровья при изменении размера экрана.
+   * Должен вызываться из Creep.onResize() для синхронизации с родительским объектом.
+   * 
+   * @param creepX - текущая позиция крипа по X
+   * @param creepY - текущая позиция крипа по Y
+   * @param creepWidth - ширина крипа
+   * @param scale - масштаб крипа
+   */
+  public onResize(creepX: number, creepY: number, creepWidth: number, scale: number): void {
+    // Обновляем позицию полоски с новыми размерами экрана
+    this.updatePosition(creepX, creepY, creepWidth, scale);
   }
 } 

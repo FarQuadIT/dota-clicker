@@ -55,12 +55,15 @@ export interface CreepTypeConfig {
   /** Особые способности крипа */
   specialAbilities?: string[];
   
+  /** Процент от максимальной маны который отнимает manaburn (для сатира) */
+  manaburnPercent?: number;
+  
   // === ПАРАМЕТРЫ ПОЗИЦИОНИРОВАНИЯ ПОЛОСОК ЗДОРОВЬЯ ===
   
-  /** Смещение полоски здоровья по X относительно центра крипа (в пикселях) */
+  /** Смещение полоски здоровья по X относительно центра крипа (в пикселях, автоматически масштабируется под размер экрана) */
   healthBarOffsetX: number;
   
-  /** Смещение полоски здоровья по Y относительно центра крипа (в пикселях, отрицательные значения = выше крипа) */
+  /** Смещение полоски здоровья по Y относительно центра крипа (в пикселях, отрицательные значения = выше крипа, автоматически масштабируется под размер экрана) */
   healthBarOffsetY: number;
   
   /** Ширина полоски здоровья (множитель от ширины крипа, например 0.5 = половина ширины крипа) */
@@ -92,13 +95,13 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     positionY: 0.72,     // 72% от высоты экрана
     collisionZone: 1.0,  // Стандартная зона коллизии
     // Боевые характеристики из старого проекта
-    maxHealth: 10,       // creepHealthTotal: 10
-    damage: 3,           // creepDamage: 3
+    maxHealth: 10000,    // creepHealthTotal: 10000 (для тестирования регенерации)
+    damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 0, // unlockedLevel: 0
-    // Позиционирование полоски здоровья
-    healthBarOffsetX: 60,   // На 15 пикселей влево от центра крипа
-    healthBarOffsetY: -100,  // На 35 пикселей выше крипа
+    // Позиционирование полоски здоровья (адаптивное масштабирование)
+    healthBarOffsetX: 60,   // На 60 пикселей влево от центра крипа (автоматически масштабируется)
+    healthBarOffsetY: -100,  // На 100 пикселей выше крипа (автоматически масштабируется)
     healthBarWidthRatio: 0.4, // 60% от ширины крипа
     healthBarMinWidth: 45,    // Минимальная ширина 45px на маленьких экранах
   },
@@ -117,8 +120,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     positionY: 0.72,     // 72% от высоты экрана
     collisionZone: 1.7,  // Большая зона коллизии (агрессивный)
     // Боевые характеристики из старого проекта
-    maxHealth: 5,        // creepHealthTotal: 5
-    damage: 5,           // creepDamage: 5
+    maxHealth: 10000,    // creepHealthTotal: 10000 (для тестирования регенерации)
+    damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 3, // unlockedLevel: 3
     // Позиционирование полоски здоровья
@@ -134,7 +137,7 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
    */
   satyr: {
     name: 'Satyr',
-    health: 1,        // Убивается одним ударом
+    health: 1000,        
     difficulty: 2,    // Легкий-средний (размер компенсирует сложность)
     description: 'Крупный сатир, внушительный размер',
     // Визуальные параметры из GameConfig.ts
@@ -142,16 +145,17 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     positionY: 0.735,    // Выше стандартного (прыгучий)
     collisionZone: 0.9,  // Уменьшенная зона (нужно подойти ближе)
     // Боевые характеристики из старого проекта
-    maxHealth: 7,        // creepHealthTotal: 7
-    damage: 2,           // creepDamage: 2
+    maxHealth: 10000,    // creepHealthTotal: 10000 (для тестирования регенерации)
+    damage: 100,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 4, // unlockedLevel: 4
     specialAbilities: ["manaburn"], // Лишение маны при ударе
+    manaburnPercent: 20, // Отнимает 15% от максимальной маны героя
     // Позиционирование полоски здоровья
-    healthBarOffsetX: -5,   // Немного влево от центра
-    healthBarOffsetY: -45,  // На 45 пикселей выше (satyr большой)
-    healthBarWidthRatio: 0.5, // 50% от ширины крипа (большой крип)
-    healthBarMinWidth: 100,    // Минимальная ширина 55px (satyr большой)
+    healthBarOffsetX: 70,   // Немного влево от центра
+    healthBarOffsetY: -110,  // На 45 пикселей выше (satyr большой)
+    healthBarWidthRatio: 0.3, // 50% от ширины крипа (большой крип)
+    healthBarMinWidth: 80,    // Минимальная ширина 55px (satyr большой)
   },
   
   /**
@@ -168,8 +172,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     positionY: 0.71,     // Высоко (летает)
     collisionZone: 1.5,  // Увеличенная зона
     // Боевые характеристики из старого проекта
-    maxHealth: 15,       // creepHealthTotal: 15
-    damage: 2,           // creepDamage: 2
+    maxHealth: 10000,    // creepHealthTotal: 10000 (для тестирования регенерации)
+    damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 1, // unlockedLevel: 1
     // Позиционирование полоски здоровья
@@ -193,8 +197,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     positionY: 0.665,    // Ниже стандартного (ползает)
     collisionZone: 1.3,  // Увеличенная зона
     // Боевые характеристики из старого проекта
-    maxHealth: 10,       // creepHealthTotal: 10
-    damage: 2,           // creepDamage: 2
+    maxHealth: 10000,    // creepHealthTotal: 10000 (для тестирования регенерации)
+    damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 5, // unlockedLevel: 5
     specialAbilities: ["poison"], // Отравление - отключает регенерацию HP на 1 секунду
@@ -219,8 +223,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     positionY: 0.69,     // Ниже стандартного (большой, на земле)
     collisionZone: 2.0,  // Большая зона коллизии (коллизия на расстоянии)
     // Боевые характеристики из старого проекта
-    maxHealth: 10,       // creepHealthTotal: 10
-    damage: 1,           // creepDamage: 1
+    maxHealth: 10000,    // creepHealthTotal: 10000 (для тестирования регенерации)
+    damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 2, // unlockedLevel: 2
     // Позиционирование полоски здоровья

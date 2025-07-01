@@ -17,13 +17,24 @@ export class HeroHealthBar extends Container {
   private manaText!: Text;
   
   // Параметры полосок (из старого проекта)
-  private readonly barWidth: number = 120;
+  private baseBarWidth: number = 120;      // Базовая ширина при масштабе 1.0
+  private minBarWidth: number = 80;        // Минимальная ширина для удобства использования
+  private barWidth: number = 120;          // Текущая ширина (динамическая)
   private readonly barHeight: number = 20;
   private readonly barSpacing: number = 5;
+  
+  // Параметры шрифта
+  private baseFontSize: number = 12;       // Базовый размер шрифта при масштабе 1.0
+  private minFontSize: number = 10;        // Минимальный размер шрифта для читаемости
+  private currentFontSize: number = 12;    // Текущий размер шрифта (динамический)
   
   // Плавная анимация (как в старом проекте)
   private healthInterpolation: number = 0;
   private manaInterpolation: number = 0;
+  
+  // Плавная анимация текста (для более игрового отображения цифр)
+  private displayedHealth: number = 0;
+  private displayedMana: number = 0;
   
   // Флаг первой инициализации для мгновенного отображения полных полосок
   private isFirstUpdate: boolean = true;
@@ -115,6 +126,8 @@ export class HeroHealthBar extends Container {
     if (this.isFirstUpdate) {
       this.healthInterpolation = currentHealth;
       this.manaInterpolation = currentMana;
+      this.displayedHealth = currentHealth;
+      this.displayedMana = currentMana;
       this.isFirstUpdate = false;
     } else {
       // Плавная анимация здоровья (как в старом проекте)
@@ -130,6 +143,31 @@ export class HeroHealthBar extends Container {
       } else {
         this.manaInterpolation = currentMana; // Мгновенное обновление при уменьшении
       }
+      
+      // Плавная анимация отображаемых цифр (медленнее чем полоски для более игрового эффекта)
+      const textAnimationSpeed = 0.003; // Медленнее чем полоски
+      
+      // Анимация цифр здоровья
+      if (Math.abs(this.displayedHealth - currentHealth) > 0.1) {
+        if (this.displayedHealth < currentHealth) {
+          this.displayedHealth += (currentHealth - this.displayedHealth) * deltaTime * textAnimationSpeed;
+        } else {
+          this.displayedHealth = currentHealth; // Мгновенное обновление при уменьшении (урон)
+        }
+      } else {
+        this.displayedHealth = currentHealth; // Фиксируем значение когда близко
+      }
+      
+      // Анимация цифр маны
+      if (Math.abs(this.displayedMana - currentMana) > 0.1) {
+        if (this.displayedMana < currentMana) {
+          this.displayedMana += (currentMana - this.displayedMana) * deltaTime * textAnimationSpeed;
+        } else {
+          this.displayedMana = currentMana; // Мгновенное обновление при уменьшении (трата маны)
+        }
+      } else {
+        this.displayedMana = currentMana; // Фиксируем значение когда близко
+      }
     }
     
     // Отрисовка полоски здоровья
@@ -137,6 +175,9 @@ export class HeroHealthBar extends Container {
     
     // Отрисовка полоски маны
     this.drawManaBar(this.manaInterpolation, maxMana, manaRegen);
+
+    // Обновление анимации предупреждения о мане
+    this.updateManaWarning(deltaTime);
   }
   
   /**
@@ -164,8 +205,9 @@ export class HeroHealthBar extends Container {
       this.healthBarFill.fill({ color: fillColor });
     }
     
-    // Обновляем текст
-    this.healthText.text = `${Math.round(currentHealth * 10) / 10}/${maxHealth}`;
+    // Обновляем текст с плавной анимацией и округлением до целых чисел для игрового вида
+    const displayedHealthRounded = Math.round(this.displayedHealth);
+    this.healthText.text = `${displayedHealthRounded}/${maxHealth}`;
     this.healthText.x = this.barWidth / 2;
     this.healthText.y = this.barHeight / 2;
   }
@@ -198,31 +240,58 @@ export class HeroHealthBar extends Container {
       this.manaBarFill.fill({ color: fillColor });
     }
     
-    // Обновляем текст
-    this.manaText.text = `${Math.round(currentMana * 10) / 10}/${maxMana}`;
+    // Обновляем текст с плавной анимацией и округлением до целых чисел для игрового вида
+    const displayedManaRounded = Math.round(this.displayedMana);
+    this.manaText.text = `${displayedManaRounded}/${maxMana}`;
     this.manaText.x = this.barWidth / 2;
     this.manaText.y = manaY + this.barHeight / 2;
   }
   
   /**
-   * Позиционирование полосок над героем
+   * Установка позиции полосок над героем
    * 
-   * @param heroX - X координата героя
-   * @param heroY - Y координата героя
+   * @param heroX - позиция героя по X
+   * @param heroY - позиция героя по Y 
    * @param heroWidth - ширина героя
    * @param heroScale - масштаб героя
    */
   public positionAboveHero(heroX: number, heroY: number, heroWidth: number, heroScale: number): void {
-    // Позиционируем полоски над героем
-    this.x = heroX + (heroWidth - this.barWidth) / 2;
+    // Обновляем ширину полосок в зависимости от масштаба героя (с минимальным ограничением)
+    this.barWidth = Math.max(this.minBarWidth, this.baseBarWidth * heroScale);
     
-    // Адаптивное позиционирование как в старом проекте: 10% от высоты героя выше героя
-    // Это гарантирует что полоски всегда будут над героем независимо от размера экрана
-    this.y = Math.max(50, heroY + 0.15 * heroY);
+    // Обновляем размер шрифта в зависимости от масштаба героя (с минимальным ограничением)
+    this.currentFontSize = Math.max(this.minFontSize, this.baseFontSize * heroScale);
+    this.updateTextStyles();
     
-    // Масштабируем полоски пропорционально герою
-    const scale = Math.max(0.8, Math.min(1.2, heroScale));
-    this.scale.set(scale);
+    // Позиционируем полоски чуть выше героя
+    const offsetX = (heroWidth - this.barWidth) / 2;
+    const offsetY = 90 * heroScale; // Динамическое смещение вверх в зависимости от масштаба
+    
+    this.x = heroX + offsetX;
+    this.y = heroY + offsetY;
+  }
+  
+  /**
+   * Обновление стилей текста в зависимости от текущего размера шрифта
+   */
+  private updateTextStyles(): void {
+    // Обновляем стиль текста здоровья
+    const healthTextStyle = new TextStyle({
+      fontFamily: 'Arial',
+      fontSize: this.currentFontSize,
+      fill: '#ffffff',
+      align: 'center'
+    });
+    this.healthText.style = healthTextStyle;
+    
+    // Обновляем стиль текста маны
+    const manaTextStyle = new TextStyle({
+      fontFamily: 'Arial',
+      fontSize: this.currentFontSize,
+      fill: '#ffffff',
+      align: 'center'
+    });
+    this.manaText.style = manaTextStyle;
   }
   
   /**
@@ -243,7 +312,90 @@ export class HeroHealthBar extends Container {
     this.manaBarBg?.destroy();
     this.manaBarFill?.destroy();
     this.manaText?.destroy();
+    this.manaWarningText?.destroy();
     
     super.destroy();
+  }
+
+  // ==================================================================================
+  // СИСТЕМА ПРЕДУПРЕЖДЕНИЯ О НЕДОСТАТКЕ МАНЫ
+  // ==================================================================================
+
+  private manaWarningText?: Text;
+  private manaWarningTimer: number = 0;
+  private isManaWarningActive: boolean = false;
+
+  /**
+   * Показать предупреждение "Недостаточно маны" над полосками
+   * Появляется на 1 секунду с плавным исчезновением и движением вверх
+   */
+  public showManaWarning(): void {
+    // Если уже показываем предупреждение - не создаем новое
+    if (this.isManaWarningActive) return;
+
+    // Создаем текст предупреждения если его нет
+    if (!this.manaWarningText) {
+             const warningStyle = new TextStyle({
+         fontFamily: 'Arial',
+         fontSize: 14,
+         fill: '#ff6b6b',
+         stroke: { color: '#000000', width: 2 },
+         align: 'center',
+         fontWeight: 'bold'
+       });
+
+      this.manaWarningText = new Text({
+        text: 'Недостаточно маны!',
+        style: warningStyle
+      });
+
+      this.manaWarningText.anchor.set(0.5);
+      this.addChild(this.manaWarningText);
+    }
+
+    // Сбрасываем состояние анимации
+    this.manaWarningText.alpha = 1.0;
+    this.manaWarningText.x = this.barWidth / 2;
+    this.manaWarningText.y = -25; // Над полосками здоровья и маны
+
+    // Активируем предупреждение
+    this.isManaWarningActive = true;
+    this.manaWarningTimer = 0;
+
+    console.log("⚡ Показано предупреждение: Недостаточно маны!");
+  }
+
+  /**
+   * Обновление анимации предупреждения о мане
+   * Вызывается в updateBars для обновления эффекта
+   * 
+   * @param deltaTime время между кадрами в миллисекундах
+   */
+  private updateManaWarning(deltaTime: number): void {
+    if (!this.isManaWarningActive || !this.manaWarningText) return;
+
+    // Обновляем таймер
+    this.manaWarningTimer += deltaTime;
+
+    const duration = 1000; // 1 секунда
+    const progress = Math.min(1, this.manaWarningTimer / duration);
+
+    // Анимация движения вверх
+    const initialY = -25;
+    const finalY = -45; // Движение на 20 пикселей вверх
+    this.manaWarningText.y = initialY + (finalY - initialY) * progress;
+
+    // Анимация затухания (начинается с 50% времени)
+    if (progress > 0.5) {
+      const fadeProgress = (progress - 0.5) / 0.5; // 0-1 для второй половины анимации
+      this.manaWarningText.alpha = 1 - fadeProgress;
+    }
+
+    // Завершение анимации
+    if (progress >= 1) {
+      this.isManaWarningActive = false;
+      this.manaWarningText.alpha = 0;
+      console.log("⚡ Предупреждение о мане исчезло");
+    }
   }
 } 

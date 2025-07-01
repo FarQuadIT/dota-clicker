@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Application, Graphics, TilingSprite } from 'pixi.js';
 import { assetsManager, type LoadingProgress } from '../../game/managers/AssetsManager';
 import { GAME_CONFIG } from '../../game/config/GameConfig';
+import { useGame } from '../../contexts/GameContext';
 
 /**
 * Компонент игровой страницы с полноэкранным Pixi.js канвасом
@@ -39,6 +40,9 @@ export default function GamePage() {
 
  // Состояние для отслеживания готовности DOM
  const [isDOMReady, setIsDOMReady] = useState(false);
+
+ // Используем контекст игры для управления паузой
+ const { isPaused, setGameActive, setGameController } = useGame();
 
  // Эффект для проверки готовности DOM
  useEffect(() => {
@@ -383,6 +387,12 @@ export default function GamePage() {
        (app as any).gameHero = hero;
        (app as any).gameController = gameController;
        
+       // Передаем контроллер в игровой контекст
+       setGameController(gameController);
+       
+       // Устанавливаем игру как активную
+       setGameActive(true);
+       
        // Запускаем игровой цикл
        gameController.startGameLoop();
        
@@ -399,6 +409,10 @@ export default function GamePage() {
 
    // Функция очистки при размонтировании компонента
    return () => {
+     // Деактивируем игру при размонтировании
+     setGameActive(false);
+     setGameController(null);
+     
      if (pixiApp) {
        // Очищаем обработчик изменения размера
        if ((pixiApp as any).removeResizeListener) {
@@ -411,7 +425,7 @@ export default function GamePage() {
        // Уничтожаем приложение и освобождаем ресурсы
        pixiApp.destroy(true);
        
-             setPixiApp(null);
+       setPixiApp(null);
      }
    };
  }, [isDOMReady]); // Зависит от готовности DOM
@@ -424,6 +438,8 @@ export default function GamePage() {
     // Перезагружаем страницу для повторной инициализации
     window.location.reload();
   };
+
+  // Функции управления паузой теперь находятся в GameContext
 
  /**
   * Компонент экрана загрузки
@@ -571,6 +587,8 @@ export default function GamePage() {
 
      {/* Экран загрузки */}
      {(isInitializing || isLoadingAssets) && <LoadingScreen />}
+
+     {/* Кнопки управления игрой теперь находятся в Header */}
 
      {/* Overlay для отображения ошибок */}
      {error && (

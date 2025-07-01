@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { useGold } from '../../../contexts/GoldContext'; // Импортируем хук для золота
+import { useGame } from '../../../contexts/GameContext'; // Импортируем хук для игры
 import './Header.css';
 
 /**
@@ -26,6 +27,9 @@ export default function Header() {
   // Получаем золото и пассивный доход из контекста
   const { gold, passiveIncome } = useGold();
   
+  // Получаем игровой контекст для управления паузой
+  const { isPaused, isGameActive, pauseGame, resumeGame } = useGame();
+  
   // Состояние для отображения/скрытия настроек
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -34,9 +38,29 @@ export default function Header() {
   const formattedIncome = useMemo(() => formatNumber(passiveIncome), [passiveIncome]);
   
   // Оптимизированный обработчик для кнопки настроек
+  // При открытии настроек - ставим игру на паузу, при закрытии - снимаем с паузы
   const toggleSettings = useCallback(() => {
-    setIsSettingsOpen(prev => !prev);
-  }, []);
+    setIsSettingsOpen(prev => {
+      const newSettingsState = !prev;
+      
+      // Если игра активна, управляем паузой в зависимости от состояния настроек
+      if (isGameActive) {
+        if (newSettingsState) {
+          // Открываем настройки - ставим игру на паузу
+          if (!isPaused) {
+            pauseGame();
+          }
+        } else {
+          // Закрываем настройки - снимаем игру с паузы
+          if (isPaused) {
+            resumeGame();
+          }
+        }
+      }
+      
+      return newSettingsState;
+    });
+  }, [isGameActive, isPaused, pauseGame, resumeGame]);
 
   return (
     <header className="top-bar">
@@ -84,6 +108,7 @@ export default function Header() {
           className={`settings-icon ${isSettingsOpen ? 'active' : ''}`}
           onClick={toggleSettings}
           aria-label="Настройки"
+          title="Настройки"
         >
           <i className="fas fa-cog"></i>
         </button>
