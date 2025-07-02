@@ -25,6 +25,8 @@ export enum EntityState {
 export enum GameState {
   /** Идет загрузка ресурсов и инициализация */
   LOADING = 'loading',
+  /** Начальная инициализация: герой стоит 2 секунды, крипы не спавнятся */
+  INITIALIZATION = 'initialization',
   /** Игра активна: герой бежит, крипы движутся */
   RUNNING = 'running',
   /** Бой: оба атакуют, мир остановлен */

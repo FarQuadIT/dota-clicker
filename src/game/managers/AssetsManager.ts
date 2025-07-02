@@ -85,6 +85,23 @@ interface GameAssets {
     health: Texture;
     mana: Texture;
   };
+  
+  // Значки уровней для HUD
+  levels: {
+    [levelName: string]: Texture;
+    bronze: Texture;
+    silver: Texture;
+    gold: Texture;
+    platinum: Texture;
+    master: Texture;
+    grandmaster: Texture;
+  };
+  
+  // Иконки героев для прогресс-бара
+  heroIcons: {
+    [heroName: string]: Texture;
+    juggernaut: Texture;
+  };
 }
 
 /**
@@ -199,6 +216,8 @@ class AssetsManager {
       await this.loadCreepAssets(assetManifest.creeps);
       await this.loadBackgroundAssets(assetManifest.backgrounds);
       await this.loadUIAssets(assetManifest.ui);
+      await this.loadLevelAssets(assetManifest.levels);
+      await this.loadHeroIconAssets(assetManifest.heroIcons);
 
       // Устанавливаем флаг завершения загрузки
       this.isLoaded = true;
@@ -421,6 +440,21 @@ class AssetsManager {
         gold: '/media/shop/images/gold.png',
         health: '/media/shop/main/health.png',
         mana: '/media/shop/main/mana.png'
+      },
+      
+      // Значки уровней для HUD
+      levels: {
+        bronze: '/media/game/assets/levels/bronze.jpg',
+        silver: '/media/game/assets/levels/silver.webp',
+        gold: '/media/game/assets/levels/gold.JPG',
+        platinum: '/media/game/assets/levels/platinum.webp',
+        master: '/media/game/assets/levels/master.webp',
+        grandmaster: '/media/game/assets/levels/grandmaster.webp'
+      },
+      
+      // Иконки героев для прогресс-бара
+      heroIcons: {
+        juggernaut: '/media/game/assets/heroes/Juggernaut_minimap_icon.webp'
       }
     };
   }
@@ -649,6 +683,72 @@ class AssetsManager {
   }
 
   /**
+   * Загрузка значков уровней для HUD
+   * 
+   * @param levelManifest - Объект с путями к значкам уровней
+   */
+  private async loadLevelAssets(levelManifest: any): Promise<void> {
+    console.log(`🎯 Загружаем значки уровней...`);
+    
+    // Инициализируем объект для хранения значков уровней
+    this.assets.levels = {} as GameAssets['levels'];
+    
+    // Перебираем все значки уровней в манифесте
+    for (const [levelName, path] of Object.entries(levelManifest)) {
+      try {
+        this.loadingProgress.currentAsset = `Уровень: ${levelName}`;
+        this.notifyProgress();
+        
+        // Загружаем текстуру значка уровня
+        const texture = await Assets.load(path as string);
+        this.assets.levels[levelName] = texture;
+        
+        this.incrementProgress();
+        
+        console.log(`✅ Загружен значок уровня: ${levelName}`);
+        
+      } catch (error) {
+        console.error(`❌ Ошибка загрузки значка уровня ${path}:`, error);
+        this.assets.levels[levelName] = Texture.WHITE;
+        this.incrementProgress();
+      }
+    }
+  }
+
+  /**
+   * Загрузка иконок героев для прогресс-бара
+   * 
+   * @param heroIconManifest - Объект с путями к иконкам героев
+   */
+  private async loadHeroIconAssets(heroIconManifest: any): Promise<void> {
+    console.log(`🏆 Загружаем иконки героев...`);
+    
+    // Инициализируем объект для хранения иконок героев
+    this.assets.heroIcons = {} as GameAssets['heroIcons'];
+    
+    // Перебираем все иконки героев в манифесте
+    for (const [heroName, path] of Object.entries(heroIconManifest)) {
+      try {
+        this.loadingProgress.currentAsset = `Иконка героя: ${heroName}`;
+        this.notifyProgress();
+        
+        // Загружаем текстуру иконки героя
+        const texture = await Assets.load(path as string);
+        this.assets.heroIcons[heroName] = texture;
+        
+        this.incrementProgress();
+        
+        console.log(`✅ Загружена иконка героя: ${heroName}`);
+        
+      } catch (error) {
+        console.error(`❌ Ошибка загрузки иконки героя ${path}:`, error);
+        this.assets.heroIcons[heroName] = Texture.WHITE;
+        this.incrementProgress();
+      }
+    }
+  }
+
+  /**
    * Увеличение счетчика загруженных ресурсов
    * Вызывается после успешной загрузки каждого ресурса
    */
@@ -759,6 +859,38 @@ class AssetsManager {
     }
     
     console.warn(`⚠️ UI текстура не найдена: ${uiName}`);
+    return Texture.WHITE;
+  }
+
+  /**
+   * Получение значка уровня
+   * 
+   * @param levelName - имя уровня (например, 'bronze', 'silver')
+   * @returns Texture или fallback в случае отсутствия текстуры
+   */
+  public getLevelTexture(levelName: string): Texture {
+    const levelTexture = this.assets.levels?.[levelName];
+    if (levelTexture) {
+      return levelTexture;
+    }
+    
+    console.warn(`⚠️ Значок уровня не найден: ${levelName}`);
+    return Texture.WHITE;
+  }
+
+  /**
+   * Получение иконки героя для прогресс-бара
+   * 
+   * @param heroName - имя героя (например, 'juggernaut')
+   * @returns Texture или fallback в случае отсутствия текстуры
+   */
+  public getHeroIconTexture(heroName: string): Texture {
+    const heroIconTexture = this.assets.heroIcons?.[heroName];
+    if (heroIconTexture) {
+      return heroIconTexture;
+    }
+    
+    console.warn(`⚠️ Иконка героя не найдена: ${heroName}`);
     return Texture.WHITE;
   }
 

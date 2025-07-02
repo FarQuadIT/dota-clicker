@@ -29,6 +29,8 @@ interface CreepConfig {
   deathOffsetY?: number;
   /** Зона коллизии для данного крипа (множитель, по умолчанию 1.0) */
   collisionZone?: number;
+  /** Множитель здоровья для боссов (по умолчанию 1.0) */
+  healthMultiplier?: number;
 }
 
 /**
@@ -335,6 +337,10 @@ export class Creep extends AnimatedSprite {
     } else {
       this.maxHealth = creepTypeConfig.maxHealth;
     }
+    
+    // Применяем множитель здоровья для боссов
+    const healthMultiplier = this.config.healthMultiplier ?? 1.0;
+    this.maxHealth = Math.floor(this.maxHealth * healthMultiplier);
     
     // Устанавливаем текущее здоровье равным максимальному
     this.currentHealth = this.maxHealth;

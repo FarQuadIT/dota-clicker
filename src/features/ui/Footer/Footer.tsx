@@ -130,21 +130,21 @@ export default function Footer() {
 
   return (
     <>
-      <footer className="footer-bar">
-        {/* Создаем пункты меню */}
-        {menuItems.map((item, index) => (
-          <div
-            key={item.label}
-            className={`footer-item ${index === activeIndex ? 'active' : ''}`}
+    <footer className="footer-bar">
+      {/* Создаем пункты меню */}
+      {menuItems.map((item, index) => (
+        <div
+          key={item.label}
+          className={`footer-item ${index === activeIndex ? 'active' : ''}`}
             onClick={() => handleTabClick(item)}
-          >
-            <i className={item.icon}></i>
-          </div>
-        ))}
+        >
+          <i className={item.icon}></i>
+        </div>
+      ))}
 
-        {/* Красная полоска, которая следует за активным пунктом */}
-        <div className="footer-follow" style={{ left: leftPosition }}></div>
-      </footer>
+      {/* Красная полоска, которая следует за активным пунктом */}
+      <div className="footer-follow" style={{ left: leftPosition }}></div>
+    </footer>
 
       {/* Модальное окно подтверждения навигации */}
       <NavigationConfirmModal

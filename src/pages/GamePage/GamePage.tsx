@@ -7,6 +7,7 @@ import { GAME_CONFIG } from '../../game/config/GameConfig';
 import { useGame } from '../../contexts/GameContext';
 import { useHeroStore } from '../../contexts/heroStore';
 import GameOverModal from '../../features/ui/GameOverModal';
+import { heroLevelSystem } from '../../game/systems/HeroLevelSystem';
 
 /**
 * Компонент игровой страницы с полноэкранным Pixi.js канвасом
@@ -47,6 +48,8 @@ export default function GamePage() {
  // Состояние для Game Over модального окна
  const [isGameOver, setIsGameOver] = useState(false);
  const [sessionGold, setSessionGold] = useState(0);
+
+ // Состояние прогресса уровня больше не нужно - HUD встроен в Pixi.js
 
  // Используем контекст игры для управления паузой
  const { isPaused, setGameActive, setGameController, gameController, isGameActive } = useGame();
@@ -384,6 +387,20 @@ export default function GamePage() {
        const { Hero } = await import('../../game/entities/Hero');
        const { GameController } = await import('../../game/core/GameController');
        
+       // Инициализируем систему уровней героя для тестирования
+       console.log('🎯 Инициализация HeroLevelSystem');
+       console.log('📊 Текущий уровень:', heroLevelSystem.getCurrentLevel());
+       console.log('🏆 Градация:', heroLevelSystem.getLevelName());
+       console.log('💾 Данные уровня:', heroLevelSystem.getLevelData());
+       
+       // Тестируем события
+       heroLevelSystem.on('levelUp', (newLevel: number) => {
+         console.log('🎉 Событие levelUp:', newLevel);
+       });
+       
+       // Делаем систему доступной глобально для тестирования
+       (window as any).heroLevelSystem = heroLevelSystem;
+       
        // Создаем игровой контроллер
        const gameController = new GameController(app, new Hero(app, 'juggernaut', {
          positionX: GAME_CONFIG.HERO.position.x,  // 20% от левого края
@@ -421,6 +438,8 @@ export default function GamePage() {
        
        // Передаем контроллер в игровой контекст
        setGameController(gameController);
+       
+       // Прогресс уровня теперь отображается в Pixi.js HUD автоматически
        
              // Устанавливаем callback для Game Over
       gameController.setGameOverCallback((sessionGoldEarned: number) => {
@@ -463,6 +482,11 @@ export default function GamePage() {
          // Очищаем обработчик изменения размера
          if ((pixiApp as any).removeResizeListener) {
            (pixiApp as any).removeResizeListener();
+         }
+         
+         // Очищаем интервал обновления прогресса
+         if ((pixiApp as any).progressInterval) {
+           clearInterval((pixiApp as any).progressInterval);
          }
          
          // Останавливаем все анимации
@@ -726,6 +750,8 @@ export default function GamePage() {
 
      {/* Экран загрузки */}
      {(isInitializing || isLoadingAssets) && <LoadingScreen />}
+
+     {/* HUD прогресса уровня теперь встроен в Pixi.js игру */}
 
      {/* Кнопки управления игрой теперь находятся в Header */}
 

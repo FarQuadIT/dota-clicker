@@ -100,10 +100,10 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 0, // unlockedLevel: 0
     // Позиционирование полоски здоровья (адаптивное масштабирование)
-    healthBarOffsetX: 60,   // На 60 пикселей влево от центра крипа (автоматически масштабируется)
-    healthBarOffsetY: -100,  // На 100 пикселей выше крипа (автоматически масштабируется)
+    healthBarOffsetX: 120,   // На 60 пикселей влево от центра крипа (автоматически масштабируется)
+    healthBarOffsetY: -150,  // На 100 пикселей выше крипа (автоматически масштабируется)
     healthBarWidthRatio: 0.4, // 60% от ширины крипа
-    healthBarMinWidth: 45,    // Минимальная ширина 45px на маленьких экранах
+    healthBarMinWidth: 80,    // Минимальная ширина 45px на маленьких экранах
   },
   
   /**
@@ -128,7 +128,7 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     healthBarOffsetX: 0,    // По центру крипа
     healthBarOffsetY: -40,  // На 40 пикселей выше крипа (wolf прыгучий)
     healthBarWidthRatio: 0.5, // 70% от ширины крипа
-    healthBarMinWidth: 100,    // Минимальная ширина 40px на маленьких экранах
+    healthBarMinWidth: 80,    // Минимальная ширина 40px на маленьких экранах
   },
   
   /**
@@ -177,10 +177,10 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 1, // unlockedLevel: 1
     // Позиционирование полоски здоровья
-    healthBarOffsetX: 0,    // По центру крипа
-    healthBarOffsetY: -30,  // На 30 пикселей выше (shishka летает низко)
-    healthBarWidthRatio: 0.8, // 80% от ширины крипа
-    healthBarMinWidth: 100,    // Минимальная ширина 50px на маленьких экранах
+    healthBarOffsetX: -120,    // По центру крипа
+    healthBarOffsetY: -110,  // На 30 пикселей выше (shishka летает низко)
+    healthBarWidthRatio: 0.2, // 80% от ширины крипа
+    healthBarMinWidth: 80,    // Минимальная ширина 50px на маленьких экранах
   },
   
   /**
@@ -204,8 +204,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     specialAbilities: ["poison"], // Отравление - отключает регенерацию HP на 1 секунду
     // Позиционирование полоски здоровья
     healthBarOffsetX: 5,    // Немного вправо от центра
-    healthBarOffsetY: -25,  // На 25 пикселей выше (voul ползает низко)
-    healthBarWidthRatio: 0.6, // 60% от ширины крипа
+    healthBarOffsetY: -70,  // На 25 пикселей выше (voul ползает низко)
+    healthBarWidthRatio: 0.3, // 60% от ширины крипа
     healthBarMinWidth: 100,    // Минимальная ширина 42px на маленьких экранах
   },
   
@@ -229,8 +229,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     requiredHeroLevel: 2, // unlockedLevel: 2
     // Позиционирование полоски здоровья
     healthBarOffsetX: 0,    // По центру крипа
-    healthBarOffsetY: -35,  // На 35 пикселей выше крипа
-    healthBarWidthRatio: 0.7, // 70% от ширины крипа
+    healthBarOffsetY: -180,  // На 35 пикселей выше крипа
+    healthBarWidthRatio: 0.5, // 70% от ширины крипа
     healthBarMinWidth: 100,    // Минимальная ширина 48px на маленьких экранах
   }
   
