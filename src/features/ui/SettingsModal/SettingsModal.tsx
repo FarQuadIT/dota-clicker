@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { audioManager } from '../../../game/managers/SoundManager';
 import './SettingsModal.css';
 
 /**
@@ -19,26 +20,109 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   isVisible,
   onClose
 }) => {
-  // Состояние настроек (пока что только локальное)
+  // Состояние настроек (интегрированное с AudioManager)
   const [soundVolume, setSoundVolume] = useState(50); // Громкость звука 0-100
+  const [isMuted, setIsMuted] = useState(false); // Отключен ли звук
   const [hintsEnabled, setHintsEnabled] = useState(true); // Включены ли подсказки
+  
+  // Загружаем настройки при открытии модального окна
+  useEffect(() => {
+    if (isVisible) {
+      try {
+        // Загружаем текущие настройки из AudioManager
+        const currentVolume = Math.round(audioManager.getVolume() * 100);
+        const currentMuted = audioManager.getMuted();
+        
+        setSoundVolume(currentVolume);
+        setIsMuted(currentMuted);
+        
+        // Загружаем настройки подсказок из localStorage
+        const savedHints = localStorage.getItem('gameHintsEnabled');
+        if (savedHints !== null) {
+          setHintsEnabled(JSON.parse(savedHints));
+        }
+      } catch (error) {
+        console.warn('⚠️ Не удалось загрузить настройки звука:', error);
+      }
+    }
+  }, [isVisible]);
   
   if (!isVisible) return null;
 
   const handleVolumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSoundVolume(Number(event.target.value));
-    // TODO: Здесь будет применение громкости к звуковой системе
+    const newVolume = Number(event.target.value);
+    setSoundVolume(newVolume);
+    
+    try {
+      // Уведомляем о пользовательском взаимодействии
+      audioManager.onUserInteraction();
+      
+      // Воспроизводим звук клика по ползунку
+      audioManager.playSound('ui_click');
+      
+      // Применяем громкость к звуковой системе (преобразуем в диапазон 0-1)
+      audioManager.setVolume(newVolume / 100);
+    } catch (error) {
+      console.warn('⚠️ Не удалось установить громкость:', error);
+    }
+  };
+
+  const handleMuteToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newMuted = event.target.checked;
+    setIsMuted(newMuted);
+    
+    try {
+      // Уведомляем о пользовательском взаимодействии
+      audioManager.onUserInteraction();
+      
+      // Воспроизводим звук клика по чекбоксу (только если не отключаем звук)
+      if (!newMuted) {
+        audioManager.playSound('ui_click');
+      }
+      
+      // Применяем состояние отключения звука
+      audioManager.setMuted(newMuted);
+    } catch (error) {
+      console.warn('⚠️ Не удалось изменить состояние звука:', error);
+    }
   };
 
   const handleHintsToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setHintsEnabled(event.target.checked);
-    // TODO: Здесь будет управление показом подсказок
+    const newHintsEnabled = event.target.checked;
+    setHintsEnabled(newHintsEnabled);
+    
+    try {
+      // Уведомляем о пользовательском взаимодействии
+      audioManager.onUserInteraction();
+      
+      // Воспроизводим звук клика по чекбоксу подсказок
+      audioManager.playSound('ui_click');
+    } catch (error) {
+      console.warn('⚠️ Не удалось разблокировать звуки:', error);
+    }
+    
+    // Сохраняем настройку подсказок в localStorage
+    localStorage.setItem('gameHintsEnabled', JSON.stringify(newHintsEnabled));
+  };
+
+  const handleCloseClick = () => {
+    try {
+      // Уведомляем о пользовательском взаимодействии
+      audioManager.onUserInteraction();
+      
+      // Воспроизводим звук закрытия модального окна (тот же, что и при открытии)
+      audioManager.playSound('open_modal');
+    } catch (error) {
+      console.warn('⚠️ Не удалось разблокировать звуки:', error);
+    }
+    
+    onClose();
   };
 
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
     // Закрываем модалку при клике на overlay, но не на само модальное окно
     if (event.target === event.currentTarget) {
-      onClose();
+      handleCloseClick();
     }
   };
 
@@ -89,7 +173,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <h2 className="settings-modal-title">⚙️ НАСТРОЙКИ</h2>
           <button 
             className="settings-modal-close-btn"
-            onClick={onClose}
+            onClick={handleCloseClick}
             aria-label="Закрыть настройки"
           >
             ✕
@@ -106,6 +190,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <span className="settings-modal-section-title">Громкость звука</span>
             </div>
             
+            {/* Чекбокс отключения звука */}
+            <div className="settings-modal-checkbox-control">
+              <label className="settings-modal-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={isMuted}
+                  onChange={handleMuteToggle}
+                  className="settings-modal-checkbox"
+                  aria-label="Отключить звук"
+                />
+                <span className="settings-modal-checkbox-custom"></span>
+                <span className="settings-modal-checkbox-text">
+                  Отключить все звуки
+                </span>
+              </label>
+            </div>
+            
+            {/* Ползунок громкости (отключен если звук выключен) */}
             <div className="settings-modal-volume-control">
               <input
                 type="range"
@@ -114,9 +216,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 value={soundVolume}
                 onChange={handleVolumeChange}
                 className="settings-modal-slider"
+                disabled={isMuted}
                 aria-label="Громкость звука"
+                style={{ opacity: isMuted ? 0.5 : 1 }}
               />
-              <span className="settings-modal-volume-value">{soundVolume}%</span>
+              <span className="settings-modal-volume-value" style={{ opacity: isMuted ? 0.5 : 1 }}>
+                {soundVolume}%
+              </span>
             </div>
             
             <div className="settings-modal-description">
@@ -158,7 +264,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="settings-modal-actions">
           <button
             className="settings-modal-btn settings-modal-btn-close"
-            onClick={onClose}
+            onClick={handleCloseClick}
             aria-label="Закрыть настройки"
           >
             Закрыть

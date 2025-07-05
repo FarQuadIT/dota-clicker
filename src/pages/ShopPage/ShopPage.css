@@ -30,7 +30,7 @@
     color: white;
     display: flex;
     flex-direction: column;
-    padding: 20px 0px 0px 0px;
+    padding: 40px 0px 0px 0px;
     overflow: hidden;
     position: relative;
     min-height: 0; /* Важно для flex-элементов с overflow */
@@ -144,6 +144,22 @@
     white-space: nowrap;
 }
 
+.characteristics-value {
+    font-weight: bold;
+    text-shadow: none;
+}
+
+.characteristics-icon {
+    width: 20px;
+    height: 20px;
+    margin-left: 4px;
+    vertical-align: middle;
+    object-fit: contain;
+    display: inline-block;
+    position: relative;
+    top: -2px;
+}
+
 /* src/pages/ShopPage/ShopPage.css */
 /* src/pages/ShopPage/ShopPage.css */
 
@@ -168,6 +184,10 @@
     .menu-icon {
         width: 35px;
         height: 35px;
+    }
+    
+    .shop-bottom {
+        padding: 50px 0px 0px 0px;
     }
 }
 
@@ -194,6 +214,18 @@
     
     .characteristics {
         font-size: 16px;
+    }
+    
+    .characteristics-icon {
+        width: 18px;
+        height: 18px;
+        margin-left: 4px;
+        position: relative;
+        top: -2px;
+    }
+    
+    .shop-bottom {
+        padding: 38px 0px 0px 0px;
     }
 }
 /* Обновите стили в src/pages/ShopPage/ShopPage.css */
@@ -383,8 +415,20 @@
         font-size: 15px;
     }
     
+    .characteristics-icon {
+        width: 17px;
+        height: 17px;
+        margin-left: 4px;
+        position: relative;
+        top: -2px;
+    }
+    
     .items-scroll-area {
         padding: 0 8px 15px 8px;
+    }
+    
+    .shop-bottom {
+        padding: 35px 0px 0px 0px;
     }
 }
 
@@ -413,8 +457,20 @@
         font-size: 14px;
     }
     
+    .characteristics-icon {
+        width: 16px;
+        height: 16px;
+        margin-left: 4px;
+        position: relative;
+        top: -2px;
+    }
+    
     .items-scroll-area {
         padding: 0 6px 12px 6px;
+    }
+    
+    .shop-bottom {
+        padding: 32px 0px 0px 0px;
     }
 }
 
@@ -443,8 +499,20 @@
         font-size: 13px;
     }
     
+    .characteristics-icon {
+        width: 15px;
+        height: 15px;
+        margin-left: 4px;
+        position: relative;
+        top: -2px;
+    }
+    
     .items-scroll-area {
         padding: 0 5px 10px 5px;
+    }
+    
+    .shop-bottom {
+        padding: 28px 0px 0px 0px;
     }
 }
 
@@ -473,11 +541,19 @@
         font-size: 12px;
     }
     
+    .characteristics-icon {
+        width: 14px;
+        height: 14px;
+        margin-left: 4px;
+        position: relative;
+        top: -2px;
+    }
+    
     .items-scroll-area {
         padding: 0 4px 8px 4px;
     }
     
     .shop-bottom {
-        padding: 15px 0px 0px 0px; /* Уменьшаем верхний отступ на самых маленьких экранах */
+        padding: 25px 0px 0px 0px; /* Самый маленький отступ для крошечных экранов */
     }
 }

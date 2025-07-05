@@ -19,6 +19,7 @@ import ShopItemCard from '../../features/shop/ShopItemCard/ShopItemCard';
 import './ShopPage.css';
 import { SHOP_CATEGORIES, TEST_USER_ID, TEST_HERO_ID } from '../../shared/constants';
 import { fetchHeroItems, updateItemLevel } from '../../shared/api/apiService';
+import { audioManager } from '../../game/managers/SoundManager';
 
 /**
  * Компонент страницы магазина
@@ -140,6 +141,13 @@ export default function ShopPage() {
    * @param itemIndex - Индекс предмета в массиве данной категории
    */
   const buyItem = useCallback(async (category: string, itemIndex: number) => {
+    // Уведомляем AudioManager о пользовательском взаимодействии (для разблокировки звуков в браузере)
+    try {
+      audioManager.onUserInteraction();
+    } catch (error) {
+      console.warn('⚠️ Не удалось разблокировать звуки:', error);
+    }
+    
     // Проверяем, что компонент все еще смонтирован
     if (!isMountedRef.current) return;
     
@@ -218,6 +226,13 @@ export default function ShopPage() {
       // Отправляем данные на сервер
       await updateItemLevel(payload);
       
+      // Воспроизводим звук успешной покупки
+      try {
+        audioManager.playSound('shop_buy');
+      } catch (error) {
+        console.warn('⚠️ Не удалось воспроизвести звук покупки:', error);
+      }
+      
       // Синхронизируем золото с сервером (с флагом, если обновлен доход)
       await syncGoldWithServer(category === SHOP_CATEGORIES.INCOME);
       
@@ -266,9 +281,26 @@ export default function ShopPage() {
       <div className="shop-top">
         <div className="characteristics">
           <span>
-            {shopCategories[activeCategory]?.name}: {stats 
-              ? Number(stats[activeCategory]).toFixed(2).replace(/\.?0+$/, '')
-              : '0'}
+            {shopCategories[activeCategory]?.name}: {' '}
+            <span 
+              className="characteristics-value"
+              style={{ 
+                color: 'white',
+                filter: shopCategories[activeCategory]?.filter || 'none'
+              }}
+            >
+              {stats 
+                ? Number(stats[activeCategory]).toFixed(2).replace(/\.?0+$/, '')
+                : '0'}
+            </span>
+            {shopCategories[activeCategory] && (
+              <img 
+                src={shopCategories[activeCategory].icon} 
+                alt={shopCategories[activeCategory].name}
+                className="characteristics-icon"
+                style={{ filter: shopCategories[activeCategory].filter }}
+              />
+            )}
           </span>
         </div>
       </div>
@@ -280,7 +312,22 @@ export default function ShopPage() {
             <div
               key={key}
               className={`menu-item ${activeCategory === key ? "active" : ""}`}
-              onClick={() => setActiveCategory(key)}
+              onClick={() => {
+                // Уведомляем AudioManager о пользовательском взаимодействии
+                try {
+                  audioManager.onUserInteraction();
+                } catch (error) {
+                  console.warn('⚠️ Не удалось разблокировать звуки:', error);
+                }
+                
+                // Воспроизводим звук клика по категории
+                try {
+                  audioManager.playSound('ui_click');
+                } catch (error) {
+                  console.warn('⚠️ Не удалось воспроизвести звук клика:', error);
+                }
+                setActiveCategory(key);
+              }}
               title={category.name}
             >
               <img

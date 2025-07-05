@@ -1445,6 +1445,453 @@ class HeroManager {
 
 ---
 
+---
+
+# 🎵 ФАЗА 8: Звуковая система (Audio System)
+
+## 📋 Анализ звуков из старого проекта
+
+### 🎯 **СТРУКТУРА ЗВУКОВ В СТАРОМ ПРОЕКТЕ:**
+
+#### **🦸 Звуки героев** (`/media/game/sounds/heroes/juggernaut/`):
+- **Бег**: `run/Jugger_run.mp3` - воспроизводился в цикле при анимации "run"
+- **Атаки**: `attack/jugger_attack_0.mp3` до `jugger_attack_5.mp3` - случайный выбор при атаке
+
+#### **👹 Звуки крипов** (`/media/game/sounds/creeps/`):
+- **Атаки**:
+  - `attack/attack_start_1.mp3` до `attack_start_8.mp3` - в начале анимации атаки (swingFrame)
+  - `attack/attack_end_1.mp3` до `attack_end_12.mp3` - в конце анимации атаки (attackFrame)
+- **Смерть**: По одному файлу для каждого типа крипа (`death/creep_death_1.mp3` до `death/creep_death_10.mp3`)
+
+#### **🛒 Звуки магазина** (`/media/shop/sounds/`):
+- **Покупка**: `buy.wav` - при покупке предмета
+- **Продажа**: `sell.wav` - при продаже предмета
+
+#### **🎵 UI звуки** (`/media/main/sounds/`):
+- **Клик**: `click.wav` - звук клика по интерфейсу
+
+### 🔍 **КАК ИСПОЛЬЗОВАЛИСЬ ЗВУКИ В СТАРОМ ПРОЕКТЕ:**
+
+#### **Герой (hero.js):**
+```javascript
+// При атаке героя (случайный выбор)
+const attackSounds = [
+  new Audio('/media/game/sounds/heroes/juggernaut/attack/jugger_attack_0.mp3'),
+  new Audio('/media/game/sounds/heroes/juggernaut/attack/jugger_attack_1.mp3'),
+  // ... до jugger_attack_5.mp3
+];
+attackSounds[Math.floor(Math.random() * attackSounds.length)].play();
+
+// При беге (цикл)
+const runSound = new Audio('/media/game/sounds/heroes/juggernaut/run/Jugger_run.mp3');
+runSound.loop = true;
+runSound.play();
+```
+
+#### **Крипы (creep.js):**
+```javascript
+// При начале атаки крипа (swingFrame)
+const attackStartSounds = [
+  new Audio('/media/game/sounds/creeps/attack/attack_start_1.mp3'),
+  // ... до attack_start_8.mp3
+];
+
+// При нанесении урона (attackFrame)
+const attackEndSounds = [
+  new Audio('/media/game/sounds/creeps/attack/attack_end_1.mp3'),
+  // ... до attack_end_12.mp3
+];
+
+// При смерти крипа
+const deathSound = new Audio(`/media/game/sounds/creeps/death/creep_death_${this.creepType}.mp3`);
+deathSound.play();
+```
+
+#### **Магазин (shop.js):**
+```javascript
+// При покупке предмета
+const buySound = new Audio('/media/shop/sounds/buy.wav');
+buySound.play();
+
+// При продаже предмета
+const sellSound = new Audio('/media/shop/sounds/sell.wav');
+sellSound.play();
+```
+
+#### **UI звуки (main.js):**
+```javascript
+// При клике по интерфейсу
+const clickSound = new Audio('/media/main/sounds/click.wav');
+clickSound.play();
+```
+
+---
+
+## 🎯 План интеграции звуков в новую игру
+
+### ✅ Микрошаг 8.1 - Создание системы управления звуками
+- [x] **Задача для AI**: Создать `src/game/managers/AudioManager.ts`
+  - [x] **ЧАСТЬ 1**: Базовая архитектура звуковой системы:
+    ```typescript
+    class AudioManager {
+      private sounds: Map<string, HTMLAudioElement[]> = new Map();
+      private isMuted: boolean = false;
+      private volume: number = 0.5;
+      
+      // Основные методы
+      loadSound(key: string, path: string): void;
+      loadSoundArray(key: string, basePath: string, count: number): void;
+      playSound(key: string, loop?: boolean): void;
+      playRandomSound(key: string): void;
+      stopSound(key: string): void;
+      stopAllSounds(): void;
+      
+      // Управление громкостью
+      setVolume(volume: number): void;
+      setMuted(muted: boolean): void;
+      
+      // Создание звуковых групп
+      createSoundGroup(groupKey: string, soundKeys: string[]): void;
+    }
+    ```
+  - [x] **ЧАСТЬ 2**: Предзагрузка всех звуков:
+    ```typescript
+    // Звуки героя
+    loadSoundArray('hero_attack', '/media/game/sounds/heroes/juggernaut/attack/jugger_attack_', 6);
+    loadSound('hero_run', '/media/game/sounds/heroes/juggernaut/run/Jugger_run.mp3');
+    
+    // Звуки крипов
+    loadSoundArray('creep_attack_start', '/media/game/sounds/creeps/attack/attack_start_', 8);
+    loadSoundArray('creep_attack_end', '/media/game/sounds/creeps/attack/attack_end_', 12);
+    loadSoundArray('creep_death', '/media/game/sounds/creeps/death/creep_death_', 10);
+    
+    // Звуки магазина
+    loadSound('shop_buy', '/media/shop/sounds/buy.wav');
+    loadSound('shop_sell', '/media/shop/sounds/sell.wav');
+    
+    // UI звуки
+    loadSound('ui_click', '/media/main/sounds/click.wav');
+    ```
+  - [x] **ЧАСТЬ 3**: Интеграция с настройками:
+    ```typescript
+    // Сохранение настроек звука в localStorage
+    saveAudioSettings(): void;
+    loadAudioSettings(): void;
+    
+    // Интеграция с SettingsModal
+    getVolume(): number;
+    getMuted(): boolean;
+    ```
+
+#### 🔍 **ПРОВЕРКА МИКРОШАГА 8.1:**
+- [x] Консоль браузера: `audioManager.playSound('hero_attack')` воспроизводит звук атаки
+- [x] `audioManager.playRandomSound('hero_attack')` воспроизводит случайный звук атаки
+- [x] `audioManager.setVolume(0.3)` изменяет громкость всех звуков
+- [x] `audioManager.setMuted(true)` отключает все звуки
+- [x] Настройки звука сохраняются в localStorage
+
+### ✅ Микрошаг 8.2 - Интеграция звуков героя
+- [x] **Задача для AI**: Добавить звуки в `src/game/entities/Hero.ts`
+  - [x] **ЧАСТЬ 1**: Звуки атаки героя:
+    ```typescript
+    // В методе attack() или dealDamage()
+    private playAttackSound(): void {
+      if (this.audioManager) {
+        this.audioManager.playRandomSound('hero_attack');
+      }
+    }
+    ```
+  - [x] **ЧАСТЬ 2**: Звуки бега героя:
+    ```typescript
+    // При запуске анимации бега
+    private startRunSound(): void {
+      if (this.audioManager) {
+        this.audioManager.playSound('hero_run', true); // loop = true
+      }
+    }
+    
+    // При остановке анимации бега
+    private stopRunSound(): void {
+      if (this.audioManager) {
+        this.audioManager.stopSound('hero_run');
+      }
+    }
+    ```
+  - [x] **ЧАСТЬ 3**: Управление состоянием звуков:
+    ```typescript
+    // Интеграция с анимационными состояниями
+    private updateSoundState(): void {
+      const currentAnimation = this.getCurrentAnimation();
+      
+      if (currentAnimation === 'run' && !this.isRunSoundPlaying) {
+        this.startRunSound();
+        this.isRunSoundPlaying = true;
+      } else if (currentAnimation !== 'run' && this.isRunSoundPlaying) {
+        this.stopRunSound();
+        this.isRunSoundPlaying = false;
+      }
+    }
+    ```
+
+#### 🔍 **ПРОВЕРКА МИКРОШАГА 8.2:**
+- [x] В игре `/game`: при атаке героя должен воспроизводиться случайный звук атаки
+- [x] При беге героя должен воспроизводиться цикличный звук бега
+- [x] При остановке героя звук бега должен прекращаться
+- [x] Разные атаки должны воспроизводить разные звуки (из 6 вариантов)
+
+### ✅ Микрошаг 8.3 - Интеграция звуков крипов
+- [x] **Задача для AI**: Добавить звуки в `src/game/entities/Creep.ts`
+  - [x] **ЧАСТЬ 1**: Звуки атаки крипов:
+    ```typescript
+    // При начале анимации атаки (swingFrame)
+    private playAttackStartSound(): void {
+      if (this.audioManager) {
+        this.audioManager.playRandomSound('creep_attack_start');
+      }
+    }
+    
+    // При нанесении урона (attackFrame)
+    private playAttackEndSound(): void {
+      if (this.audioManager) {
+        this.audioManager.playRandomSound('creep_attack_end');
+      }
+    }
+    ```
+  - [x] **ЧАСТЬ 2**: Звуки смерти крипов:
+    ```typescript
+    // При смерти крипа
+    private playDeathSound(): void {
+      if (this.audioManager) {
+        this.audioManager.playRandomSound('creep_death');
+      }
+    }
+    ```
+  - [x] **ЧАСТЬ 3**: Интеграция с анимационной системой:
+    ```typescript
+    // Вызов звуков в определенные кадры анимации
+    private checkAnimationFrameForSound(): void {
+      const currentFrame = this.getCurrentFrame();
+      const animation = this.getCurrentAnimation();
+      
+      if (animation === 'attack') {
+        if (currentFrame === this.swingFrame) {
+          this.playAttackStartSound();
+        } else if (currentFrame === this.attackFrame) {
+          this.playAttackEndSound();
+        }
+      }
+    }
+    ```
+
+#### 🔍 **ПРОВЕРКА МИКРОШАГА 8.3:**
+- [x] В игре `/game`: при атаке крипа должны воспроизводиться звуки в два этапа
+- [x] При начале замаха - звук `attack_start`
+- [x] При нанесении урона - звук `attack_end`
+- [x] При смерти крипа - звук `creep_death`
+- [x] Разные типы крипов должны воспроизводить разные звуки смерти
+
+### ✅ Микрошаг 8.4 - Интеграция звуков магазина и UI
+- [x] **Задача для AI**: Добавить звуки в магазин и UI элементы
+  - [x] **ЧАСТЬ 1**: Звуки магазина в `src/pages/ShopPage/ShopPage.tsx`:
+    ```typescript
+    // При покупке предмета
+    const handleBuyItem = (item: ShopItem) => {
+      // ... логика покупки
+      if (purchaseSuccessful) {
+        audioManager.playSound('shop_buy');
+      }
+    };
+    
+    // При продаже предмета (если есть)
+    const handleSellItem = (item: ShopItem) => {
+      // ... логика продажи
+      audioManager.playSound('shop_sell');
+    };
+    ```
+  - [x] **ЧАСТЬ 2**: Звуки UI элементов:
+    ```typescript
+    // В компонентах UI (Header, Footer, кнопки навигации)
+    const handleButtonClick = () => {
+      audioManager.playSound('ui_click');
+      // ... логика кнопки
+    };
+    ```
+  - [x] **ЧАСТЬ 3**: Интеграция с навигацией:
+    ```typescript
+    // В App.tsx или компонентах навигации
+    const handleNavigation = (targetRoute: string) => {
+      audioManager.playSound('ui_click');
+      // ... логика навигации
+    };
+    ```
+
+#### 🔍 **ПРОВЕРКА МИКРОШАГА 8.4:**
+- [x] В магазине `/shop` при покупке предмета должен воспроизводиться звук покупки
+- [x] При клике по кнопкам навигации должен воспроизводиться звук клика
+- [x] При переходе между страницами должен воспроизводиться звук перехода
+- [x] Все UI элементы должны иметь соответствующие звуки
+
+### ✅ Микрошаг 8.5 - Интеграция с настройками игры
+- [x] **Задача для AI**: Добавить управление звуком в SettingsModal
+  - [x] **ЧАСТЬ 1**: Обновление `src/features/ui/SettingsModal/SettingsModal.tsx`:
+    ```typescript
+    // Состояние звука
+    const [volume, setVolume] = useState(0.5);
+    const [isMuted, setIsMuted] = useState(false);
+    
+    // Обработчики изменений
+    const handleVolumeChange = (newVolume: number) => {
+      setVolume(newVolume);
+      audioManager.setVolume(newVolume);
+    };
+    
+    const handleMuteToggle = (muted: boolean) => {
+      setIsMuted(muted);
+      audioManager.setMuted(muted);
+    };
+    ```
+  - [x] **ЧАСТЬ 2**: UI элементы в модальном окне:
+    ```typescript
+    // Ползунок громкости
+    <input
+      type="range"
+      min="0"
+      max="1"
+      step="0.1"
+      value={volume}
+      onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+    />
+    
+    // Чекбокс отключения звука
+    <input
+      type="checkbox"
+      checked={isMuted}
+      onChange={(e) => handleMuteToggle(e.target.checked)}
+    />
+    ```
+  - [x] **ЧАСТЬ 3**: Сохранение настроек:
+    ```typescript
+    // Сохранение в localStorage при изменении
+    useEffect(() => {
+      audioManager.saveAudioSettings();
+    }, [volume, isMuted]);
+    ```
+
+#### 🔍 **ПРОВЕРКА МИКРОШАГА 8.5:**
+- [x] В настройках должен быть ползунок громкости (0-100%)
+- [x] В настройках должен быть чекбокс "Отключить звук"
+- [x] Изменение громкости должно сразу влиять на все звуки в игре
+- [x] Отключение звука должно останавливать все звуки
+- [x] Настройки должны сохраняться между сессиями
+
+### ✅ Микрошаг 8.6 - Оптимизация и полировка звуковой системы
+- [x] **Задача для AI**: Оптимизировать и отполировать звуковую систему
+  - [x] **ЧАСТЬ 1**: Оптимизация загрузки звуков:
+    ```typescript
+    // Ленивая загрузка звуков
+    private loadSoundOnDemand(key: string): Promise<HTMLAudioElement> {
+      return new Promise((resolve) => {
+        const audio = new Audio();
+        audio.addEventListener('canplaythrough', () => resolve(audio));
+        audio.src = this.soundPaths[key];
+      });
+    }
+    
+    // Предзагрузка только критичных звуков
+    preloadCriticalSounds(): void {
+      const criticalSounds = ['hero_attack', 'creep_attack_start', 'creep_death'];
+      criticalSounds.forEach(key => this.loadSound(key));
+    }
+    ```
+  - [x] **ЧАСТЬ 2**: Управление одновременными звуками:
+    ```typescript
+    // Лимит одновременных звуков
+    private maxSimultaneousSounds: number = 8;
+    private activeSounds: HTMLAudioElement[] = [];
+    
+    // Очистка завершенных звуков
+    private cleanupFinishedSounds(): void {
+      this.activeSounds = this.activeSounds.filter(sound => !sound.ended);
+    }
+    ```
+  - [x] **ЧАСТЬ 3**: Обработка ошибок и fallback:
+    ```typescript
+    // Обработка ошибок загрузки
+    private handleSoundLoadError(key: string, error: Error): void {
+      console.warn(`Failed to load sound: ${key}`, error);
+      this.sounds.delete(key); // Удаляем неработающий звук
+    }
+    
+    // Проверка поддержки audio
+    private isAudioSupported(): boolean {
+      return typeof Audio !== 'undefined';
+    }
+    ```
+
+#### 🔍 **ПРОВЕРКА МИКРОШАГА 8.6:**
+- [x] Звуки загружаются без ошибок в консоли
+- [x] Не более 8 звуков воспроизводятся одновременно
+- [x] Завершенные звуки корректно очищаются из памяти
+- [x] Система работает даже если некоторые звуки не загрузились
+- [x] Производительность остается стабильной при длительной игре
+
+---
+
+## 🔍 **ПРОВЕРКА РЕЗУЛЬТАТА ФАЗЫ 8:**
+
+### 🎵 **Полное тестирование звуковой системы:**
+
+#### **Игра `/game`:**
+- [x] **Звуки героя**: При атаке - случайный звук атаки (6 вариантов)
+- [x] **Звуки героя**: При беге - цикличный звук бега
+- [x] **Звуки крипов**: При начале атаки - звук замаха
+- [x] **Звуки крипов**: При нанесении урона - звук удара
+- [x] **Звуки крипов**: При смерти - звук смерти
+- [x] **Разнообразие**: Разные типы крипов - разные звуки
+
+#### **Магазин `/shop`:**
+- [x] **Покупка**: При покупке предмета - звук покупки
+- [x] **Продажа**: При продаже предмета - звук продажи (если есть)
+
+#### **UI элементы:**
+- [x] **Звуки навигации**: При клике по кнопкам навигации - звук клика
+- [x] **Звуки переходов**: При переходе между страницами - звук перехода
+
+#### **Настройки:**
+- [x] **Ползунок громкости**: Изменение громкости влияет на все звуки
+- [x] **Отключение звука**: Чекбокс полностью отключает все звуки
+- [x] **Сохранение**: Настройки сохраняются между сессиями
+
+#### **Производительность:**
+- [x] **Нет ошибок**: Консоль браузера без ошибок загрузки звуков
+- [x] **Плавность**: Игра работает плавно даже с множеством звуков
+- [x] **Память**: Нет утечек памяти при длительной игре
+
+### 🎯 **Техническая проверка:**
+- [x] `audioManager.playSound('hero_attack')` - работает
+- [x] `audioManager.setVolume(0.3)` - изменяет громкость
+- [x] `audioManager.setMuted(true)` - отключает все звуки
+- [x] localStorage содержит настройки звука
+- [x] Все звуковые файлы загружаются корректно
+
+---
+
+
+## ✅ **ЗАКЛЮЧЕНИЕ ФАЗЫ 8:**
+
+**Цель Фазы 8:** Создать полноценную звуковую систему, которая улучшает игровой опыт и делает игру более живой и захватывающей.
+
+**Ключевые достижения:**
+- ✅ **Полная звуковая система**: Управление загрузкой, воспроизведением и настройками
+- ✅ **Интеграция со всеми элементами**: Герой, крипы, магазин, UI элементы
+- ✅ **Пользовательские настройки**: Управление громкостью и отключение звука
+- ✅ **Оптимизация**: Эффективная загрузка и управление памятью
+- ✅ **Совместимость**: Работа с существующими системами игры
+
+**Результат:** Игра с качественным звуковым оформлением, которое соответствует оригинальному проекту и улучшает пользовательский опыт.
+
+---
+
 ## ✨ ИТОГО: Новый план готов к реализации!
 
 **Следующий шаг**: Начинаем Фазу 3, Микрошаг 3.1 - создание HeroLevelSystem

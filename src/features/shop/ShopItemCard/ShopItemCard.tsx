@@ -21,6 +21,7 @@ import type { ShopItem } from '../../../shared/types';
 import { useState, useCallback } from 'react';
 import React from 'react';
 import { shopCategories } from '../../../shared/constants/shopConfig';
+import { audioManager } from '../../../game/managers/SoundManager';
 
 /**
  * Свойства компонента карточки предмета
@@ -114,6 +115,27 @@ function ShopItemCard({
   }, []);
 
   /**
+   * Обработчик клика по кнопке покупки
+   * Проверяет доступность покупки и воспроизводит соответствующий звук
+   */
+  const handleBuyClick = useCallback(() => {
+    try {
+      // Уведомляем о пользовательском взаимодействии
+      audioManager.onUserInteraction();
+      
+      if (isButtonActive) {
+        // Если покупка доступна - выполняем покупку
+        onBuy();
+      } else {
+        // Если покупка недоступна - воспроизводим звук отказа
+        audioManager.playSound('purchase_failed');
+      }
+    } catch (error) {
+      console.warn('⚠️ Ошибка при обработке клика по кнопке покупки:', error);
+    }
+  }, [isButtonActive, onBuy]);
+
+  /**
    * Обработчик ошибки загрузки изображения
    * Заменяет несуществующее изображение на заглушку
    */
@@ -167,8 +189,7 @@ function ShopItemCard({
       {/* Кнопка покупки предмета с ценой */}
       <button 
         className={`item-buy-button ${!isButtonActive ? 'disabled' : ''} ${isLargePrice ? 'large-price' : ''} ${isPressing ? 'pressing' : ''}`}
-        onClick={isButtonActive ? onBuy : undefined}
-        disabled={!isButtonActive}
+        onClick={handleBuyClick}
         aria-label={`Купить ${item.title} за ${item.currentPrice} золота`}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}

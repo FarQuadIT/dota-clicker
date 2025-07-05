@@ -5,6 +5,7 @@ import { EntityState } from '../core/GameStates';
 import { CreepHealthBar } from '../components/CreepHealthBar';
 import { CREEP_TYPES } from '../config/creepsConfig';
 import { Hero } from './Hero';
+import { audioManager } from '../managers/SoundManager';
 
 // Тип callback функции для анимации золота
 type GoldAnimationCallback = (x: number, y: number, goldAmount: number) => void;
@@ -224,6 +225,9 @@ export class Creep extends AnimatedSprite {
     
     this.isDead = true;
     
+    // Воспроизводим звук смерти крипа
+    this.playDeathSound();
+    
     // Сохраняем текущую позицию перед переключением анимации
     const currentX = this.x;
     const currentY = this.y;
@@ -278,6 +282,9 @@ export class Creep extends AnimatedSprite {
     if (hero && this.currentState === EntityState.ATTACKING) {
       this.checkAttackFrame(hero);
     }
+
+    // Проверяем кадры анимации для воспроизведения звуков
+    this.checkAnimationFrameForSound();
 
     // Обновляем полоску здоровья каждый кадр
     this.updateHealthBar();
@@ -471,6 +478,78 @@ export class Creep extends AnimatedSprite {
 
   // Флаг для отслеживания нанесения урона в атаке (как у героя)
   private hasDealtDamageToHero: boolean = false;
+
+  // ==================================================================================
+  // ЗВУКОВАЯ СИСТЕМА (Микрошаг 8.3)
+  // ==================================================================================
+
+  /**
+   * Воспроизведение звука начала атаки крипа
+   */
+  private playAttackStartSound(): void {
+    try {
+      // ИСПРАВЛЕНИЕ: Проверяем состояние игры перед воспроизведением звука
+      if (audioManager.isGamePausedState()) return;
+      
+      audioManager.playRandomSound('creep_attack_start');
+    } catch (error) {
+      console.warn('⚠️ Ошибка воспроизведения звука начала атаки крипа:', error);
+    }
+  }
+
+  /**
+   * Воспроизведение звука нанесения урона крипом
+   */
+  private playAttackEndSound(): void {
+    try {
+      // ИСПРАВЛЕНИЕ: Проверяем состояние игры перед воспроизведением звука
+      if (audioManager.isGamePausedState()) return;
+      
+      audioManager.playRandomSound('creep_attack_end');
+    } catch (error) {
+      console.warn('⚠️ Ошибка воспроизведения звука нанесения урона крипом:', error);
+    }
+  }
+
+  /**
+   * Воспроизведение звука смерти крипа по типу
+   */
+  private playDeathSound(): void {
+    try {
+      // ИСПРАВЛЕНИЕ: Проверяем состояние игры перед воспроизведением звука
+      if (audioManager.isGamePausedState()) return;
+      
+      audioManager.playCreepDeathSound(this.creepType);
+    } catch (error) {
+      console.warn('⚠️ Ошибка воспроизведения звука смерти крипа:', error);
+    }
+  }
+
+  /**
+   * Проверка кадра анимации для воспроизведения звуков
+   */
+  private checkAnimationFrameForSound(): void {
+    if (this.currentState === EntityState.ATTACKING) {
+      const currentFrame = this.currentFrame;
+      const totalFrames = this.totalFrames;
+      
+      // Звук начала атаки (swingFrame) - в начале анимации (примерно 25% от общей длительности)
+      const swingFrame = Math.floor(totalFrames * 0.25);
+      
+      // Звук нанесения урона (attackFrame) - в середине анимации (примерно 50% от общей длительности)
+      const attackFrame = Math.floor(totalFrames * 0.5);
+      
+      // Воспроизводим звук начала атаки
+      if (currentFrame === swingFrame) {
+        this.playAttackStartSound();
+      }
+      
+      // Воспроизводим звук нанесения урона
+      if (currentFrame === attackFrame) {
+        this.playAttackEndSound();
+      }
+    }
+  }
 
   /**
    * Получение типа крипа для конфигурации

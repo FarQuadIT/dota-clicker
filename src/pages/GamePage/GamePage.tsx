@@ -8,6 +8,7 @@ import { useGame } from '../../contexts/GameContext';
 import { useHeroStore } from '../../contexts/heroStore';
 import GameOverModal from '../../features/ui/GameOverModal';
 import { heroLevelSystem } from '../../game/systems/HeroLevelSystem';
+import { audioManager } from '../../game/managers/SoundManager';
 
 /**
 * Компонент игровой страницы с полноэкранным Pixi.js канвасом
@@ -419,14 +420,20 @@ export default function GamePage() {
        
        // Добавляем героя в игровой цикл для обновления анимаций
        app.ticker.add((time) => {
-         hero.update(time.deltaMS);
+         // ИСПРАВЛЕНИЕ: Проверяем что игра запущена перед обновлением героя
+         if (gameController.isRunning()) {
+           hero.update(time.deltaMS);
+         }
        });
        
 
        
        // Добавляем контроллер в игровой цикл
        app.ticker.add((time) => {
-         gameController.update(time.deltaMS);
+         // ИСПРАВЛЕНИЕ: Проверяем что игра запущена перед обновлением контроллера
+         if (gameController.isRunning()) {
+           gameController.update(time.deltaMS);
+         }
        });
        
        // Сохраняем ссылки для обработки resize
@@ -472,7 +479,12 @@ export default function GamePage() {
      // Отмечаем что компонент размонтирован
      isMounted = false;
      
-     
+     // ИСПРАВЛЕНИЕ: Сбрасываем состояние паузы при выходе из игры
+     try {
+       audioManager.resetGamePause();
+     } catch (error) {
+       console.warn('Ошибка при сбросе состояния паузы:', error);
+     }
      
      if (pixiApp) {
        try {
@@ -592,6 +604,13 @@ export default function GamePage() {
     // Закрываем модалку
     setIsGameOver(false);
     setSessionGold(0);
+    
+    // ИСПРАВЛЕНИЕ: Сбрасываем состояние паузы при выходе из игры
+    try {
+      audioManager.resetGamePause();
+    } catch (error) {
+      console.warn('Ошибка при сбросе состояния паузы:', error);
+    }
     
     // Переходим на главную страницу
     navigate('/main');

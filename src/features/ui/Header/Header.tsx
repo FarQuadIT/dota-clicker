@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useGold } from '../../../contexts/GoldContext'; // Импортируем хук для золота
 import { useGame } from '../../../contexts/GameContext'; // Импортируем хук для игры
 import SettingsModal from '../SettingsModal'; // Импортируем модальное окно настроек
+import { audioManager } from '../../../game/managers/SoundManager'; // Импортируем звуковой менеджер
 import './Header.css';
 
 /**
@@ -40,6 +41,20 @@ export default function Header() {
   
   // Обработчик для открытия настроек
   const openSettings = useCallback(() => {
+    // Уведомляем AudioManager о пользовательском взаимодействии
+    try {
+      audioManager.onUserInteraction();
+    } catch (error) {
+      console.warn('⚠️ Не удалось разблокировать звуки:', error);
+    }
+    
+    // Воспроизводим звук открытия модального окна
+    try {
+      audioManager.playSound('open_modal');
+    } catch (error) {
+      console.warn('⚠️ Не удалось воспроизвести звук открытия модального окна:', error);
+    }
+    
     setIsSettingsOpen(true);
     
     // При открытии настроек - ставим игру на паузу

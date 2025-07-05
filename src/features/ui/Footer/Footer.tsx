@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useGame } from '../../../contexts/GameContext';
 import NavigationConfirmModal from '../NavigationConfirmModal';
+import { audioManager } from '../../../game/managers/SoundManager';
 import './Footer.css';
 
 export default function Footer() {
@@ -40,6 +41,19 @@ export default function Footer() {
 
   // Обработчик клика по таб-меню
   const handleTabClick = (item: typeof menuItems[0]) => {
+    // Уведомляем AudioManager о пользовательском взаимодействии
+    try {
+      audioManager.onUserInteraction();
+    } catch (error) {
+      console.warn('⚠️ Не удалось разблокировать звуки:', error);
+    }
+    
+    // Воспроизводим звук клика по навигации
+    try {
+      audioManager.playSound('ui_click');
+    } catch (error) {
+      console.warn('⚠️ Не удалось воспроизвести звук клика:', error);
+    }
 
     
     // Если пользователь уже на этой странице, ничего не делаем
@@ -116,7 +130,14 @@ export default function Footer() {
         gameController.stopGame();
       }
       
-      // 4. Деактивируем игру в контексте (чтобы при возврате сработал перезапуск)
+      // 4. ИСПРАВЛЕНИЕ: Сбрасываем состояние паузы при выходе из игры
+      try {
+        audioManager.resetGamePause();
+      } catch (error) {
+        console.warn('⚠️ Ошибка при сбросе состояния паузы:', error);
+      }
+      
+      // 5. Деактивируем игру в контексте (чтобы при возврате сработал перезапуск)
       setGameActive(false);
       
       

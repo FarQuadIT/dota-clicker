@@ -24,6 +24,7 @@ import { LevelDisplaySystem } from '../components/LevelDisplaySystem';
 import { TEST_USER_ID, TEST_HERO_ID, API_BASE_URL } from '../../shared/constants';
 import { heroLevelSystem } from '../systems/HeroLevelSystem';
 import { getLevelConfig, getAvailableCreepsForLevel, getBossForLevel } from '../config/levelsConfig';
+import { audioManager } from '../managers/SoundManager';
 
 /**
  * Конфигурация игры
@@ -146,6 +147,27 @@ export class GameController {
     
     // Показываем значок уровня при старте игры
     this.showLevelIcon();
+    
+    // Инициализируем звуковую систему
+    this.initializeAudioSystem();
+  }
+  
+  /**
+   * Инициализация звуковой системы
+   */
+  private async initializeAudioSystem(): Promise<void> {
+    try {
+      // Проверяем, не инициализирована ли уже звуковая система
+      if (audioManager.isReady()) {
+        console.log('🎵 Звуковая система уже инициализирована, пропускаем повторную инициализацию');
+        return;
+      }
+      
+      await audioManager.initialize();
+      console.log('🎵 Звуковая система инициализирована в GameController');
+    } catch (error) {
+      console.error('❌ Ошибка инициализации звуковой системы в GameController:', error);
+    }
   }
   
   /**
@@ -220,6 +242,12 @@ export class GameController {
    * Обработка кликов по канвасу - атака героя
    */
   private onCanvasClick(): void {
+    // Уведомляем героя о пользовательском взаимодействии (для разблокировки звуков в браузере)
+    this.hero.onUserInteraction();
+    
+    // Уведомляем AudioManager о пользовательском взаимодействии (для разблокировки звуков в браузере)
+    audioManager.onUserInteraction();
+    
     // СИСТЕМА ПАУЗЫ: Блокируем клики если игра на паузе
     if (!this.isGameRunning || this.isPausedByUser) {
       return;
@@ -864,7 +892,8 @@ export class GameController {
       (this.app as any).setBackgroundMoving(false);
     }
     
-    // TODO: Остановить звуки (когда будет система звуков)
+    // Останавливаем игровые звуки
+    audioManager.setGamePaused(true);
   }
   
   /**
@@ -891,7 +920,8 @@ export class GameController {
       (this.app as any).setBackgroundMoving(shouldMoveBackground);
     }
     
-    // TODO: Возобновить звуки (когда будет система звуков)
+    // Возобновляем игровые звуки
+    audioManager.setGamePaused(false);
   }
   
   /**
@@ -927,6 +957,15 @@ export class GameController {
     if ((this.app as any).setBackgroundMoving) {
       (this.app as any).setBackgroundMoving(false);
     }
+    
+    // ИСПРАВЛЕНИЕ: Полная остановка всех звуков
+    // Останавливаем все звуки принудительно
+    audioManager.stopAllSounds();
+    
+    // Блокируем игровые звуки
+    audioManager.setGamePaused(true);
+    
+    console.log('🎮 Игра полностью остановлена');
   }
   
   /**
@@ -973,7 +1012,8 @@ export class GameController {
     // Запускаем игровой цикл заново
     this.startGameLoop();
     
-
+    // Возобновляем игровые звуки
+    audioManager.setGamePaused(false);
   }
   
   // =======================================
@@ -1084,6 +1124,9 @@ export class GameController {
     if ((this.app as any).setBackgroundMoving) {
       (this.app as any).setBackgroundMoving(false);
     }
+    
+    // Останавливаем все игровые звуки при смерти героя
+    audioManager.setGamePaused(true);
     
     // Уведомляем о Game Over через callback (устанавливается из GamePage)
     if (this.onGameOverCallback) {

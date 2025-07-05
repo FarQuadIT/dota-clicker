@@ -15,6 +15,7 @@ import { Application } from 'pixi.js';
 import { GameEntity } from '../core/GameEntity';
 import { EntityState } from '../core/GameStates';
 import { assetsManager } from '../managers/AssetsManager';
+import { audioManager } from '../managers/SoundManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { HeroHealthBar } from '../components/HeroHealthBar';
 import { useHeroStore } from '../../contexts/heroStore';
@@ -93,6 +94,11 @@ export class Hero extends GameEntity {
   
   // Полоски здоровья и маны (добавляются на сцену через GameController)
   private healthBar!: HeroHealthBar;
+  
+  // Звуковая система
+  private isRunSoundPlaying: boolean = false;
+  private shouldPlayRunSound: boolean = false; // Флаг для отложенного запуска звука бега
+  private hasUserInteracted: boolean = false; // Флаг пользовательского взаимодействия
 
   /**
    * Конструктор героя
@@ -153,6 +159,118 @@ export class Hero extends GameEntity {
     
     // НЕ добавляем как дочерний элемент - это будет делать GameController
     // чтобы полоски были поверх всех остальных элементов
+  }
+
+  // ==================================================================================
+  // ЗВУКОВАЯ СИСТЕМА
+  // ==================================================================================
+
+  /**
+   * Воспроизведение звука атаки героя (случайный из 6 вариантов)
+   */
+  private playAttackSound(): void {
+    try {
+      // Дополнительная проверка: не воспроизводим звуки если игра на паузе
+      if (audioManager.isGamePausedState()) return;
+      
+      // Проверяем готовность AudioManager
+      if (!audioManager.isReady()) {
+        console.log('🎵 AudioManager не готов, пропускаем звук атаки');
+        return;
+      }
+      
+      audioManager.playRandomSound('hero_attack');
+    } catch (error) {
+      console.warn('⚠️ Ошибка воспроизведения звука атаки героя:', error);
+    }
+  }
+
+  /**
+   * Запуск звука бега героя (цикличный)
+   */
+  private startRunSound(): void {
+    if (this.isRunSoundPlaying) return;
+    
+    try {
+      // Дополнительная проверка: не воспроизводим звуки если игра на паузе
+      if (audioManager.isGamePausedState()) return;
+      
+      // Проверяем готовность AudioManager
+      if (!audioManager.isReady()) {
+        console.log('🎵 AudioManager не готов, откладываем звук бега');
+        this.shouldPlayRunSound = true; // Запомним что нужно запустить звук
+        return;
+      }
+      
+      // Пытаемся воспроизвести звук
+      audioManager.playSound('hero_run', true); // loop = true
+      this.isRunSoundPlaying = true;
+      this.shouldPlayRunSound = false; // Сбрасываем флаг отложенного запуска
+      
+      console.log('🎵 Звук бега героя запущен');
+    } catch (error) {
+      console.warn('⚠️ Ошибка запуска звука бега героя:', error);
+      this.shouldPlayRunSound = true; // Попробуем снова позже
+    }
+  }
+
+  /**
+   * Остановка звука бега героя
+   */
+  private stopRunSound(): void {
+    if (!this.isRunSoundPlaying) return;
+    
+    try {
+      audioManager.stopSound('hero_run');
+      this.isRunSoundPlaying = false;
+    } catch (error) {
+      console.warn('⚠️ Ошибка остановки звука бега героя:', error);
+    }
+  }
+
+  /**
+   * Обновление состояния звуков в зависимости от анимации
+   */
+  private updateSoundState(): void {
+    const currentAnimation = this.getCurrentAnimationName();
+    
+    // Управление звуком бега
+    if (currentAnimation === 'run' && !this.isRunSoundPlaying) {
+      this.startRunSound();
+    } else if (currentAnimation !== 'run' && this.isRunSoundPlaying) {
+      this.stopRunSound();
+      this.shouldPlayRunSound = false; // Сбрасываем флаг если останавливаем звук
+    }
+    
+    // Retry механизм: пытаемся запустить отложенный звук бега
+    if (this.shouldPlayRunSound && !this.isRunSoundPlaying && currentAnimation === 'run') {
+      if (audioManager.isReady() && !audioManager.isGamePausedState()) {
+        console.log('🎵 Повторная попытка запуска звука бега');
+        this.startRunSound();
+      }
+    }
+  }
+
+  /**
+   * Обработчик первого пользовательского взаимодействия
+   * Вызывается при первом клике/тапе для разблокировки звуков
+   */
+  public onUserInteraction(): void {
+    if (this.hasUserInteracted) return;
+    
+    this.hasUserInteracted = true;
+    console.log('🎵 Первое пользовательское взаимодействие - разблокируем звуки');
+    
+    // Уведомляем AudioManager о взаимодействии
+    audioManager.onUserInteraction();
+    
+    // Если у нас есть отложенный звук бега, пытаемся его запустить
+    if (this.shouldPlayRunSound && !this.isRunSoundPlaying) {
+      const currentAnimation = this.getCurrentAnimationName();
+      if (currentAnimation === 'run') {
+        this.startRunSound();
+      }
+    }
   }
 
   /**
@@ -223,6 +341,9 @@ export class Hero extends GameEntity {
     
     // Уведомляем о том, что герой остановился
     this.notifyMovement(false);
+    
+    // Звуковые эффекты: останавливаем звук бега
+    this.updateSoundState();
   }
 
   /**
@@ -236,6 +357,9 @@ export class Hero extends GameEntity {
     
     // Уведомляем о том, что герой начал двигаться
     this.notifyMovement(true);
+    
+    // Звуковые эффекты: запускаем звук бега
+    this.updateSoundState();
   }
 
   /**
@@ -253,7 +377,10 @@ export class Hero extends GameEntity {
     
     // Во время атаки герой не двигается
     this.notifyMovement(false);
-
+    
+    // Звуковые эффекты: воспроизводим звук атаки и обновляем состояние звуков
+    this.playAttackSound();
+    this.updateSoundState();
   }
 
   // ==================================================================================
@@ -406,6 +533,9 @@ export class Hero extends GameEntity {
     
     // Обновляем полоски здоровья и маны
     this.updateHealthBars(deltaTime);
+    
+    // Обновляем состояние звуков
+    this.updateSoundState();
   }
   
   /**
@@ -440,6 +570,9 @@ export class Hero extends GameEntity {
   public pauseAnimations(): void {
     // Используем метод из базового класса AnimatedSprite
     this.pauseAnimation();
+    
+    // Останавливаем все звуки героя
+    this.stopRunSound();
   }
   
   /**
@@ -608,6 +741,9 @@ export class Hero extends GameEntity {
       clearTimeout(this.poisonTimer);
       this.poisonTimer = 0;
     }
+    
+    // Останавливаем все звуки героя
+    this.stopRunSound();
     
     // Очищаем полоски здоровья
     if (this.healthBar) {

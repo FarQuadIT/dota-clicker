@@ -13,6 +13,7 @@ import { GameProvider } from './contexts/GameContext';
 import type { HeroStats } from './shared/types';
 import { TEST_USER_ID, TEST_HERO_ID } from './shared/constants';
 import { fetchHeroStats } from './shared/api/apiService';
+import { audioManager } from './game/managers/SoundManager';
 
 /**
  * Компонент содержимого приложения
@@ -30,6 +31,32 @@ function AppContent() {
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+    };
+  }, []);
+
+  // Инициализация звуковой системы при первой загрузке приложения
+  useEffect(() => {
+    let isCancelled = false;
+    
+    const initializeAudioSystem = async () => {
+      try {
+        console.log('🎵 Инициализация звуковой системы из App.tsx...');
+        await audioManager.initialize();
+        
+        if (!isCancelled) {
+          console.log('✅ Звуковая система инициализирована глобально');
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.warn('⚠️ Ошибка инициализации звуковой системы:', error);
+        }
+      }
+    };
+
+    initializeAudioSystem();
+    
+    return () => {
+      isCancelled = true;
     };
   }, []);
 
