@@ -296,12 +296,5 @@ if (typeof window !== 'undefined') {
   (window as any).isCreepAvailableOnLevel = isCreepAvailableOnLevel;
   (window as any).getAllLevels = getAllLevels;
   
-  console.log('🎯 Система уровней загружена! Доступные функции:');
-  console.log('- getLevelConfig(level)');
-  console.log('- getAvailableCreepsForLevel(level)'); 
-  console.log('- getBossForLevel(level)');
-  console.log('- getNewCreepIntroduced(level)');
-  console.log('- getLevelDescription(level)');
-  console.log('- isCreepAvailableOnLevel(creepType, level)');
-  console.log('- getAllLevels()');
+  
 } 

@@ -18,13 +18,13 @@ export const shopCategories: Record<string, ShopCategory> = {
     name: "Максимальное здоровье",
     icon: "/media/shop/main/health.png",
     color: "#77d87a",
-    filter: "invert(63%) sepia(26%) saturate(5174%) hue-rotate(78deg) brightness(100%) contrast(100%)",
+    filter: "invert(59%) sepia(91%) saturate(799%) hue-rotate(58deg) brightness(109%) contrast(120%)",
   },
   "health-regen": {
     name: "Восстановление здоровья",
     icon: "/media/shop/main/healing.png",
     color: "#bc9520",
-    filter: "invert(50%) sepia(20%) saturate(400%) hue-rotate(30deg) brightness(90%) contrast(85%)",
+    filter: "invert(75%) sepia(91%) saturate(1544%) hue-rotate(82deg) brightness(97%) contrast(108%)",
   },
   "max-mana": {
     name: "Максимальная мана",
@@ -59,7 +59,7 @@ export const shopCategories: Record<string, ShopCategory> = {
   "income": {
     name: "Доход",
     icon: "/media/shop/main/gold.png",
-    color: "#d6de00",
-    filter: "invert(80%) sepia(40%) saturate(500%) hue-rotate(60deg) brightness(95%) contrast(105%)",
+    color: "#9eff00",
+    filter: "invert(45%) sepia(42%) saturate(2939%) hue-rotate(1deg) brightness(105%) contrast(101%)",
   },
 } as const;

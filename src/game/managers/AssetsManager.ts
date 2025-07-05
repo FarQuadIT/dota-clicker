@@ -688,7 +688,7 @@ class AssetsManager {
    * @param levelManifest - Объект с путями к значкам уровней
    */
   private async loadLevelAssets(levelManifest: any): Promise<void> {
-    console.log(`🎯 Загружаем значки уровней...`);
+
     
     // Инициализируем объект для хранения значков уровней
     this.assets.levels = {} as GameAssets['levels'];
@@ -705,7 +705,7 @@ class AssetsManager {
         
         this.incrementProgress();
         
-        console.log(`✅ Загружен значок уровня: ${levelName}`);
+
         
       } catch (error) {
         console.error(`❌ Ошибка загрузки значка уровня ${path}:`, error);
@@ -721,7 +721,7 @@ class AssetsManager {
    * @param heroIconManifest - Объект с путями к иконкам героев
    */
   private async loadHeroIconAssets(heroIconManifest: any): Promise<void> {
-    console.log(`🏆 Загружаем иконки героев...`);
+
     
     // Инициализируем объект для хранения иконок героев
     this.assets.heroIcons = {} as GameAssets['heroIcons'];
@@ -738,7 +738,7 @@ class AssetsManager {
         
         this.incrementProgress();
         
-        console.log(`✅ Загружена иконка героя: ${heroName}`);
+
         
       } catch (error) {
         console.error(`❌ Ошибка загрузки иконки героя ${path}:`, error);
@@ -793,7 +793,7 @@ class AssetsManager {
       return heroAssets[animation];
     }
     
-    console.warn(`⚠️ Кадры анимации героя не найдены: ${heroName}.${animation}`);
+
     return [Texture.WHITE]; // Fallback - массив с одной белой текстурой
   }
 
@@ -818,7 +818,7 @@ class AssetsManager {
       return creepAssets[animation];
     }
     
-    console.warn(`⚠️ Кадры анимации врага не найдены: ${creepName}.${animation}`);
+
     return [Texture.WHITE];
   }
 
@@ -842,7 +842,7 @@ class AssetsManager {
       return bgTexture;
     }
     
-    console.warn(`⚠️ Фоновая текстура не найдена: ${bgName}`);
+
     return Texture.WHITE;
   }
 
@@ -858,7 +858,7 @@ class AssetsManager {
       return uiTexture;
     }
     
-    console.warn(`⚠️ UI текстура не найдена: ${uiName}`);
+
     return Texture.WHITE;
   }
 
@@ -874,7 +874,7 @@ class AssetsManager {
       return levelTexture;
     }
     
-    console.warn(`⚠️ Значок уровня не найден: ${levelName}`);
+
     return Texture.WHITE;
   }
 
@@ -890,7 +890,7 @@ class AssetsManager {
       return heroIconTexture;
     }
     
-    console.warn(`⚠️ Иконка героя не найдена: ${heroName}`);
+
     return Texture.WHITE;
   }
 

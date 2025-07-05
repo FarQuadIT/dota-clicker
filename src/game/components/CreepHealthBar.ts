@@ -86,7 +86,7 @@ export class CreepHealthBar extends Container {
     this.healthText = new Text({
       text: '',
       style: {
-        fontFamily: 'Arial',
+        fontFamily: 'Doka',
         fontSize: this.currentFontSize,
         fill: '#ffffff',
         align: 'center'
@@ -157,7 +157,7 @@ export class CreepHealthBar extends Container {
       
       // Обновляем стиль текста
       this.healthText.style = {
-        fontFamily: 'Arial',
+        fontFamily: 'Doka',
         fontSize: this.currentFontSize,
         fill: '#ffffff',
         align: 'center'

@@ -7,7 +7,7 @@ import GamePage from './pages/GamePage/GamePage';
 import HelpPage from './pages/HelpPage/HelpPage';
 import Header from './features/ui/Header/Header';
 import Footer from './features/ui/Footer/Footer';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useHeroStore } from './contexts/heroStore';
 import { GameProvider } from './contexts/GameContext';
 import type { HeroStats } from './shared/types';
@@ -24,6 +24,14 @@ function AppContent() {
   const stats = useHeroStore((state) => state.stats);
   const [isLoading, setIsLoading] = useState(false); // Добавляем состояние загрузки
   const [error, setError] = useState<string | null>(null); // Добавляем состояние ошибки
+  const isMountedRef = useRef(true); // Ref для отслеживания состояния монтирования
+
+  // Cleanup при размонтировании
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Инициализация характеристик героя при первой загрузке приложения
   useEffect(() => {
@@ -36,6 +44,9 @@ function AppContent() {
       // Запрашиваем данные героя с сервера
       fetchHeroStats(TEST_USER_ID, TEST_HERO_ID)
       .then(result => {
+        // Проверяем, что компонент все еще смонтирован
+        if (!isMountedRef.current) return;
+        
         if (result) {
           // Устанавливаем характеристики героя в хранилище
           setStats(result.stats);
@@ -60,6 +71,9 @@ function AppContent() {
           }
         })
         .catch(err => {
+          // Проверяем, что компонент все еще смонтирован
+          if (!isMountedRef.current) return;
+          
           // Обрабатываем ошибки при запросе
           const errorMessage = `Ошибка при загрузке характеристик героя: ${err.message}`;
           setError(errorMessage);
@@ -68,6 +82,9 @@ function AppContent() {
           setDefaultHeroStats();
         })
         .finally(() => {
+          // Проверяем, что компонент все еще смонтирован
+          if (!isMountedRef.current) return;
+          
           // Снимаем флаг загрузки
           setIsLoading(false);
         });
@@ -80,6 +97,9 @@ function AppContent() {
    * в автономном режиме, когда сервер недоступен
    */
   const setDefaultHeroStats = () => {
+    // Проверяем, что компонент все еще смонтирован
+    if (!isMountedRef.current) return;
+    
     // Создаем стандартные характеристики для демонстрации
     const initialStats: HeroStats = {
       "max-health": 100,

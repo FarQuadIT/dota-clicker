@@ -158,8 +158,6 @@ export class GameController {
     
     // Слушаем клики по всему канвасу
     this.app.stage.on('pointerdown', this.onCanvasClick.bind(this));
-    
-
   }
 
   /**
@@ -168,8 +166,6 @@ export class GameController {
   private setupHeroCallbacks(): void {
     // Устанавливаем callback для отслеживания движения героя
     this.hero.setMovementCallback((isMoving: boolean) => {
-  
-      
       // Синхронизируем движение крипа с фоном
       this.syncWorldMovement(isMoving);
     });
@@ -178,8 +174,6 @@ export class GameController {
     this.hero.setDamageCallback((x: number, y: number) => {
       this.damageEffectManager.createHeroDamageEffect(x, y);
     });
-    
-
   }
   
   /**
@@ -200,8 +194,6 @@ export class GameController {
    * Синхронизация движения всего мира (фон + крип)
    */
   private syncWorldMovement(isMoving: boolean): void {
-
-    
     // Управляем фоном через app
     if ((this.app as any).setBackgroundMoving) {
       (this.app as any).setBackgroundMoving(isMoving);
@@ -215,10 +207,10 @@ export class GameController {
         this.currentCreep.setMoveSpeed(0);
       } else {
         // Вне боя крип синхронизируется с фоном/героем
-      if (isMoving) {
-        this.currentCreep.setMoveSpeed(this.config.moveSpeed);
-      } else {
-        this.currentCreep.setMoveSpeed(0);
+        if (isMoving) {
+          this.currentCreep.setMoveSpeed(this.config.moveSpeed);
+        } else {
+          this.currentCreep.setMoveSpeed(0);
         }
       }
     }
@@ -317,16 +309,7 @@ export class GameController {
     
     if (this.isCurrentlyBoss) {
       // Убили босса - уровень завершен!
-      console.log(`🎉 Уровень завершен! Переход на уровень ${heroLevelSystem.getCurrentLevel() + 1}`);
       this.onLevelComplete();
-    } else {
-      // Убили обычного крипа
-      console.log(`💀 Убит крип ${this.currentLevelProgress}/${this.CREEPS_PER_LEVEL}`);
-      
-      if (this.currentLevelProgress === this.NORMAL_CREEPS_COUNT) {
-        // Следующий крип будет босс
-        console.log('⚔️ Следующий крип - БОСС!');
-      }
     }
     // =================================================
     
@@ -350,7 +333,6 @@ export class GameController {
    * Завершение анимации смерти крипа
    */
   private onCreepDeathComplete(): void {
-
     this.cleanupCreep();
   }
   
@@ -365,8 +347,6 @@ export class GameController {
     this.currentLevelProgress = 0;
     this.isCurrentlyBoss = false;
     
-    console.log(`✨ Уровень героя повышен до ${heroLevelSystem.getCurrentLevel()} (${heroLevelSystem.getLevelName()})`);
-    
     // Плавный переход к новому уровню (скрываем прогресс-бар, показываем новый значок)
     const newLevel = heroLevelSystem.getCurrentLevel();
     this.levelDisplaySystem.transitionToNewLevel(newLevel);
@@ -378,13 +358,14 @@ export class GameController {
    * Запуск игрового цикла
    */
   public startGameLoop(): void {
-    console.log('🎮 Запуск игрового цикла...');
+
     
     // НОВАЯ ЛОГИКА: Если в состоянии INITIALIZATION - герой стоит в idle
     if (this.currentState === GameState.INITIALIZATION) {
-      console.log('⏳ Инициализация: герой стоит 2 секунды, крипы не спавнятся');
+      
       this.hero.setIdle(); // Герой стоит в idle анимации
       this.initializationTimer = 0; // Сбрасываем таймер
+      
       // НЕ создаем крипа в состоянии INITIALIZATION
     } else {
       // Если игра уже была запущена (например, после паузы)
@@ -407,7 +388,7 @@ export class GameController {
       this.initializationTimer += deltaTime;
       
       if (this.initializationTimer >= this.INITIALIZATION_DURATION) {
-        console.log('✅ Инициализация завершена, начинаем игру!');
+
         this.currentState = GameState.RUNNING;
         this.hero.setMoving(); // Герой начинает бежать
         this.createNewCreep().catch(console.error); // Создаем первого крипа
@@ -416,6 +397,8 @@ export class GameController {
              // В состоянии INITIALIZATION обновляем только героя и UI системы, но не крипов
        if (this.hero) {
          this.hero.updateRegeneration(deltaTime);
+         // ИСПРАВЛЕНО: Также обновляем анимации героя в состоянии INITIALIZATION
+         this.hero.update(deltaTime);
        }
        
        // Обновляем систему отображения уровня (значок уровня показывается в эти 2 секунды)
@@ -488,7 +471,6 @@ export class GameController {
     this.spawnTimer += deltaTime;
     
     if (this.spawnTimer >= this.config.spawnDelay && this.isSpawnBlocked) {
-
       this.isSpawnBlocked = false;
       this.currentState = GameState.RUNNING;
       this.createNewCreep().catch(console.error);
@@ -534,8 +516,6 @@ export class GameController {
    * Начало боя - коллизия обнаружена
    */
   private startFighting(): void {
-
-    
     this.currentState = GameState.FIGHTING;
     
     // Останавливаем движение мира (фон и крип через синхронизацию)
@@ -550,7 +530,6 @@ export class GameController {
    * Конец боя - коллизия прекратилась
    */
   private stopFighting(): void {
-
     this.currentState = GameState.RUNNING;
     
     // Возобновляем движение мира (фон и крип через синхронизацию)
@@ -571,7 +550,7 @@ export class GameController {
     if (this.currentLevelProgress === this.NORMAL_CREEPS_COUNT) {
       // 10-й крип на уровне = босс
       this.isCurrentlyBoss = true;
-      console.log(`👹 Спавним БОССА для уровня ${currentLevel}: ${levelConfig.bossCreep}!`);
+
       return levelConfig.bossCreep;
     } else {
       // 1-9 крипы на уровне = обычные крипы
@@ -584,14 +563,12 @@ export class GameController {
       const randomIndex = Math.floor(Math.random() * availableCreeps.length);
       const selectedCreep = availableCreeps[randomIndex];
       
-      console.log(`🐾 Спавним обычного крипа для уровня ${currentLevel}: ${selectedCreep} (доступно: ${availableCreeps.length} типов)`);
+
       return selectedCreep;
     }
     
     // =================================================
   }
-
-
 
   /**
    * Создание нового крипа
@@ -645,9 +622,9 @@ export class GameController {
     // Логируем информацию о созданном крипе
     const currentLevel = heroLevelSystem.getCurrentLevel();
     if (this.isCurrentlyBoss) {
-      console.log(`👹 БОСС создан: ${creepType} (уровень ${currentLevel}, масштаб: x${bossMultiplier}, HP: x${bossHealthMultiplier})`);
+
     } else {
-      console.log(`🐾 Обычный крип создан: ${creepType} (уровень ${currentLevel})`);
+      
     }
     
     // СВЯЗЬ КРИПА С GAMECONTROLLER: Устанавливаем ссылку на GameController для доступа к менеджерам эффектов
@@ -663,7 +640,6 @@ export class GameController {
     
     // Создаем полоску здоровья после добавления крипа к сцене
     this.currentCreep.createHealthBar();
-
   }
   
   /**
@@ -675,7 +651,6 @@ export class GameController {
       this.app.stage.removeChild(this.currentCreep);
       this.currentCreep.destroy();
       this.currentCreep = null;
-
     }
   }
   
@@ -698,7 +673,6 @@ export class GameController {
    */
   public updateConfig(newConfig: Partial<GameConfig>): void {
     this.config = { ...this.config, ...newConfig };
-
   }
   
   /**
@@ -737,8 +711,6 @@ export class GameController {
     
     // Сохраняем скорость крипа в config
     this.config.moveSpeed = creepSpeed;
-    
-
     
     // Обновляем скорость фона если доступно
     if ((this.app as any).updateBackgroundSpeed) {
@@ -961,7 +933,7 @@ export class GameController {
    * Перезапустить игру (используется при возврате из других вкладок)
    */
   public restartGame(): void {
-    console.log('🔄 Перезапуск игры...');
+
     
     // Восстанавливаем флаги работы игры
     this.isGameRunning = true;
@@ -982,12 +954,11 @@ export class GameController {
     this.isCurrentlyBoss = false;
     
     // ИСПРАВЛЕНО: Сбрасываем и перезапускаем систему отображения уровня
-    console.log('🎯 Сбрасываем систему отображения уровня');
+
     this.levelDisplaySystem.hideLevelDisplay();
     
     // Показываем иконку текущего уровня как в начале игры
     const levelData = heroLevelSystem.getLevelData();
-    console.log(`🎯 Показываем иконку уровня ${levelData.currentLevel} после рестарта`);
     this.levelDisplaySystem.showLevelIcon(levelData.currentLevel);
     
     // Восстанавливаем здоровье и ману героя
@@ -1002,7 +973,7 @@ export class GameController {
     // Запускаем игровой цикл заново
     this.startGameLoop();
     
-    console.log('✅ Игра перезапущена с правильным отображением уровня');
+
   }
   
   // =======================================
@@ -1029,8 +1000,6 @@ export class GameController {
       // Синхронизируем с GoldContext для мгновенного обновления UI
       if ((window as any).updateGoldFromGameController) {
         (window as any).updateGoldFromGameController(newCoins);
-      } else {
-        console.warn(`⚠️ updateGoldFromGameController не найден в window`);
       }
       
       // ОТПРАВКА НА СЕРВЕР (как в старом проекте)
@@ -1097,7 +1066,7 @@ export class GameController {
    * Ставит игру на паузу (не останавливает полностью) и запускает Game Over последовательность
    */
   private endGame(): void {
-    console.log('☠️ Герой погиб! Игра поставлена на паузу...');
+
     
     // ИСПРАВЛЕНИЕ: Ставим игру на паузу, а не останавливаем полностью
     // Это заморозит игру в текущем состоянии, сохранив позиции героя и крипа
@@ -1142,8 +1111,6 @@ export class GameController {
    */
   private showLevelIcon(): void {
     const levelData = heroLevelSystem.getLevelData();
-    console.log(`🎯 Показываем значок уровня ${levelData.currentLevel}`);
-    
     this.levelDisplaySystem.showLevelIcon(levelData.currentLevel);
   }
 
@@ -1185,7 +1152,6 @@ export class GameController {
     if ((this.app as any).gameController === this) {
       delete (this.app as any).gameController;
     }
-
   }
 }
 

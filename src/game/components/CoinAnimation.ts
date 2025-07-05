@@ -105,7 +105,7 @@ export class CoinAnimationManager {
     const goldText = new Text({
       text: `+${goldAmount}`,
       style: {
-        fontFamily: 'Arial',
+        fontFamily: 'Doka',
         fontSize: 24, // Крупнее для лучшей видимости
         fontWeight: 'bold',
         fill: '#F5D244', // Золотистый цвет

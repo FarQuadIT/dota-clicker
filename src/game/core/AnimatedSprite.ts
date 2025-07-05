@@ -104,7 +104,6 @@ export class AnimatedSprite extends Container {
     
     // Добавляем спрайт как дочерний объект
     this.addChild(this.sprite);
-    
 
   }
 
@@ -122,8 +121,6 @@ export class AnimatedSprite extends Container {
     
     // Сохраняем анимацию в коллекции
     this.animations.set(config.name, config);
-    
-
   }
 
   /**
@@ -152,6 +149,12 @@ export class AnimatedSprite extends Container {
     // Устанавливаем новую анимацию
     this.currentAnimation = animation;
     
+    // Проверяем корректность кадров
+    if (animation.textures.length === 0) {
+      console.error(`❌ Анимация ${animationName} не имеет кадров!`);
+      return;
+    }
+    
     // Сбрасываем состояние
     this.animationState = {
       currentFrame: 0,
@@ -167,8 +170,6 @@ export class AnimatedSprite extends Container {
     if (animation.onStart) {
       animation.onStart();
     }
-    
-
   }
 
   /**
@@ -178,8 +179,6 @@ export class AnimatedSprite extends Container {
     if (!this.currentAnimation) return;
     
     this.animationState.isPlaying = false;
-    
-
   }
 
   /**
@@ -189,7 +188,6 @@ export class AnimatedSprite extends Container {
     if (!this.currentAnimation) return;
     
     this.animationState.isPlaying = false;
-    console.log(`⏸️ Анимация '${this.currentAnimation.name}' поставлена на паузу`);
   }
 
   /**
@@ -199,7 +197,6 @@ export class AnimatedSprite extends Container {
     if (!this.currentAnimation) return;
     
     this.animationState.isPlaying = true;
-    console.log(`▶️ Анимация '${this.currentAnimation.name}' возобновлена`);
   }
 
   /**
@@ -269,6 +266,8 @@ export class AnimatedSprite extends Container {
     if (texture) {
       // Устанавливаем новую текстуру
       this.sprite.texture = texture;
+    } else {
+      console.error(`❌ Нет текстуры для кадра ${this.animationState.currentFrame} анимации ${this.currentAnimation.name}`);
     }
   }
 
@@ -317,7 +316,6 @@ export class AnimatedSprite extends Container {
     
     // Вызываем родительский метод destroy
     super.destroy();
-    
 
   }
 }

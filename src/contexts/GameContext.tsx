@@ -39,53 +39,45 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // Переключение паузы
   const togglePause = useCallback(() => {
     if (!gameController || !isGameActive) {
-      console.warn('⚠️ GameController не найден или игра неактивна');
       return;
     }
     
     if (isPaused) {
       gameController.resumeGame();
       setIsPaused(false);
-      console.log('🟢 Игра возобновлена через контекст');
     } else {
       gameController.pauseGame();
       setIsPaused(true);
-      console.log('🟡 Игра поставлена на паузу через контекст');
     }
   }, [gameController, isPaused, isGameActive]);
 
   // Постановка на паузу
   const pauseGame = useCallback(() => {
     if (!gameController || !isGameActive) {
-      console.warn('⚠️ GameController не найден или игра неактивна');
       return;
     }
     
     if (!isPaused) {
       gameController.pauseGame();
       setIsPaused(true);
-      console.log('🟡 Игра поставлена на паузу через контекст');
     }
   }, [gameController, isPaused, isGameActive]);
 
   // Снятие с паузы
   const resumeGame = useCallback(() => {
     if (!gameController || !isGameActive) {
-      console.warn('⚠️ GameController не найден или игра неактивна');
       return;
     }
     
     if (isPaused) {
       gameController.resumeGame();
       setIsPaused(false);
-      console.log('🟢 Игра возобновлена через контекст');
     }
   }, [gameController, isPaused, isGameActive]);
 
   // Установка активности игры
   const setGameActiveWrapper = useCallback((active: boolean) => {
     setIsGameActive(active);
-    console.log(`🎮 Состояние игры изменено: ${active ? 'активна' : 'неактивна'}`);
   }, []);
 
   // Установка игрового контроллера
@@ -95,10 +87,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     // При установке нового GameController сбрасываем состояние паузы
     if (controller && isPaused) {
       setIsPaused(false);
-      console.log('🔄 Состояние паузы сброшено при установке нового GameController');
     }
-    
-    console.log('🎮 GameController установлен в контекст');
   }, [isPaused]);
 
   const value: GameContextType = {

@@ -64,7 +64,7 @@ export class HeroHealthBar extends Container {
     
     // Текст здоровья
     const healthTextStyle = new TextStyle({
-      fontFamily: 'Arial',
+      fontFamily: 'Doka',
       fontSize: 12,
       fill: '#ffffff',
       align: 'center'
@@ -93,7 +93,7 @@ export class HeroHealthBar extends Container {
     
     // Текст маны
     const manaTextStyle = new TextStyle({
-      fontFamily: 'Arial',
+      fontFamily: 'Doka',
       fontSize: 12,
       fill: '#ffffff',
       align: 'center'
@@ -277,7 +277,7 @@ export class HeroHealthBar extends Container {
   private updateTextStyles(): void {
     // Обновляем стиль текста здоровья
     const healthTextStyle = new TextStyle({
-      fontFamily: 'Arial',
+      fontFamily: 'Doka',
       fontSize: this.currentFontSize,
       fill: '#ffffff',
       align: 'center'
@@ -286,7 +286,7 @@ export class HeroHealthBar extends Container {
     
     // Обновляем стиль текста маны
     const manaTextStyle = new TextStyle({
-      fontFamily: 'Arial',
+      fontFamily: 'Doka',
       fontSize: this.currentFontSize,
       fill: '#ffffff',
       align: 'center'
@@ -336,7 +336,7 @@ export class HeroHealthBar extends Container {
     // Создаем текст предупреждения если его нет
     if (!this.manaWarningText) {
              const warningStyle = new TextStyle({
-         fontFamily: 'Arial',
+         fontFamily: 'Doka',
          fontSize: 14,
          fill: '#ff6b6b',
          stroke: { color: '#000000', width: 2 },
@@ -362,7 +362,7 @@ export class HeroHealthBar extends Container {
     this.isManaWarningActive = true;
     this.manaWarningTimer = 0;
 
-    console.log("⚡ Показано предупреждение: Недостаточно маны!");
+
   }
 
   /**
@@ -395,7 +395,7 @@ export class HeroHealthBar extends Container {
     if (progress >= 1) {
       this.isManaWarningActive = false;
       this.manaWarningText.alpha = 0;
-      console.log("⚡ Предупреждение о мане исчезло");
+
     }
   }
 } 

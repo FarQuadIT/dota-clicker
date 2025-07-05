@@ -123,7 +123,6 @@ export class Hero extends GameEntity {
     this.setupHero();
     this.setupAnimations();
     this.setupHealthBar();
-    
 
   }
 
@@ -165,6 +164,8 @@ export class Hero extends GameEntity {
       const idleFrames = assetsManager.getHeroFrames(this.heroType, 'idle');
       const runFrames = assetsManager.getHeroFrames(this.heroType, 'run');
       const attackFrames = assetsManager.getHeroFrames(this.heroType, 'attack');
+      
+
       
       // Добавляем анимацию idle с всеми кадрами
       this.addAnimation({
@@ -216,8 +217,9 @@ export class Hero extends GameEntity {
   public setIdle(): void {
     this.changeState(EntityState.IDLE);
     
-    // Воспроизводим анимацию idle
-    this.playAnimation('idle');
+    // ИСПРАВЛЕНИЕ: Принудительно перезапускаем анимацию idle
+    // changeState уже вызывает playStateAnimation(), но нужно убедиться что анимация точно играет
+    this.playAnimation('idle', true); // forceRestart = true
     
     // Уведомляем о том, что герой остановился
     this.notifyMovement(false);
@@ -229,8 +231,8 @@ export class Hero extends GameEntity {
   public setMoving(): void {
     this.changeState(EntityState.MOVING);
     
-    // Воспроизводим анимацию run
-    this.playAnimation('run');
+    // ИСПРАВЛЕНИЕ: Принудительно перезапускаем анимацию run
+    this.playAnimation('run', true); // forceRestart = true
     
     // Уведомляем о том, что герой начал двигаться
     this.notifyMovement(true);
@@ -251,7 +253,6 @@ export class Hero extends GameEntity {
     
     // Во время атаки герой не двигается
     this.notifyMovement(false);
-    
 
   }
 
@@ -266,7 +267,6 @@ export class Hero extends GameEntity {
    */
   public setMovementCallback(callback: MovementCallback): void {
     this.movementCallback = callback;
-
   }
   
   /**
@@ -276,7 +276,6 @@ export class Hero extends GameEntity {
    */
   public setAttackCallback(callback: AttackCallback): void {
     this.attackCallback = callback;
-
   }
 
   /**
@@ -441,7 +440,6 @@ export class Hero extends GameEntity {
   public pauseAnimations(): void {
     // Используем метод из базового класса AnimatedSprite
     this.pauseAnimation();
-    console.log('⏸️ Анимации героя поставлены на паузу');
   }
   
   /**
@@ -450,7 +448,6 @@ export class Hero extends GameEntity {
   public resumeAnimations(): void {
     // Используем метод из базового класса AnimatedSprite
     this.resumeAnimation();
-    console.log('▶️ Анимации героя возобновлены');
   }
 
   // ==================================================================================
@@ -493,21 +490,9 @@ export class Hero extends GameEntity {
    * @param damage количество урона
    */
   public takeDamage(damage: number): void {
-    const heroStore = useHeroStore.getState();
-    if (!heroStore.stats) return;
-    
-    const currentHealth = heroStore.stats["current-health"];
+    const currentHealth = this.getHealth();
     const newHealth = Math.max(0, currentHealth - damage);
-    
-    // Обновляем статистики в heroStore
-    heroStore.updateStat("current-health", newHealth);
-    
-    // Вызываем callback для создания визуального эффекта урона (если задан)
-    if (this.damageCallback) {
-      this.damageCallback(this.x, this.y);
-    }
-    
-    console.log(`🗡️ Герой получил ${damage} урона. HP: ${currentHealth} → ${newHealth}`);
+    this.setHealth(newHealth);
   }
 
   /**
@@ -517,16 +502,9 @@ export class Hero extends GameEntity {
    * @param damage количество урона по мане
    */
   public takeManaburn(damage: number): void {
-    const heroStore = useHeroStore.getState();
-    if (!heroStore.stats) return;
-    
-    const currentMana = heroStore.stats["current-mana"];
+    const currentMana = this.getMana(); 
     const newMana = Math.max(0, currentMana - damage);
-    
-    // Обновляем статистики в heroStore
-    heroStore.updateStat("current-mana", newMana);
-    
-    console.log(`💙 Герой потерял ${damage} маны от manaburn. Мана: ${currentMana} → ${newMana}`);
+    this.setMana(newMana);
   }
 
   /**
@@ -536,19 +514,18 @@ export class Hero extends GameEntity {
    * 
    * @param duration длительность отравления в миллисекундах
    */
-  public applyPoison(duration: number): void {
-    // Сбрасываем предыдущий таймер если он был
-    if (this.poisonTimer > 0) {
-      clearTimeout(this.poisonTimer);
-    }
+  public applyPoison(duration: number = 1000): void {
+    // Снимаем предыдущее отравление, если есть
+    this.removePoison();
     
-    // Устанавливаем новый таймер
+    // Блокируем восстановление здоровья
+    this.isHealthRegenBlocked = true;
+    
+    // Устанавливаем таймер на снятие отравления
     this.poisonTimer = setTimeout(() => {
+      this.isHealthRegenBlocked = false;
       this.poisonTimer = 0;
-      console.log(`💚 Отравление прошло`);
     }, duration) as unknown as number;
-    
-    console.log(`💚 Герой отравлен на ${duration}мс`);
   }
 
   /**
@@ -619,7 +596,7 @@ export class Hero extends GameEntity {
     // Обновляем статистики в heroStore
     heroStore.updateStat("current-mana", newMana);
     
-    console.log(`💙 Мана героя установлена: ${amount} → ${newMana}`);
+
   }
   
   /**
@@ -651,17 +628,14 @@ export class Hero extends GameEntity {
    * 
    * @param amount количество маны для траты
    */
-  public spendMana(amount: number): void {
-    const heroStore = useHeroStore.getState();
-    if (!heroStore.stats) return;
-    
-    const currentMana = heroStore.stats["current-mana"];
-    const newMana = Math.max(0, currentMana - amount);
-    
-    // Обновляем статистики в heroStore
-    heroStore.updateStat("current-mana", newMana);
-    
-    console.log(`💙 Герой потратил ${amount} маны на атаку. Мана: ${currentMana} → ${newMana}`);
+  public spendMana(amount: number): boolean {
+    const currentMana = this.getCurrentMana();
+    if (currentMana >= amount) {
+      const newMana = Math.max(0, currentMana - amount);
+      this.setCurrentMana(newMana);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -774,8 +748,58 @@ export class Hero extends GameEntity {
       
       if (healAmount > 0) {
         useHeroStore.getState().updateStat("current-health", newHealth);
-        console.log(`🩸 Вампиризм: восстановлено ${healAmount.toFixed(1)} HP. Здоровье: ${currentHealth.toFixed(1)} → ${newHealth.toFixed(1)}`);
+    
       }
     }
+  }
+
+  public removePoison(): void {
+    if (this.poisonTimer > 0) {
+      clearTimeout(this.poisonTimer);
+      this.poisonTimer = 0;
+    }
+  }
+
+  public setHealth(health: number): void {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return;
+    
+    heroStore.updateStat("current-health", health);
+  }
+
+  public getHealth(): number {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return 100; // Значение по умолчанию
+    return heroStore.stats["current-health"];
+  }
+
+  public setMana(mana: number): void {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return;
+    
+    heroStore.updateStat("current-mana", mana);
+  }
+
+  public getMana(): number {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return 50; // Значение по умолчанию
+    return heroStore.stats["current-mana"];
+  }
+
+  public isHealthRegenBlocked: boolean = false;
+
+  public performVampirism(damageDealt: number): void {
+    const heroStore = useHeroStore.getState();
+    if (!heroStore.stats) return;
+    
+    const vampirismPercent = heroStore.stats.vampirism || 0;
+    if (vampirismPercent <= 0) return;
+    
+    const healAmount = (damageDealt * vampirismPercent) / 100;
+    const currentHealth = this.getHealth();
+    const maxHealth = heroStore.stats['max-health'] || 1000;
+    const newHealth = Math.min(maxHealth, currentHealth + healAmount);
+    
+    this.setHealth(newHealth);
   }
 }

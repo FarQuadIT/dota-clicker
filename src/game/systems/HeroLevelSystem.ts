@@ -58,7 +58,7 @@ export class HeroLevelSystem extends SimpleEventEmitter {
       this.currentLevel++;
       this.saveToStorage();
       this.emit('levelUp', this.currentLevel);
-      console.log(`🎉 Уровень героя повышен до ${this.currentLevel} (${this.getLevelName()})`);
+  
     }
   }
 
@@ -116,9 +116,9 @@ export class HeroLevelSystem extends SimpleEventEmitter {
       this.currentLevel = level;
       this.saveToStorage();
       this.emit('levelChanged', this.currentLevel);
-      console.log(`🔧 Уровень героя установлен на ${this.currentLevel} (${this.getLevelName()})`);
+
     } else {
-      console.warn(`❌ Некорректный уровень: ${level}. Должен быть от 1 до ${this.maxLevel}`);
+      // Некорректный уровень - игнорируем
     }
   }
 
@@ -129,7 +129,7 @@ export class HeroLevelSystem extends SimpleEventEmitter {
     this.currentLevel = 1;
     this.saveToStorage();
     this.emit('levelReset');
-    console.log('🔄 Уровень героя сброшен до 1 (Бронза)');
+
   }
 
   /**
@@ -156,7 +156,7 @@ export class HeroLevelSystem extends SimpleEventEmitter {
         const data = JSON.parse(saved);
         if (data.currentLevel && data.currentLevel >= 1 && data.currentLevel <= this.maxLevel) {
           this.currentLevel = data.currentLevel;
-          console.log(`📥 Уровень героя загружен: ${this.currentLevel} (${this.getLevelName()})`);
+    
         }
       }
     } catch (error) {

@@ -40,19 +40,17 @@ export default function Footer() {
 
   // Обработчик клика по таб-меню
   const handleTabClick = (item: typeof menuItems[0]) => {
-    console.log(`🔍 Клик по табу: ${item.path}, текущий путь: ${location.pathname}`);
-    console.log(`🔍 Состояние игры: isGameActive=${isGameActive}, isPaused=${isPaused}`);
-    console.log(`🔍 GameController:`, gameController ? 'есть' : 'нет');
+
     
     // Если пользователь уже на этой странице, ничего не делаем
     if (location.pathname === item.path) {
-      console.log('⏩ Пользователь уже на этой странице');
+
       return;
     }
 
     // Если игра активна и пользователь хочет покинуть игру (переход С игры)
     if (location.pathname === '/game' && isGameActive && !isPaused && item.path !== '/game') {
-      console.log(`🛑 ПЕРЕХВАТ: переход с игры (${location.pathname}) на ${item.path}`);
+      
       
       // Ставим игру на паузу
       pauseGame();
@@ -61,10 +59,9 @@ export default function Footer() {
       setTargetPath(item.path);
       setShowNavigationModal(true);
       
-      console.log(`🛑 Модалка показана для перехода на ${item.path}`);
+      
     } else {
-      console.log(`⏩ Обычная навигация: ${location.pathname} → ${item.path}`);
-      console.log(`⏩ Причина: isGameActive=${isGameActive}, isPaused=${isPaused}, currentPath=${location.pathname}`);
+      
       
       // Обычная навигация
       navigate(item.path);
@@ -85,7 +82,7 @@ export default function Footer() {
     // Переходим на целевую страницу
     navigate(targetPath);
     
-    console.log(`✅ Подтверждена навигация на ${targetPath}`);
+    
   };
 
   // Обработчик отмены навигации
@@ -96,7 +93,7 @@ export default function Footer() {
     // Снимаем игру с паузы и продолжаем играть
     resumeGame();
     
-    console.log('❌ Навигация отменена, возврат к игре');
+    
   };
 
   // Функция сброса игры к исходному состоянию
@@ -122,7 +119,7 @@ export default function Footer() {
       // 4. Деактивируем игру в контексте (чтобы при возврате сработал перезапуск)
       setGameActive(false);
       
-      console.log('🔄 Игра сброшена к исходному состоянию');
+      
     } catch (error) {
       console.error('❌ Ошибка при сбросе игры:', error);
     }

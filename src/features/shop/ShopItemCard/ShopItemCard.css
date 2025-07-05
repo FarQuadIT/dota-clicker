@@ -4,21 +4,40 @@
     display: flex;
     align-items: center;
     gap: 15px;
-    padding: 12px;
+    padding: 16px 12px;
     margin: 10px 20px;
-    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.11), rgba(255, 255, 255, 0)), #1c2028;
-    border: 2px solid #000000;
-    border-style: ridge;
-    border-radius: 4px;
-    box-shadow: inset 0 0 1px rgba(255, 255, 255, 0.3), inset 0 0 3px rgba(255, 255, 255, 0.2);
-    transition: all 0.2s ease;
+    background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%);
+    border: 2px solid rgba(100, 120, 140, 0.3);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
     animation: fadeIn 0.3s ease-out;
+    position: relative;
+    overflow: hidden;
   }
   
-  .shop-item-card:hover {
-    background: linear-gradient(to bottom, rgba(235, 145, 43, 0.15), rgba(255, 255, 255, 0.02)), #1c2028;
-    transform: translateY(-1px);
+  /* Декоративные элементы для карточки */
+  .shop-item-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.6) 50%, transparent 100%);
   }
+  
+  .shop-item-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(100, 120, 140, 0.4) 50%, transparent 100%);
+  }
+  
+
   
   /* Иконка предмета с уровнем */
   .item-icon-wrapper {
@@ -29,23 +48,36 @@
   .item-icon {
     width: 64px;
     height: 64px;
-    border: 1px solid rgb(119, 19, 19);
-    border-radius: 2px;
+    border: 2px solid rgba(100, 120, 140, 0.3);
+    border-radius: 6px;
     object-fit: cover;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   }
   
   .item-level {
     position: absolute;
     top: 0;
     left: 0;
-    background: rgb(93, 102, 184);
-    color: #fff;
-    padding: 2px 6px;
-    font-size: 11px;
+    background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%);
+    border: 1px solid rgba(100, 120, 140, 0.3);
+    color: #ffd700;
+    width: 65%; /* Увеличиваем ширину для размещения текста "Ур." + число */
+    height: 30%; /* 30% от высоты иконки для лучших пропорций */
+    min-height: 16px; /* Минимальная высота для читаемости */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(7px, 2.2vw, 11px); /* Немного уменьшил для лучшего помещения */
     font-weight: bold;
-    border-radius: 1px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
     pointer-events: none;
+    box-sizing: border-box;
+    padding: 1px 1px; /* Уменьшаем горизонтальный padding */
+    white-space: nowrap; /* Запрещаем перенос текста на новую строку */
+    overflow: hidden; /* Скрываем переполнение если текст не помещается */
+    text-overflow: ellipsis; /* Добавляем многоточие если текст обрезается */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
   
   /* Детали предмета */
@@ -57,11 +89,14 @@
   .item-title {
     margin: 0 0 8px 0;
     font-size: 16px;
-    color: #d5d7df;
-    font-weight: 600;
+    color: #c9aa71;
+    font-weight: bold;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   }
   
   .item-stats {
@@ -69,57 +104,85 @@
     align-items: center;
     gap: 8px;
     font-size: 14px;
-    color: #aaa;
+    color: rgba(201, 170, 113, 0.8);
   }
   
   .stat-current {
-    color: #77d87a;
+    color: #ffd700;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .stat-category-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    transform: translateY(-1px);
   }
   
   .stat-arrow {
-    color: #666;
+    color: rgba(201, 170, 113, 0.6);
+    line-height: 1;
   }
   
   .stat-next {
-    color: #ffd700;
+    color: #ffffff;
     font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    line-height: 1;
+    display: flex;
+    align-items: center;
   }
   
-/* Улучшенный стиль кнопки покупки */
+/* Кнопка покупки в стиле кнопки "Герои" с главной страницы */
 .item-buy-button {
     width: 120px; /* Увеличиваем ширину для больших чисел */
     height: 45px;
-    background: linear-gradient(to bottom, #244af3, #040266);
-    border: 2px solid #FFC300;
-    border-radius: 4px;
+    background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%);
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center; /* Центрируем содержимое */
     gap: 6px; /* Меньший отступ между ценой и иконкой */
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     flex-shrink: 0;
     padding: 0 10px; /* Добавляем горизонтальные отступы */
     font-family: inherit;
     position: relative; /* Для лучшего позиционирования содержимого */
-  }
-  /* Стиль для неактивной кнопки */
-.item-buy-button.disabled {
-    background: linear-gradient(to bottom, #333, #111) !important; /* Серый градиент, !important для перекрытия других стилей */
-    border-color: #555 !important; /* Серая граница */
-    cursor: not-allowed !important; /* Курсор "запрещено" */
-    opacity: 0.7 !important; /* Прозрачность для эффекта неактивности */
-    pointer-events: none !important; /* Блокирует все события мыши */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    overflow: hidden;
   }
   
-  /* Убираем все hover эффекты для неактивной кнопки */
-  .item-buy-button.disabled:hover {
-    transform: none !important;
-    background: linear-gradient(to bottom, #333, #111) !important;
+  /* Декоративные элементы для кнопки покупки в стиле "Герои" */
+  .item-buy-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.6) 50%, transparent 100%);
   }
-  /* Улучшенный стиль цены */
+  
+  .item-buy-button::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(100, 120, 140, 0.4) 50%, transparent 100%);
+  }
+
+  /* Цена в стиле панелек - приглушенная и гармоничная */
   .button-price {
-    color: white;
+    color: #c9aa71;
     font-size: 16px;
     font-weight: bold;
     text-align: center;
@@ -135,9 +198,10 @@
     line-height: 1;         /* Нормализуем высоту строки */
     padding-bottom: 0;      /* Убираем нижний отступ, если он был */
     margin: 0;              /* Сбрасываем все внешние отступы */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   }
   
-  /* Улучшенный стиль иконки */
+  /* Иконка в стиле панелек - приглушенная */
   .button-icon {
     width: 22px;
     height: 22px;
@@ -145,6 +209,8 @@
     object-fit: contain;     /* Сохраняем пропорции изображения */
     margin: 0;               /* Убираем все внешние отступы */
     align-self: center;      /* Центрируем иконку по вертикали */
+    filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8)) brightness(0.9) saturate(0.8);
+    transition: all 0.3s ease;
   }
   
   /* Стиль для кнопки с большими числами */
@@ -167,7 +233,7 @@
   /* Адаптивность */
   @media (max-width: 768px) {
     .shop-item-card {
-      padding: 10px;
+      padding: 14px 10px;
       margin: 8px 15px;
     }
     
@@ -187,12 +253,19 @@
     
     .button-price {
       font-size: 14px;
+      max-width: 60px;
+    }
+    
+    .button-icon {
+      width: 20px;
+      height: 20px;
     }
   }
   
   @media (max-width: 480px) {
     .shop-item-card {
       gap: 12px;
+      padding: 12px 8px;
     }
     
     .item-icon {
@@ -212,31 +285,6 @@
       width: 90px;
       height: 36px;
     }
-  }
-
-  /* Адаптивность для маленьких экранов */
-@media (max-width: 768px) {
-    .item-buy-button {
-      width: 110px;
-      height: 40px;
-    }
-    
-    .button-price {
-      font-size: 14px;
-      max-width: 60px;
-    }
-    
-    .button-icon {
-      width: 20px;
-      height: 20px;
-    }
-  }
-  
-  @media (max-width: 480px) {
-    .item-buy-button {
-      width: 100px;
-      height: 36px;
-    }
     
     .button-price {
       font-size: 13px;
@@ -246,6 +294,45 @@
     .button-icon {
       width: 18px;
       height: 18px;
+    }
+  }
+
+
+
+  /* Адаптивность для очень маленьких экранов */
+  @media (max-width: 320px) {
+    .shop-item-card {
+      gap: 10px;
+      padding: 12px 8px;
+      margin: 6px 10px;
+    }
+    
+    .item-icon {
+      width: 42px;
+      height: 42px;
+    }
+    
+    .item-title {
+      font-size: 13px;
+    }
+    
+    .item-stats {
+      font-size: 11px;
+    }
+    
+    .item-buy-button {
+      width: 85px;
+      height: 32px;
+    }
+    
+    .button-price {
+      font-size: 12px;
+      max-width: 50px;
+    }
+    
+    .button-icon {
+      width: 16px;
+      height: 16px;
     }
   }
 
@@ -286,33 +373,61 @@
   }
 }
 
-/* Добавим стиль для анимации нажатия */
+/* Добавим стиль для анимации нажатия в стиле панелек */
 .item-buy-button.pressing {
-  transform: translateY(3px) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3) !important;
   transition: transform 0.1s ease, box-shadow 0.1s ease !important;
 }
 
-/* Улучшим стиль для неактивной кнопки */
+/* Неактивная кнопка в едином стиле */
 .item-buy-button.disabled {
-  background: linear-gradient(to bottom, #333, #111) !important;
-  border-color: #555 !important;
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.95) 0%, rgba(40, 40, 40, 0.85) 50%, rgba(30, 30, 30, 0.95) 100%) !important;
+  border-color: rgba(255, 215, 0, 0.2) !important;
   cursor: not-allowed !important;
-  opacity: 0.7 !important;
+  opacity: 0.6 !important;
   transform: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.3) !important;
+  pointer-events: none !important;
 }
 
-/* Добавим плавное увеличение при наведении (только для активных кнопок) */
+/* Приглушенные декоративные элементы для неактивных кнопок */
+.item-buy-button.disabled::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.2) 50%, transparent 100%) !important;
+}
+
+.item-buy-button.disabled::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(100, 120, 140, 0.2) 50%, transparent 100%) !important;
+}
+
+/* Стиль цены для неактивной кнопки */
+.item-buy-button.disabled .button-price {
+  color: rgba(201, 170, 113, 0.5) !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Стиль иконки для неактивной кнопки */
+.item-buy-button.disabled .button-icon {
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8)) brightness(0.6) saturate(0.5) !important;
+}
+
+/* Hover эффекты в стиле кнопки "Герои" */
 .item-buy-button:not(.disabled):hover {
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%);
+  border-color: rgba(255, 215, 0, 0.8);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
 }
 
-/* Улучшим стиль для карточки при наведении */
-.shop-item-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+/* Hover эффекты для элементов кнопки в стиле "Герои" */
+.item-buy-button:not(.disabled):hover .button-price {
+  color: #ffffff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
+
+.item-buy-button:not(.disabled):hover .button-icon {
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8)) brightness(1.1) saturate(1.0);
+  transform: scale(1.05);
+}
+

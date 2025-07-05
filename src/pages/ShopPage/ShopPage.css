@@ -1,7 +1,7 @@
 .shop-page {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 40px);
+    height: calc(100vh - 40px - 50px); /* вычитаем высоту хедера (40px) и футера (50px) */
     width: 100vw;
     position: relative;
     left: 50%;
@@ -28,10 +28,12 @@
     width: 100%;
     background-color: #222;
     color: white;
-    display: block;
+    display: flex;
+    flex-direction: column;
     padding: 20px 0px 0px 0px;
     overflow: hidden;
     position: relative;
+    min-height: 0; /* Важно для flex-элементов с overflow */
 }
 
 .menu-container {
@@ -62,30 +64,66 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    border-radius: 10px;
+    border-radius: 8px;
     font-size: 0.8rem;
     cursor: pointer;
-    transition: all 0.2s ease;
-    border: 2px solid transparent;
-    background-blend-mode: overlay;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(100, 120, 140, 0.3);
+    background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Декоративные элементы для menu-item в стиле карточек предметов */
+.menu-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.6) 50%, transparent 100%);
+}
+
+.menu-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(100, 120, 140, 0.4) 50%, transparent 100%);
 }
 
 .menu-item.active {
-    transform: translateY(4px);
-    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.6);
-    border: 2px solid currentColor;
-    background: #00000010;
+    border: 2px solid rgba(255, 215, 0, 0.8);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
 }
 
 .menu-item:hover {
-    transform: translateY(3px);
-    box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.75);
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.55), 0 0 15px rgba(255, 215, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    transform: scale(1.02);
 }
 
 .menu-icon {
     width: 30px;
     height: 30px;
     object-fit: contain;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+}
+
+.menu-item:hover .menu-icon {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+
+.menu-item.active .menu-icon {
+    opacity: 1;
+    transform: scale(1.1);
 }
 .shop-top,
 .menu-container,
@@ -97,10 +135,13 @@
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    color: white;
+    color: #c9aa71;
     font-size: 18px;
     font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
 }
 
 /* src/pages/ShopPage/ShopPage.css */
@@ -226,7 +267,6 @@
   .stat-next {
     width: 40px;
     height: 14px;
-    background: rgba(255, 255, 255, 0.1);
     border-radius: 3px;
   }
   
@@ -258,7 +298,6 @@
   .button-price {
     width: 50px;
     height: 16px;
-    background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
   }
   
@@ -294,9 +333,11 @@
 
 /* Контейнер для прокрутки предметов */
 .items-scroll-area {
-    height: 100%;
+    flex: 1; /* Занимает всё доступное пространство */
     overflow-y: auto; /* Прокрутка только здесь */
-    padding-bottom: 20px;
+    overflow-x: hidden; /* Горизонтальная прокрутка отключена */
+    padding: 0 10px 20px 10px; /* Отступы со всех сторон */
+    min-height: 0; /* Важно для корректной работы flex + overflow */
 }
 
 /* Стилизация скроллбара */
@@ -341,6 +382,10 @@
     .characteristics {
         font-size: 15px;
     }
+    
+    .items-scroll-area {
+        padding: 0 8px 15px 8px;
+    }
 }
 
 /* Адаптивность для маленьких мобильных */
@@ -366,6 +411,10 @@
     
     .characteristics {
         font-size: 14px;
+    }
+    
+    .items-scroll-area {
+        padding: 0 6px 12px 6px;
     }
 }
 
@@ -393,6 +442,10 @@
     .characteristics {
         font-size: 13px;
     }
+    
+    .items-scroll-area {
+        padding: 0 5px 10px 5px;
+    }
 }
 
 /* Адаптивность для самых маленьких экранов */
@@ -418,5 +471,13 @@
     
     .characteristics {
         font-size: 12px;
+    }
+    
+    .items-scroll-area {
+        padding: 0 4px 8px 4px;
+    }
+    
+    .shop-bottom {
+        padding: 15px 0px 0px 0px; /* Уменьшаем верхний отступ на самых маленьких экранах */
     }
 }

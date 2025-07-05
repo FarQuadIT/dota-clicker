@@ -45,6 +45,45 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <div className="settings-modal-overlay" onClick={handleOverlayClick}>
       <div className="settings-modal">
+        
+        {/* Декоративные элементы по углам */}
+        <div style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          width: '20px',
+          height: '20px',
+          border: '2px solid rgba(255, 215, 0, 0.4)',
+          borderLeft: 'none',
+          borderBottom: 'none',
+          borderRadius: '0 4px 0 0',
+          pointerEvents: 'none'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '8px',
+          left: '8px',
+          width: '20px',
+          height: '20px',
+          border: '2px solid rgba(255, 215, 0, 0.4)',
+          borderRight: 'none',
+          borderTop: 'none',
+          borderRadius: '0 0 0 4px',
+          pointerEvents: 'none'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '8px',
+          right: '8px',
+          width: '20px',
+          height: '20px',
+          border: '2px solid rgba(255, 215, 0, 0.4)',
+          borderLeft: 'none',
+          borderTop: 'none',
+          borderRadius: '0 0 4px 0',
+          pointerEvents: 'none'
+        }} />
+        
         {/* Заголовок */}
         <div className="settings-modal-header">
           <h2 className="settings-modal-title">⚙️ НАСТРОЙКИ</h2>

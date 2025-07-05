@@ -17,27 +17,28 @@
  */
 
 import './ShopItemCard.css';
-import type { ShopItem, ShopCategory } from '../../../shared/types'; 
+import type { ShopItem } from '../../../shared/types'; 
 import { useState, useCallback } from 'react';
 import React from 'react';
+import { shopCategories } from '../../../shared/constants/shopConfig';
 
 /**
  * Свойства компонента карточки предмета
  * 
  * @property {ShopItem} item - Объект предмета с информацией (уровень, цена и т.д.)
- * @property {ShopCategory} category - Категория предмета для стилизации
  * @property {boolean} isAffordable - Флаг доступности предмета для покупки (хватает ли золота)
  * @property {number} currentValue - Текущее значение характеристики героя
  * @property {function} onBuy - Функция-обработчик покупки предмета
  * @property {boolean} [isPurchasing=false] - Флаг, указывающий, что предмет в процессе покупки
+ * @property {string} categoryKey - Ключ категории для определения цвета и иконки
  */
 interface ShopItemCardProps {
   item: ShopItem;
-  category: ShopCategory;
   isAffordable: boolean;
   currentValue: number;
   onBuy: () => void;
   isPurchasing?: boolean;
+  categoryKey: string;
 }
 
 /**
@@ -48,11 +49,11 @@ interface ShopItemCardProps {
  */
 function ShopItemCard({ 
   item, 
-  category, 
   isAffordable, 
   currentValue,
   onBuy,
-  isPurchasing = false
+  isPurchasing = false,
+  categoryKey
 }: ShopItemCardProps) {
   // Состояние для анимации нажатия кнопки
   const [isPressing, setIsPressing] = useState(false);
@@ -65,6 +66,9 @@ function ShopItemCard({
   
   // Флаг активности кнопки покупки
   const isButtonActive = isAffordable && !isPurchasing;
+  
+  // Получаем информацию о категории для стилизации
+  const categoryInfo = shopCategories[categoryKey];
   
   /**
    * Форматирует число, добавляя разделители тысяч для улучшения читаемости
@@ -122,13 +126,7 @@ function ShopItemCard({
     }
   }, [item.img]);
 
-  // Стиль кнопки, зависящий от доступности предмета
-  const buttonStyle = {
-    borderColor: isButtonActive ? category.color : '#555',
-    background: isButtonActive 
-      ? `linear-gradient(to bottom, ${category.color}99, #040266)`
-      : 'linear-gradient(to bottom, #333, #111)'
-  };
+  // Убираем динамический стиль - теперь используем только CSS классы
 
   return (
     <div className="shop-item-card">
@@ -147,7 +145,20 @@ function ShopItemCard({
       <div className="item-details">
         <h3 className="item-title">{item.title}</h3>
         <div className="item-stats">
-          <span className="stat-current">+{item.baseValue}</span>
+          <span 
+            className="stat-current"
+            style={{ color: categoryInfo?.color || '#ffd700' }}
+          >
+            +{item.baseValue}
+            {categoryInfo && (
+              <img 
+                src={categoryInfo.icon} 
+                alt={categoryInfo.name}
+                className="stat-category-icon"
+                style={{ filter: categoryInfo.filter }}
+              />
+            )}
+          </span>
           <span className="stat-arrow">→</span>
           <span className="stat-next">{nextValue}</span>
         </div>
@@ -162,7 +173,6 @@ function ShopItemCard({
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
-        style={buttonStyle}
       >
         {isPurchasing ? (
           // Индикатор загрузки в процессе покупки
@@ -187,26 +197,5 @@ function ShopItemCard({
   );
 }
 
-/**
- * Мемоизированная версия компонента карточки предмета
- * 
- * Предотвращает лишние ререндеры при изменении внешних состояний,
- * которые не влияют на отображение этого конкретного предмета.
- * 
- * Компонент перерендерится только при изменении:
- * - Уровня предмета
- * - Текущей цены
- * - Доступности для покупки
- * - Значения характеристики
- * - Состояния процесса покупки
- */
-export default React.memo(ShopItemCard, (prevProps, nextProps) => {
-  // Возвращаем true, если пропсы не изменились (компонент не будет перерендерен)
-  return (
-    prevProps.item.level === nextProps.item.level &&
-    prevProps.item.currentPrice === nextProps.item.currentPrice &&
-    prevProps.isAffordable === nextProps.isAffordable &&
-    prevProps.currentValue === nextProps.currentValue &&
-    prevProps.isPurchasing === nextProps.isPurchasing
-  );
-});
+// Убираем React.memo временно для диагностики DOM ошибок
+export default ShopItemCard;

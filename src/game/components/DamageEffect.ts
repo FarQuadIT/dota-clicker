@@ -128,8 +128,6 @@ export class DamageEffect extends Container {
       this.addChild(particle);
       this.particles.push(particle);
     }
-    
-    console.log(`💥 Создан эффект урона в позиции (${x}, ${y}) с ${this.config.particleCount} частицами`);
   }
   
   /**

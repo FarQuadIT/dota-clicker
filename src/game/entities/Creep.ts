@@ -332,7 +332,7 @@ export class Creep extends AnimatedSprite {
     // Получаем конфигурацию типа крипа
     const creepTypeConfig = CREEP_TYPES[this.creepType];
     if (!creepTypeConfig) {
-      console.warn(`Не найдена конфигурация для типа крипа: ${this.creepType}`);
+      console.error(`Не найдена конфигурация для типа крипа: ${this.creepType}`);
       this.maxHealth = 10; // Значение по умолчанию
     } else {
       this.maxHealth = creepTypeConfig.maxHealth;
@@ -353,7 +353,7 @@ export class Creep extends AnimatedSprite {
     // Получаем конфигурацию типа крипа для позиционирования
     const creepTypeConfig = CREEP_TYPES[this.creepType];
     if (!creepTypeConfig) {
-      console.warn(`Не найдена конфигурация для позиционирования полоски здоровья: ${this.creepType}`);
+  
       return;
     }
 
@@ -458,10 +458,10 @@ export class Creep extends AnimatedSprite {
       if (creepConfig && creepConfig.goldReward) {
         // Вызываем callback с позицией крипа и количеством золота
         this.goldAnimationCallback(this.x, this.y, creepConfig.goldReward);
-        console.log(`💰 Вызван callback анимации золота: +${creepConfig.goldReward} в позиции (${this.x}, ${this.y})`);
+    
       }
     } else {
-      console.warn(`❌ Callback анимации золота не установлен для крипа ${this.creepType}`);
+      
     }
   }
 
@@ -500,7 +500,7 @@ export class Creep extends AnimatedSprite {
     // Получаем конфигурацию крипа для урона и способностей
     const creepConfig = CREEP_TYPES[this.creepType];
     if (!creepConfig) {
-      console.warn(`Не найдена конфигурация для атаки крипа: ${this.creepType}`);
+  
       return;
     }
 
@@ -510,7 +510,7 @@ export class Creep extends AnimatedSprite {
     // Применяем особые способности согласно старому проекту
     this.applySpecialAbilities(hero, creepConfig);
 
-    console.log(`⚔️ Крип ${this.creepType} атаковал героя, урон: ${creepConfig.damage}`);
+
   }
 
   /**
@@ -532,7 +532,7 @@ export class Creep extends AnimatedSprite {
             
             // Отнимаем вычисленное количество маны
             hero.takeManaburn(manaburnAmount);
-            console.log(`💙 Satyr использовал manaburn на ${manaburnAmount} маны (${config.manaburnPercent}% от максимальной)`);
+    
             
             // Создаем визуальный эффект manaburn (синие частицы)
             // Получаем GameController через app для доступа к эффектам
@@ -544,11 +544,11 @@ export class Creep extends AnimatedSprite {
 
         case 'poison': // Способность вула
           hero.applyPoison(1000); // 1 секунда отравления
-          console.log(`☠️ Voul отравил героя на 1 секунду`);
+
           break;
 
         default:
-          console.warn(`Неизвестная способность крипа: ${ability}`);
+
       }
     }
   }
@@ -598,7 +598,7 @@ export class Creep extends AnimatedSprite {
     this.originalAnimationSpeed = this.animationSpeed;
     // Останавливаем анимацию PixiJS AnimatedSprite
     this.animationSpeed = 0;
-    console.log(`⏸️ Анимации крипа ${this.creepType} поставлены на паузу (скорость: ${this.originalAnimationSpeed})`);
+
   }
   
   /**
@@ -607,7 +607,7 @@ export class Creep extends AnimatedSprite {
   public resumeAnimations(): void {
     // Восстанавливаем сохраненную скорость анимации
     this.animationSpeed = this.originalAnimationSpeed;
-    console.log(`▶️ Анимации крипа ${this.creepType} возобновлены (скорость: ${this.originalAnimationSpeed})`);
+
   }
 
   /**

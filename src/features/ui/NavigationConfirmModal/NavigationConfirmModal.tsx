@@ -49,6 +49,44 @@ export default function NavigationConfirmModal({
     <div className="navigation-modal-overlay">
       <div className="navigation-modal">
         
+        {/* Декоративные элементы по углам */}
+        <div style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          width: '20px',
+          height: '20px',
+          border: '2px solid rgba(255, 215, 0, 0.4)',
+          borderLeft: 'none',
+          borderBottom: 'none',
+          borderRadius: '0 4px 0 0',
+          pointerEvents: 'none'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '8px',
+          left: '8px',
+          width: '20px',
+          height: '20px',
+          border: '2px solid rgba(255, 215, 0, 0.4)',
+          borderRight: 'none',
+          borderTop: 'none',
+          borderRadius: '0 0 0 4px',
+          pointerEvents: 'none'
+        }} />
+        <div style={{
+          position: 'absolute',
+          bottom: '8px',
+          right: '8px',
+          width: '20px',
+          height: '20px',
+          border: '2px solid rgba(255, 215, 0, 0.4)',
+          borderLeft: 'none',
+          borderTop: 'none',
+          borderRadius: '0 0 4px 0',
+          pointerEvents: 'none'
+        }} />
+        
         {/* Заголовок модального окна */}
         <div className="navigation-modal-header">
           <h2 className="navigation-modal-title">

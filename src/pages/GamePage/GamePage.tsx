@@ -343,12 +343,12 @@ export default function GamePage() {
        // Это позволит герою управлять фоном и обновлять скорость при изменении размера
        (app as any).setBackgroundMoving = (moving: boolean) => {
          isBackgroundMoving = moving;
-         console.log(`🌊 Фон ${moving ? 'начал' : 'остановил'} движение`);
+   
        };
        
        (app as any).updateBackgroundSpeed = (newBaseSpeed: number) => {
          scrollSpeed = newBaseSpeed * speedMultiplier; // Применяем общий коэффициент скорости
-         console.log(`🌊 Скорость фона обновлена: ${scrollSpeed.toFixed(2)} (базовая: ${newBaseSpeed.toFixed(2)}, множитель: ${speedMultiplier})`);
+ 
        };
        
        // Функция для обновления размеров фона при изменении экрана
@@ -388,14 +388,11 @@ export default function GamePage() {
        const { GameController } = await import('../../game/core/GameController');
        
        // Инициализируем систему уровней героя для тестирования
-       console.log('🎯 Инициализация HeroLevelSystem');
-       console.log('📊 Текущий уровень:', heroLevelSystem.getCurrentLevel());
-       console.log('🏆 Градация:', heroLevelSystem.getLevelName());
-       console.log('💾 Данные уровня:', heroLevelSystem.getLevelData());
+       
        
        // Тестируем события
        heroLevelSystem.on('levelUp', (newLevel: number) => {
-         console.log('🎉 Событие levelUp:', newLevel);
+         
        });
        
        // Делаем систему доступной глобально для тестирования
@@ -475,7 +472,7 @@ export default function GamePage() {
      // Отмечаем что компонент размонтирован
      isMounted = false;
      
-     console.log('🔄 Очистка GamePage при размонтировании');
+     
      
      if (pixiApp) {
        try {
@@ -532,7 +529,7 @@ export default function GamePage() {
        
              // Если игра остановлена, но мы на странице игры - перезапускаем
       if (!isRunning && !isGameActive) {
-        console.log('🔄 Обнаружена остановленная игра при возврате на GamePage');
+
         
         // Сбрасываем состояние Game Over перед перезапуском
         setIsGameOver(false);
@@ -588,7 +585,7 @@ export default function GamePage() {
     setIsGameOver(false);
     setSessionGold(0);
     
-    console.log('🔄 Игра перезапущена после смерти героя (безопасный метод)');
+    
   };
 
   const handleMainMenu = () => {
@@ -599,7 +596,7 @@ export default function GamePage() {
     // Переходим на главную страницу
     navigate('/main');
     
-    console.log('🏠 Переход в главное меню после смерти героя');
+    
   };
 
   // Функции управления паузой теперь находятся в GameContext
@@ -616,7 +613,7 @@ export default function GamePage() {
      left: 0,
      width: '100%',
      height: '100%',
-     backgroundColor: 'rgba(0, 0, 0, 0.9)',
+     backgroundColor: 'rgba(0, 0, 0, 0.95)',
      display: 'flex',
      flexDirection: 'column',
      justifyContent: 'center',
@@ -624,81 +621,180 @@ export default function GamePage() {
      zIndex: 10,
      color: 'white',
      fontFamily: 'Arial, sans-serif',
+     backgroundImage: 'url(/media/game/images/forest_background1.jpg)',
+     backgroundSize: 'cover',
+     backgroundPosition: 'center',
+     backgroundRepeat: 'no-repeat',
    }}>
      
-     {/* Заголовок */}
+     {/* Затемняющий overlay для лучшей читаемости */}
      <div style={{
-       fontSize: '24px',
-       fontWeight: 'bold',
-       marginBottom: '30px',
-       textAlign: 'center',
+       position: 'absolute',
+       top: 0,
+       left: 0,
+       right: 0,
+       bottom: 0,
+       backgroundColor: 'rgba(0, 0, 0, 0.8)',
+       zIndex: -1
+     }} />
+
+     {/* Стилизованная панель загрузки */}
+     <div style={{
+       background: 'linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%)',
+       border: '2px solid rgba(255, 215, 0, 0.6)',
+       borderRadius: '8px',
+       padding: 'clamp(20px, 4vw, 40px)',
+       boxShadow: `
+         0 8px 32px rgba(0, 0, 0, 0.5),
+         inset 0 1px 0 rgba(255, 255, 255, 0.1),
+         inset 0 -1px 0 rgba(0, 0, 0, 0.3)
+       `,
+       position: 'relative',
+       overflow: 'hidden',
+       minWidth: 'clamp(320px, 60vw, 500px)',
+       maxWidth: '90vw',
+       textAlign: 'center'
      }}>
-       {isInitializing && '⚙️ Инициализация игрового движка...'}
-       {isLoadingAssets && '📦 Загрузка игровых ресурсов...'}
-     </div>
-
-     {/* Прогресс бар */}
-     {isLoadingAssets && (
-       <>
-         <div style={{
-           width: '300px',
-           height: '20px',
-           backgroundColor: 'rgba(255, 255, 255, 0.2)',
-           borderRadius: '10px',
-           overflow: 'hidden',
-           marginBottom: '15px',
-           border: '2px solid rgba(255, 255, 255, 0.3)',
-         }}>
-           <div style={{
-             width: `${loadingProgress.percentage}%`,
-             height: '100%',
-             backgroundColor: '#4CAF50',
-             borderRadius: '8px',
-             transition: 'width 0.3s ease',
-             background: 'linear-gradient(90deg, #4CAF50, #45a049)',
-           }} />
-         </div>
-
-         {/* Процент и текущий ресурс */}
-         <div style={{
-           fontSize: '16px',
-           marginBottom: '10px',
-           fontWeight: 'bold',
-         }}>
-           {loadingProgress.percentage}%
-         </div>
-
-         <div style={{
-           fontSize: '14px',
-           opacity: 0.8,
-           textAlign: 'center',
-           maxWidth: '400px',
-         }}>
-           {loadingProgress.currentAsset || 'Подготовка...'}
-         </div>
-
-         {/* Информация о прогрессе */}
-         <div style={{
-           fontSize: '12px',
-           opacity: 0.6,
-           marginTop: '10px',
-         }}>
-           {loadingProgress.loaded} из {loadingProgress.total} ресурсов
-         </div>
-       </>
-     )}
-
-     {/* Индикатор инициализации */}
-     {isInitializing && (
+       
+       {/* Декоративный элемент сверху */}
        <div style={{
-         width: '40px',
-         height: '40px',
-         border: '4px solid rgba(255, 255, 255, 0.3)',
-         borderTop: '4px solid #4CAF50',
-         borderRadius: '50%',
-         animation: 'spin 1s linear infinite',
+         position: 'absolute',
+         top: 0,
+         left: 0,
+         right: 0,
+         height: '2px',
+         background: 'linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.8) 50%, transparent 100%)'
        }} />
-     )}
+
+       {/* Заголовок */}
+       <div style={{
+         fontSize: 'clamp(18px, 4vw, 28px)',
+         fontWeight: 'bold',
+         marginBottom: 'clamp(20px, 4vw, 30px)',
+         color: '#c9aa71',
+         textTransform: 'uppercase',
+         letterSpacing: 'clamp(0.5px, 0.2vw, 1.5px)',
+         textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+       }}>
+         {isInitializing && '⚙️ Инициализация игрового движка...'}
+         {isLoadingAssets && '📦 Загрузка игровых ресурсов...'}
+       </div>
+
+       {/* Прогресс бар */}
+       {isLoadingAssets && (
+         <>
+           <div style={{
+             width: '100%',
+             height: 'clamp(16px, 2vw, 24px)',
+             backgroundColor: 'rgba(0, 0, 0, 0.4)',
+             borderRadius: '12px',
+             overflow: 'hidden',
+             marginBottom: 'clamp(15px, 3vw, 20px)',
+             border: '2px solid rgba(100, 120, 140, 0.5)',
+             boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+           }}>
+             <div style={{
+               width: `${loadingProgress.percentage}%`,
+               height: '100%',
+               borderRadius: '10px',
+               transition: 'width 0.3s ease',
+               background: 'linear-gradient(90deg, #c9aa71, #ffd700, #c9aa71)',
+               boxShadow: '0 0 10px rgba(201, 170, 113, 0.5)',
+             }} />
+           </div>
+
+           {/* Процент и статус */}
+           <div style={{
+             fontSize: 'clamp(16px, 3vw, 22px)',
+             marginBottom: 'clamp(10px, 2vw, 15px)',
+             fontWeight: 'bold',
+             color: '#ffd700',
+             textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+           }}>
+             {loadingProgress.percentage}%
+           </div>
+
+           <div style={{
+             fontSize: 'clamp(12px, 2.5vw, 16px)',
+             opacity: 0.9,
+             color: '#c9aa71',
+             marginBottom: 'clamp(8px, 1.5vw, 12px)',
+             textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+           }}>
+             {loadingProgress.currentAsset || 'Подготовка...'}
+           </div>
+
+           {/* Информация о прогрессе */}
+           <div style={{
+             fontSize: 'clamp(10px, 2vw, 14px)',
+             opacity: 0.7,
+             color: '#a0a0a0',
+             textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
+           }}>
+             {loadingProgress.loaded} из {loadingProgress.total} ресурсов
+           </div>
+         </>
+       )}
+
+       {/* Индикатор инициализации */}
+       {isInitializing && (
+         <div style={{
+           width: 'clamp(40px, 6vw, 60px)',
+           height: 'clamp(40px, 6vw, 60px)',
+           border: '4px solid rgba(201, 170, 113, 0.3)',
+           borderTop: '4px solid #c9aa71',
+           borderRadius: '50%',
+           animation: 'spin 1s linear infinite',
+           boxShadow: '0 0 20px rgba(201, 170, 113, 0.3)',
+         }} />
+       )}
+
+       {/* Декоративные элементы по углам */}
+       <div style={{
+         position: 'absolute',
+         top: '8px',
+         left: '8px',
+         width: '20px',
+         height: '20px',
+         border: '2px solid rgba(255, 215, 0, 0.4)',
+         borderRight: 'none',
+         borderBottom: 'none',
+         borderRadius: '4px 0 0 0',
+       }} />
+       <div style={{
+         position: 'absolute',
+         top: '8px',
+         right: '8px',
+         width: '20px',
+         height: '20px',
+         border: '2px solid rgba(255, 215, 0, 0.4)',
+         borderLeft: 'none',
+         borderBottom: 'none',
+         borderRadius: '0 4px 0 0',
+       }} />
+       <div style={{
+         position: 'absolute',
+         bottom: '8px',
+         left: '8px',
+         width: '20px',
+         height: '20px',
+         border: '2px solid rgba(255, 215, 0, 0.4)',
+         borderRight: 'none',
+         borderTop: 'none',
+         borderRadius: '0 0 0 4px',
+       }} />
+       <div style={{
+         position: 'absolute',
+         bottom: '8px',
+         right: '8px',
+         width: '20px',
+         height: '20px',
+         border: '2px solid rgba(255, 215, 0, 0.4)',
+         borderLeft: 'none',
+         borderTop: 'none',
+         borderRadius: '0 0 4px 0',
+       }} />
+     </div>
 
      {/* CSS анимация */}
      <style dangerouslySetInnerHTML={{

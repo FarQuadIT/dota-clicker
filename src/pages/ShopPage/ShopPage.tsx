@@ -10,7 +10,7 @@
  * характеристику героя и синхронизируется с сервером.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { shopCategories } from '../../shared/constants/shopConfig';
 import type { ShopItem, HeroStats } from '../../shared/types';
 import { useGold } from '../../contexts/GoldContext';
@@ -29,6 +29,16 @@ import { fetchHeroItems, updateItemLevel } from '../../shared/api/apiService';
  * и список доступных предметов для покупки.
  */
 export default function ShopPage() {
+  // Ref для отслеживания состояния монтирования компонента
+  const isMountedRef = useRef(true);
+
+  // Cleanup при размонтировании
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Состояние для хранения активной категории
   const [activeCategory, setActiveCategory] = useState<string>(SHOP_CATEGORIES.MAX_HEALTH);
   
@@ -58,6 +68,9 @@ export default function ShopPage() {
    * устанавливает их в состояние или обрабатывает ошибку
    */
   const loadItems = useCallback(async () => {
+    // Проверяем, что компонент все еще смонтирован
+    if (!isMountedRef.current) return;
+    
     // Предотвращаем повторную загрузку, если данные уже есть
     if (Object.keys(items).length > 0) return;
     
@@ -67,17 +80,26 @@ export default function ShopPage() {
     try {
       const fetchedItems = await fetchHeroItems(TEST_USER_ID, TEST_HERO_ID);
       
+      // Проверяем, что компонент все еще смонтирован
+      if (!isMountedRef.current) return;
+      
       if (fetchedItems) {
         setItems(fetchedItems);
       } else {
         throw new Error('Не удалось загрузить предметы магазина');
       }
     } catch (error) {
+      // Проверяем, что компонент все еще смонтирован
+      if (!isMountedRef.current) return;
+      
       const errorMessage = error instanceof Error 
         ? error.message 
         : 'Ошибка загрузки предметов магазина';
       setError(errorMessage);
     } finally {
+      // Проверяем, что компонент все еще смонтирован
+      if (!isMountedRef.current) return;
+      
       setIsInitialLoading(false);
     }
   }, [items]);
@@ -94,6 +116,9 @@ export default function ShopPage() {
    * @param isPurchasing - Устанавливаемый флаг покупки
    */
   const setItemPurchasingState = useCallback((itemId: string, isPurchasing: boolean) => {
+    // Проверяем, что компонент все еще смонтирован
+    if (!isMountedRef.current) return;
+    
     setPurchasingItemIds(prev => {
       const newSet = new Set(prev);
       if (isPurchasing) {
@@ -115,6 +140,9 @@ export default function ShopPage() {
    * @param itemIndex - Индекс предмета в массиве данной категории
    */
   const buyItem = useCallback(async (category: string, itemIndex: number) => {
+    // Проверяем, что компонент все еще смонтирован
+    if (!isMountedRef.current) return;
+    
     // Получаем текущий предмет
     const item = items[category][itemIndex];
     
@@ -127,6 +155,9 @@ export default function ShopPage() {
     setItemPurchasingState(item.id, true);
     
     try {
+      // Проверяем, что компонент все еще смонтирован
+      if (!isMountedRef.current) return;
+      
       // Стоимость предмета
       const cost = item.currentPrice;
       
@@ -150,6 +181,9 @@ export default function ShopPage() {
         level: item.level + 1,
         currentPrice: item.priceFormula(item.currentPrice),
       };
+      
+      // Проверяем, что компонент все еще смонтирован
+      if (!isMountedRef.current) return;
       
       // Обновляем только этот конкретный предмет в массиве
       setItems(prev => {
@@ -188,6 +222,9 @@ export default function ShopPage() {
       await syncGoldWithServer(category === SHOP_CATEGORIES.INCOME);
       
     } catch (error) {
+      // Проверяем, что компонент все еще смонтирован
+      if (!isMountedRef.current) return;
+      
       // В случае ошибки возвращаем золото
       setGold(prev => prev + item.currentPrice);
       
@@ -195,12 +232,19 @@ export default function ShopPage() {
       setError('Ошибка при покупке предмета. Попробуйте еще раз.');
       
       // Сбрасываем ошибку через 3 секунды
-      setTimeout(() => setError(null), 3000);
+      setTimeout(() => {
+        if (isMountedRef.current) {
+          setError(null);
+        }
+      }, 3000);
     } finally {
+      // Проверяем, что компонент все еще смонтирован
+      if (!isMountedRef.current) return;
+      
       // Снимаем флаг покупки
       setItemPurchasingState(item.id, false);
     }
-  }, [items, purchasingItemIds, gold, stats, setItemPurchasingState, setGold, updateStat, setPassiveIncome, syncGoldWithServer]);
+      }, [items, purchasingItemIds, gold, stats, setItemPurchasingState, setGold, updateStat, setPassiveIncome, syncGoldWithServer]);
 
   // Получаем список предметов для активной категории (или пустой массив)
   const categoryItems = items[activeCategory] || [];
@@ -209,6 +253,9 @@ export default function ShopPage() {
    * Обработчик перезагрузки страницы при ошибке
    */
   const handleRetry = useCallback(() => {
+    // Проверяем, что компонент все еще смонтирован
+    if (!isMountedRef.current) return;
+    
     setError(null);
     loadItems();
   }, [loadItems]);
@@ -235,11 +282,6 @@ export default function ShopPage() {
               className={`menu-item ${activeCategory === key ? "active" : ""}`}
               onClick={() => setActiveCategory(key)}
               title={category.name}
-              style={{
-                background: `linear-gradient(to bottom, ${category.color}99, rgba(0,0,0,0.1))`,
-                borderColor: category.color,
-                color: category.color,
-              }}
             >
               <img
                 className="menu-icon"
@@ -306,11 +348,11 @@ export default function ShopPage() {
               <ShopItemCard
                 key={item.id}
                 item={item}
-                category={shopCategories[activeCategory]}
                 isAffordable={gold >= item.currentPrice}
                 currentValue={stats ? Number(stats[activeCategory]) : 0}
                 onBuy={() => buyItem(activeCategory, index)}
                 isPurchasing={purchasingItemIds.has(item.id)}
+                categoryKey={activeCategory}
               />
             ))
           ) : (

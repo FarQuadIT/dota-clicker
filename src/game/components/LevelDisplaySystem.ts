@@ -2,7 +2,7 @@
  * Система отображения уровня с красивыми значками и прогресс-баром
  * 
  * Логика работы:
- * 1. При старте уровня - показ значка уровня с цифрой на 3 секунды
+ * 1. При старте уровня - показ значка уровня с цифрой на 2 секунды
  * 2. Потом показ полоски прогресса с 9 делениями и джаггернаутом
  * 3. При убийстве крипа - движение джаггернаута к следующей границе
  */
@@ -38,13 +38,14 @@ export class LevelDisplaySystem {
   private progressContainer: Container | null = null;
   private progressBar: Graphics | null = null;
   private juggernautSprite: Sprite | null = null;
+  private creepCountText: Text | null = null; // Счетчик убитых крипов
   private currentProgress: number = 0; // 0-10
   private readonly TOTAL_PROGRESS = 10;
   private readonly PROGRESS_DIVISIONS = 9; // 9 делений = 10 границ
   // ====================================
   
   // ======= НАСТРОЙКИ ОТОБРАЖЕНИЯ =======
-  private readonly LEVEL_ICON_DISPLAY_TIME = 3000; // 3 секунды
+  private readonly LEVEL_ICON_DISPLAY_TIME = 2000; // 2 секунды
   private readonly PROGRESS_BAR_HEIGHT = 12;
   private readonly JUGGERNAUT_SIZE = 32;
   private readonly PROGRESS_BAR_MIN_WIDTH = 300; // Минимальная ширина
@@ -55,6 +56,14 @@ export class LevelDisplaySystem {
   private readonly FADE_IN_DURATION = 500; // Время появления (мс)
   private readonly FADE_OUT_DURATION = 300; // Время исчезновения (мс)
   // ===================================
+  
+  // ======= НАСТРОЙКИ ПОЗИЦИИ И РАЗМЕРА ЦИФР =======
+  // Размер значка: Math.max(80, Math.min(120, screenWidth * 0.12))
+  // Размер шрифта: Math.max(24, Math.min(40, screenWidth * 0.06))
+  // Для настройки позиции цифр ищите в updatePositioning():
+  // const horizontalOffset = 2; // сдвиг вправо (+) / влево (-)
+  // const verticalOffset = 0;   // сдвиг вниз (+) / вверх (-)
+  // ================================================
 
   constructor(app: Application) {
     this.app = app;
@@ -84,11 +93,9 @@ export class LevelDisplaySystem {
   }
 
   /**
-   * Показать значок уровня с номером на 3 секунды
+   * Показать значок уровня с номером на 2 секунды
    */
   public async showLevelIcon(level: number): Promise<void> {
-    console.log(`🎯 Показываем значок уровня ${level}`);
-    
     this.currentMode = DisplayMode.LEVEL_ICON;
     this.clearDisplay();
     
@@ -99,43 +106,50 @@ export class LevelDisplaySystem {
       // Получаем текстуру из AssetsManager
       const iconTexture = assetsManager.getLevelTexture(iconFileName.split('.')[0]);
       
-      // Создаем спрайт значка
+      // Создаем спрайт значка с адаптивным размером
       this.levelIconSprite = new Sprite(iconTexture);
       this.levelIconSprite.anchor.set(0.5);
-      this.levelIconSprite.scale.set(0.8); // Немного уменьшаем
+      
+      // Адаптивный размер значка (увеличенный размер)
+      const screenWidth = this.app.screen.width;
+      const adaptiveIconSize = Math.max(80, Math.min(120, screenWidth * 0.12));
+      const iconScale = adaptiveIconSize / Math.max(iconTexture.width, iconTexture.height);
+      this.levelIconSprite.scale.set(iconScale);
       this.levelIconSprite.alpha = 0; // Начинаем с прозрачности
       
-      // Создаем текст с номером уровня
+      // Адаптивный размер шрифта (увеличенный размер)
+      const adaptiveFontSize = Math.max(24, Math.min(40, screenWidth * 0.06));
+      
+      // Создаем текст с номером уровня в том же стиле что на главной странице
       this.levelNumberText = new Text(level.toString(), {
-        fontFamily: 'Arial',
-        fontSize: 36,
+        fontFamily: 'Arial, sans-serif',
+        fontSize: adaptiveFontSize,
         fontWeight: 'bold',
         fill: '#ffffff',
-        stroke: { width: 3, color: '#000000' },
+        stroke: { width: Math.max(3, adaptiveFontSize * 0.15), color: '#000000' },
         dropShadow: {
-          alpha: 0.8,
-          angle: Math.PI / 6,
-          blur: 2,
-          distance: 2,
+          alpha: 1,
+          angle: Math.PI / 4,
+          blur: 6,
+          distance: 3,
           color: '#000000'
         }
       });
-      this.levelNumberText.anchor.set(0.5);
+      this.levelNumberText.anchor.set(0.5, 0.5); // Центрируем и по X и по Y
       this.levelNumberText.alpha = 0; // Начинаем с прозрачности
       
       // Добавляем элементы в контейнер
       this.container.addChild(this.levelIconSprite);
       this.container.addChild(this.levelNumberText);
       
-      // Позиционируем по центру сверху
+      // Позиционируем по центру сверху (настройка смещения в updatePositioning)
       this.updatePositioning();
       
       // Плавное появление значка
       this.fadeIn(this.levelIconSprite);
       this.fadeIn(this.levelNumberText, () => {
-        // После появления запускаем таймер на 3 секунды
+        // После появления запускаем таймер на 2 секунды
         this.levelIconTimer = Date.now() + this.FADE_IN_DURATION;
-        console.log('✨ Значок уровня появился плавно');
       });
       
     } catch (error) {
@@ -149,8 +163,6 @@ export class LevelDisplaySystem {
    * Показать полоску прогресса с джаггернаутом
    */
   public showProgressBar(): void {
-    console.log('📊 Показываем полоску прогресса');
-    
     this.currentMode = DisplayMode.PROGRESS_BAR;
     this.clearDisplay();
     this.currentProgress = 0;
@@ -166,6 +178,9 @@ export class LevelDisplaySystem {
       // Создаем джаггернаута
       this.createJuggernautIcon();
       
+      // Создаем счетчик крипов
+      this.createCreepCounter();
+      
       // Добавляем в основной контейнер
       this.container.addChild(this.progressContainer);
       
@@ -173,9 +188,7 @@ export class LevelDisplaySystem {
       this.updatePositioning();
       
       // Плавное появление прогресс-бара
-      this.fadeIn(this.progressContainer, () => {
-        console.log('✨ Прогресс-бар появился плавно');
-      });
+      this.fadeIn(this.progressContainer);
       
     } catch (error) {
       console.error('❌ Ошибка создания прогресс-бара:', error);
@@ -192,7 +205,10 @@ export class LevelDisplaySystem {
     
     this.currentProgress = Math.max(0, Math.min(current, this.TOTAL_PROGRESS));
     
-    console.log(`⚔️ Обновляем прогресс: ${this.currentProgress}/${this.TOTAL_PROGRESS}`);
+    // Обновляем текст счетчика крипов
+    if (this.creepCountText) {
+      this.creepCountText.text = `${this.currentProgress}/${this.TOTAL_PROGRESS}`;
+    }
     
     // ИСПРАВЛЕНО: Рассчитываем позицию джаггернаута по границам делений
     // У нас 9 делений = 10 границ (позиций для джаггернаута)
@@ -203,8 +219,6 @@ export class LevelDisplaySystem {
     const progressBarWidth = this.getProgressBarWidth();
     const newX = -progressBarWidth / 2 + (progressRatio * progressBarWidth);
     
-    console.log(`📍 Позиция джаггернаута: прогресс ${this.currentProgress} -> ${clampedProgress}, ratio ${progressRatio.toFixed(3)}, x=${newX.toFixed(1)}`);
-    
     // Плавная анимация перемещения
     this.animateJuggernautMovement(newX);
   }
@@ -213,8 +227,6 @@ export class LevelDisplaySystem {
    * Плавный переход от значка уровня к прогресс-бару
    */
   private transitionToProgressBar(): void {
-    console.log('🔄 Плавный переход к прогресс-бару');
-    
     // Плавно скрываем значок уровня
     if (this.levelIconSprite) {
       this.fadeOut(this.levelIconSprite);
@@ -223,7 +235,6 @@ export class LevelDisplaySystem {
     if (this.levelNumberText) {
       this.fadeOut(this.levelNumberText, () => {
         // После исчезновения значка показываем прогресс-бар
-        console.log('✨ Значок уровня исчез плавно');
         this.showProgressBar();
       });
     } else {
@@ -236,12 +247,9 @@ export class LevelDisplaySystem {
    * Плавно скрыть прогресс-бар и показать новый значок уровня
    */
   public transitionToNewLevel(newLevel: number): void {
-    console.log('🔄 Плавный переход к новому уровню');
-    
     if (this.currentMode === DisplayMode.PROGRESS_BAR && this.progressContainer) {
       // Плавно скрываем прогресс-бар
       this.fadeOut(this.progressContainer, () => {
-        console.log('✨ Прогресс-бар исчез плавно');
         // После исчезновения показываем новый значок уровня
         this.showLevelIcon(newLevel);
       });
@@ -255,8 +263,6 @@ export class LevelDisplaySystem {
    * Скрыть отображение уровня
    */
   public hideLevelDisplay(): void {
-    console.log('🙈 Скрываем отображение уровня');
-    
     this.currentMode = DisplayMode.HIDDEN;
     this.clearDisplay();
   }
@@ -290,13 +296,30 @@ export class LevelDisplaySystem {
       const topY = 80; // Отступ сверху
       
       if (this.levelIconSprite) {
+        // Пересчитываем адаптивный размер значка при изменении экрана (увеличенный)
+        const adaptiveIconSize = Math.max(80, Math.min(120, screenWidth * 0.12));
+        const iconScale = adaptiveIconSize / Math.max(this.levelIconSprite.texture.width, this.levelIconSprite.texture.height);
+        this.levelIconSprite.scale.set(iconScale);
+        
         this.levelIconSprite.x = centerX;
         this.levelIconSprite.y = topY;
       }
       
       if (this.levelNumberText) {
-        this.levelNumberText.x = centerX;
-        this.levelNumberText.y = topY;
+        // Пересчитываем адаптивный размер шрифта при изменении экрана (увеличенный)
+        const adaptiveFontSize = Math.max(24, Math.min(40, screenWidth * 0.06));
+        this.levelNumberText.style.fontSize = adaptiveFontSize;
+        this.levelNumberText.style.stroke = { width: Math.max(3, adaptiveFontSize * 0.15), color: '#000000' };
+        
+        // Убеждаемся что anchor установлен по центру
+        this.levelNumberText.anchor.set(0.5, 0.5);
+        
+        // Позиционирование цифры на значке (можно настроить смещение здесь)
+        const horizontalOffset = 2.3; // НАСТРОЙКА: сдвиг вправо в пикселях (0 = по центру)
+        const verticalOffset = 0;   // НАСТРОЙКА: сдвиг вниз в пикселях (0 = по центру)
+        
+        this.levelNumberText.x = centerX + horizontalOffset;
+        this.levelNumberText.y = topY + verticalOffset;
       }
       
     } else if (this.currentMode === DisplayMode.PROGRESS_BAR && this.progressContainer) {
@@ -323,10 +346,12 @@ export class LevelDisplaySystem {
     this.progressContainer.removeChildren();
     this.progressBar = null;
     this.juggernautSprite = null;
+    this.creepCountText = null; // Очищаем счетчик крипов
     
     // Создаем заново с новой шириной
     this.createProgressBar();
     this.createJuggernautIcon();
+    this.createCreepCounter(); // Пересоздаем счетчик крипов
     
     // Восстанавливаем позицию джаггернаута
     if (savedProgress > 0) {
@@ -345,6 +370,7 @@ export class LevelDisplaySystem {
     this.progressContainer = null;
     this.progressBar = null;
     this.juggernautSprite = null;
+    this.creepCountText = null; // Очищаем счетчик крипов
     this.levelIconTimer = 0;
   }
 
@@ -422,12 +448,48 @@ export class LevelDisplaySystem {
       this.juggernautSprite.x = initialX;
       this.juggernautSprite.y = 0;
       
-      console.log(`🎯 Джаггернаут создан в позиции x=${initialX} (начальная граница)`);
-      
       this.progressContainer!.addChild(this.juggernautSprite);
       
     } catch (error) {
       console.error('❌ Ошибка создания иконки джаггернаута:', error);
+    }
+  }
+
+  /**
+   * Создать счетчик убитых крипов
+   */
+  private createCreepCounter(): void {
+    try {
+      // Создаем текст счетчика крипов (формат: "1/10")
+      this.creepCountText = new Text({ 
+        text: `${this.currentProgress}/${this.TOTAL_PROGRESS}`, 
+        style: {
+          fontFamily: 'Doka',
+          fontSize: 16,
+          fontWeight: 'bold',
+          fill: '#ffffff', // Белый текст
+          stroke: { width: 2, color: '#000000' }, // Черная обводка
+          dropShadow: {
+            alpha: 0.8,
+            angle: Math.PI / 6,
+            blur: 2,
+            distance: 2,
+            color: '#000000'
+          }
+        }
+      });
+      
+      // Якорь по центру сверху, чтобы текст располагался под полоской по центру
+      this.creepCountText.anchor.set(0.5, 0);
+      
+      // Позиционируем под прогресс-баром по центру
+      this.creepCountText.x = 0; // По центру полоски
+      this.creepCountText.y = this.PROGRESS_BAR_HEIGHT / 2 + 8; // 8px отступ под полоской
+      
+      this.progressContainer!.addChild(this.creepCountText);
+      
+    } catch (error) {
+      console.error('❌ Ошибка создания счетчика крипов:', error);
     }
   }
 
