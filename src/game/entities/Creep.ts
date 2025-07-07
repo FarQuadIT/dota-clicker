@@ -333,6 +333,13 @@ export class Creep extends AnimatedSprite {
   }
 
   /**
+   * Установка зоны коллизии для данного крипа
+   */
+  public setCollisionZone(zone: number): void {
+    this.collisionZone = zone;
+  }
+
+  /**
    * Инициализация системы здоровья крипа
    */
   private initializeHealth(): void {
@@ -687,6 +694,54 @@ export class Creep extends AnimatedSprite {
     // Восстанавливаем сохраненную скорость анимации
     this.animationSpeed = this.originalAnimationSpeed;
 
+  }
+
+  /**
+   * Обновление множителя здоровья (для системы прогрева текстур)
+   * @param healthMultiplier новый множитель здоровья
+   */
+  public updateHealthMultiplier(healthMultiplier: number): void {
+    // Получаем базовое здоровье из конфигурации
+    const creepTypeConfig = CREEP_TYPES[this.creepType];
+    if (!creepTypeConfig) {
+      return;
+    }
+    
+    // Пересчитываем максимальное здоровье
+    this.maxHealth = Math.floor(creepTypeConfig.maxHealth * healthMultiplier);
+    
+    // Обновляем текущее здоровье
+    this.currentHealth = this.maxHealth;
+    
+    // Обновляем полоску здоровья
+    if (this.healthBar) {
+      this.healthBar.updateHealth(this.currentHealth, this.maxHealth);
+    }
+  }
+
+  /**
+   * Сброс крипа к исходному состоянию для повторного использования
+   * Используется системой прогрева текстур
+   */
+  public resetToInitialState(): void {
+    // Сбрасываем состояние и флаги
+    this.currentState = EntityState.IDLE;
+    this.isDead = false;
+    this.hasDealtDamageToHero = false;
+    
+    // Восстанавливаем здоровье до максимума
+    this.currentHealth = this.maxHealth;
+    
+    // Обновляем полоску здоровья
+    if (this.healthBar) {
+      this.healthBar.updateHealth(this.currentHealth);
+    }
+    
+    // Запускаем анимацию ожидания
+    this.setupIdleAnimation();
+    
+    // Восстанавливаем скорость анимации
+    this.animationSpeed = this.originalAnimationSpeed;
   }
 
   /**

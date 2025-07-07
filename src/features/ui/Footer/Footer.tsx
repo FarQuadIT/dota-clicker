@@ -10,7 +10,7 @@ import './Footer.css';
 export default function Footer() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isGameActive, isPaused, pauseGame, resumeGame, gameController, setGameActive } = useGame();
+  const { isGameActive, isPaused, pauseGame, resumeGame, gameController, setGameActive, isMenuBlocked } = useGame();
 
   // Состояние для модального окна подтверждения навигации
   const [showNavigationModal, setShowNavigationModal] = useState(false);
@@ -41,6 +41,11 @@ export default function Footer() {
 
   // Обработчик клика по таб-меню
   const handleTabClick = (item: typeof menuItems[0]) => {
+    // Если меню заблокировано, игнорируем клики
+    if (isMenuBlocked) {
+      return;
+    }
+    
     // Уведомляем AudioManager о пользовательском взаимодействии
     try {
       audioManager.onUserInteraction();
@@ -148,12 +153,12 @@ export default function Footer() {
 
   return (
     <>
-    <footer className="footer-bar">
+    <footer className={`footer-bar ${isMenuBlocked ? 'blocked' : ''}`}>
       {/* Создаем пункты меню */}
       {menuItems.map((item, index) => (
         <div
           key={item.label}
-          className={`footer-item ${index === activeIndex ? 'active' : ''}`}
+          className={`footer-item ${index === activeIndex ? 'active' : ''} ${isMenuBlocked ? 'blocked' : ''}`}
             onClick={() => handleTabClick(item)}
         >
           <i className={item.icon}></i>

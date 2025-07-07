@@ -30,7 +30,7 @@ export default function Header() {
   const { gold, passiveIncome } = useGold();
   
   // Получаем игровой контекст для управления паузой
-  const { isPaused, isGameActive, pauseGame, resumeGame } = useGame();
+  const { isPaused, isGameActive, pauseGame, resumeGame, blockMenu, unblockMenu, isMenuBlocked } = useGame();
   
   // Состояние для отображения/скрытия настроек
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -61,7 +61,10 @@ export default function Header() {
     if (isGameActive && !isPaused) {
       pauseGame();
     }
-  }, [isGameActive, isPaused, pauseGame]);
+    
+    // Блокируем меню при открытии настроек
+    blockMenu();
+  }, [isGameActive, isPaused, pauseGame, blockMenu]);
 
   // Обработчик для закрытия настроек
   const closeSettings = useCallback(() => {
@@ -71,12 +74,15 @@ export default function Header() {
     if (isGameActive && isPaused) {
       resumeGame();
     }
-  }, [isGameActive, isPaused, resumeGame]);
+    
+    // Разблокируем меню при закрытии настроек
+    unblockMenu();
+  }, [isGameActive, isPaused, resumeGame, unblockMenu]);
 
   return (
     <header className="top-bar">
       {/* Левая иконка (возврат) */}
-      <div id="resume-button" className="settings-button">
+      <div id="resume-button" className={`settings-button ${isMenuBlocked ? 'blocked' : ''}`}>
         <div className="left-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 472.615 472.615" width="24" height="24">
             <path d="M167.158,117.315l-0.001-77.375L0,193.619l167.157,153.679v-68.555c200.338,0.004,299.435,153.932,299.435,153.932 

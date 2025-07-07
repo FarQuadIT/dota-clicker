@@ -103,3 +103,14 @@
 .left-icon svg {
     fill: rgb(121, 121, 121);
 }
+
+/* Заблокированное состояние Header */
+.settings-button.blocked {
+    pointer-events: none;
+    opacity: 0.5;
+    filter: blur(1px);
+}
+
+.settings-button.blocked .left-icon svg {
+    fill: rgb(80, 80, 80);
+}

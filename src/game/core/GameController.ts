@@ -25,6 +25,7 @@ import { TEST_USER_ID, TEST_HERO_ID, API_BASE_URL } from '../../shared/constants
 import { heroLevelSystem } from '../systems/HeroLevelSystem';
 import { getLevelConfig, getAvailableCreepsForLevel, getBossForLevel } from '../config/levelsConfig';
 import { audioManager } from '../managers/SoundManager';
+import { TextureWarmupManager } from '../managers/TextureWarmupManager';
 
 /**
  * Конфигурация игры
@@ -104,6 +105,9 @@ export class GameController {
   // Система отображения уровня
   private levelDisplaySystem: LevelDisplaySystem;
   
+  // Менеджер прогрева текстур
+  public textureWarmupManager: TextureWarmupManager;
+  
   /**
    * Конструктор контроллера
    */
@@ -131,6 +135,9 @@ export class GameController {
     
     // Инициализируем систему отображения уровня
     this.levelDisplaySystem = new LevelDisplaySystem(this.app);
+    
+    // Инициализируем менеджер прогрева текстур
+    this.textureWarmupManager = new TextureWarmupManager(this.app);
     
     // Добавляем ссылку на себя в app для доступа из других компонентов
     (this.app as any).gameController = this;
@@ -379,6 +386,13 @@ export class GameController {
     const newLevel = heroLevelSystem.getCurrentLevel();
     this.levelDisplaySystem.transitionToNewLevel(newLevel);
     
+    // Запускаем прогрев текстур для нового уровня
+    this.textureWarmupManager.warmupLevel(newLevel).then(() => {
+      console.log(`✅ Прогрев нового уровня ${newLevel} завершен`);
+    }).catch(error => {
+      console.warn(`⚠️ Ошибка прогрева нового уровня ${newLevel}:`, error);
+    });
+    
     // TODO: Показать модальное окно завершения уровня (в следующих микрошагах)
   }
   
@@ -394,11 +408,34 @@ export class GameController {
       this.hero.setIdle(); // Герой стоит в idle анимации
       this.initializationTimer = 0; // Сбрасываем таймер
       
+      // Запускаем предварительный прогрев текстур
+      this.preWarmupCurrentLevel();
+      
       // НЕ создаем крипа в состоянии INITIALIZATION
     } else {
       // Если игра уже была запущена (например, после паузы)
       this.hero.setMoving();
       this.createNewCreep().catch(console.error);
+    }
+  }
+  
+  /**
+   * Предварительный прогрев текстур для текущего уровня
+   */
+  private async preWarmupCurrentLevel(): Promise<void> {
+    try {
+      const currentLevel = heroLevelSystem.getCurrentLevel();
+      console.log(`🔥 Предварительный прогрев текстур для уровня ${currentLevel}...`);
+      
+      // Запускаем прогрев асинхронно, чтобы не блокировать игру
+      this.textureWarmupManager.warmupLevel(currentLevel).then(() => {
+        console.log(`✅ Предварительный прогрев уровня ${currentLevel} завершен`);
+      }).catch(error => {
+        console.warn(`⚠️ Ошибка предварительного прогрева уровня ${currentLevel}:`, error);
+      });
+      
+    } catch (error) {
+      console.warn('⚠️ Ошибка при запуске предварительного прогрева:', error);
     }
   }
   
@@ -599,7 +636,7 @@ export class GameController {
   }
 
   /**
-   * Создание нового крипа
+   * Создание нового крипа с системой прогрева текстур
    */
   private async createNewCreep(): Promise<void> {
     // Блокируем создание крипов в состоянии INITIALIZATION
@@ -608,6 +645,79 @@ export class GameController {
       return;
     }
     
+    const currentLevel = heroLevelSystem.getCurrentLevel();
+    
+    // Прогреваем текстуры для текущего уровня если нужно
+    if (!this.textureWarmupManager.isLevelWarmedUp(currentLevel)) {
+      console.log(`🔥 Запускаем прогрев текстур для уровня ${currentLevel}...`);
+      await this.textureWarmupManager.warmupLevel(currentLevel);
+    }
+    
+    // Пытаемся получить следующего крипа из очереди уровня
+    this.currentCreep = this.textureWarmupManager.getNextLevelCreep();
+    
+    if (this.currentCreep) {
+      // Используем предварительно прогретого крипа
+      console.log('✅ Используем прогретого крипа из очереди');
+      
+      // Определяем, является ли этот крип боссом по его здоровью
+      await this.updateBossStatus(this.currentCreep);
+      
+      // Настраиваем крипа для игры
+      await this.configureCreepForGame(this.currentCreep);
+      
+    } else {
+      // Создаем крипа обычным способом, если прогрев не сработал
+      console.log('⚠️ Создаем крипа обычным способом (прогрев не сработал)');
+      await this.createCreepFallback();
+    }
+  }
+  
+  /**
+   * Обновление статуса босса на основе характеристик крипа
+   */
+  private async updateBossStatus(creep: Creep): Promise<void> {
+    // Определяем, является ли крип боссом по его здоровью
+    const { getCreepConfig } = await import('../config/creepsConfig');
+    const creepConfig = getCreepConfig(creep.getCreepType());
+    
+    if (creepConfig) {
+      const baseHealth = creepConfig.maxHealth;
+      const creepMaxHealth = creep.getMaxHealth();
+      
+      // Если здоровье крипа в 3 раза больше базового, значит это босс
+      const healthRatio = creepMaxHealth / baseHealth;
+      this.isCurrentlyBoss = healthRatio > 2.0; // Обычный крип имеет ratio ~1.0, босс ~3.0
+      
+      console.log(`🔍 Крип ${creep.getCreepType()}: здоровье ${creepMaxHealth}/${baseHealth} (ratio: ${healthRatio.toFixed(2)}) = ${this.isCurrentlyBoss ? 'БОСС' : 'обычный'}`);
+    }
+  }
+
+  /**
+   * Настройка крипа для игры после получения из очереди прогрева
+   */
+  private async configureCreepForGame(creep: Creep): Promise<void> {
+    // Используем менеджер прогрева для настройки крипа
+    await this.textureWarmupManager.prepareCreepForGame(creep);
+    
+    // Устанавливаем правильную скорость движения
+    creep.setMoveSpeed(this.config.moveSpeed);
+    
+    // Устанавливаем callback для анимации золота у крипа
+    creep.setGoldAnimationCallback((x: number, y: number, goldAmount: number) => {
+      this.coinAnimationManager.showCoinAnimationOnCreep(this.currentCreep!, goldAmount);
+    });
+    
+    // Крип уже добавлен к сцене в системе прогрева, просто убеждаемся что он видим
+    if (!creep.parent) {
+      this.app.stage.addChild(creep);
+    }
+  }
+  
+  /**
+   * Резервный метод создания крипа (без прогрева)
+   */
+  private async createCreepFallback(): Promise<void> {
     const { Creep } = await import('../entities/Creep');
     
     // Выбираем тип крипа (случайный или фиксированный)
@@ -619,7 +729,6 @@ export class GameController {
     if (!creepConfig) {
       return;
     }
-    
     
     // Используем параметры из creepsConfig.ts (которые содержат оригинальные значения из GameConfig.ts)
     const visualScale = creepConfig.visualScale;    // Визуальный масштаб
@@ -646,14 +755,6 @@ export class GameController {
       collisionZone: creepCollisionZone,
       healthMultiplier: bossHealthMultiplier // Увеличенное здоровье для боссов
     });
-    
-    // Логируем информацию о созданном крипе
-    const currentLevel = heroLevelSystem.getCurrentLevel();
-    if (this.isCurrentlyBoss) {
-
-    } else {
-      
-    }
     
     // СВЯЗЬ КРИПА С GAMECONTROLLER: Устанавливаем ссылку на GameController для доступа к менеджерам эффектов
     (this.app as any).gameController = this;
@@ -715,6 +816,11 @@ export class GameController {
     // ИСПРАВЛЕНО: Обновляем позиционирование и размеры системы отображения уровня
     if (this.levelDisplaySystem) {
       this.levelDisplaySystem.updatePositioning();
+    }
+    
+    // Обновляем менеджер прогрева текстур
+    if (this.textureWarmupManager) {
+      this.textureWarmupManager.onResize();
     }
     
     // Обновляем скорость движения пропорционально новому размеру экрана
@@ -1189,6 +1295,11 @@ export class GameController {
     // Уничтожаем систему отображения уровня
     if (this.levelDisplaySystem) {
       this.levelDisplaySystem.destroy();
+    }
+    
+    // Уничтожаем менеджер прогрева текстур
+    if (this.textureWarmupManager) {
+      this.textureWarmupManager.destroy();
     }
     
     // Убираем ссылку на себя из app

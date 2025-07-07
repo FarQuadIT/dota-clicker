@@ -55,6 +55,9 @@ export class LevelDisplaySystem {
   // ======= НАСТРОЙКИ АНИМАЦИИ =======
   private readonly FADE_IN_DURATION = 500; // Время появления (мс)
   private readonly FADE_OUT_DURATION = 300; // Время исчезновения (мс)
+  private readonly SCALE_ANIMATION_DURATION = 800; // Время масштабирования (мс)
+  private readonly SMALL_SCALE_FACTOR = 0.6; // Коэффициент уменьшения (60% от оригинала)
+  private readonly ELEMENT_SPACING = 16; // Расстояние между элементами
   // ===================================
   
   // ======= НАСТРОЙКИ ПОЗИЦИИ И РАЗМЕРА ЦИФР =======
@@ -121,18 +124,21 @@ export class LevelDisplaySystem {
       const adaptiveFontSize = Math.max(24, Math.min(40, screenWidth * 0.06));
       
       // Создаем текст с номером уровня в том же стиле что на главной странице
-      this.levelNumberText = new Text(level.toString(), {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: adaptiveFontSize,
-        fontWeight: 'bold',
-        fill: '#ffffff',
-        stroke: { width: Math.max(3, adaptiveFontSize * 0.15), color: '#000000' },
-        dropShadow: {
-          alpha: 1,
-          angle: Math.PI / 4,
-          blur: 6,
-          distance: 3,
-          color: '#000000'
+      this.levelNumberText = new Text({
+        text: level.toString(),
+        style: {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: adaptiveFontSize,
+          fontWeight: 'bold',
+          fill: '#ffffff',
+          stroke: { width: Math.max(3, adaptiveFontSize * 0.15), color: '#000000' },
+          dropShadow: {
+            alpha: 1,
+            angle: Math.PI / 4,
+            blur: 6,
+            distance: 3,
+            color: '#000000'
+          }
         }
       });
       this.levelNumberText.anchor.set(0.5, 0.5); // Центрируем и по X и по Y
@@ -196,6 +202,127 @@ export class LevelDisplaySystem {
   }
 
   /**
+   * Создать скрытый прогресс-бар (для анимации)
+   */
+  private createProgressBarHidden(): void {
+    this.currentProgress = 0;
+    
+    try {
+      // Создаем контейнер для прогресс-бара
+      this.progressContainer = new Container();
+      this.progressContainer.alpha = 0; // Полностью скрыт
+      
+      // Создаем полоску прогресса
+      this.createProgressBar();
+      
+      // Создаем джаггернаута
+      this.createJuggernautIcon();
+      
+      // Создаем счетчик крипов
+      this.createCreepCounter();
+      
+      // Добавляем в основной контейнер
+      this.container.addChild(this.progressContainer);
+      
+      // Позиционируем прогресс-бар под уменьшенным значком с равным расстоянием
+      const screenWidth = this.app.screen.width;
+      const iconY = 60 - this.ELEMENT_SPACING; // Позиция значка (44)
+      this.progressContainer.x = screenWidth / 2;
+      this.progressContainer.y = iconY + this.ELEMENT_SPACING * 2.5; // Под значком с увеличенным расстоянием
+      
+    } catch (error) {
+      console.error('❌ Ошибка создания скрытого прогресс-бара:', error);
+    }
+  }
+
+  /**
+   * Показать скрытый прогресс-бар (плавное появление)
+   */
+  private showHiddenProgressBar(): void {
+    this.currentMode = DisplayMode.PROGRESS_BAR;
+    
+    if (this.progressContainer) {
+      // Плавное появление прогресс-бара
+      this.fadeIn(this.progressContainer);
+    }
+  }
+
+  /**
+   * Создать скрытый значок уровня (маленький размер над прогресс-баром)
+   */
+  private createLevelIconHidden(level: number): void {
+    try {
+      // Получаем имя файла значка для уровня
+      const iconFileName = this.getLevelIconFileName(level);
+      
+      // Получаем текстуру из AssetsManager
+      const iconTexture = assetsManager.getLevelTexture(iconFileName.split('.')[0]);
+      
+      // Создаем спрайт значка
+      this.levelIconSprite = new Sprite(iconTexture);
+      this.levelIconSprite.anchor.set(0.5);
+      
+      // Маленький размер и позиция над прогресс-баром
+      const screenWidth = this.app.screen.width;
+      const adaptiveIconSize = Math.max(80, Math.min(120, screenWidth * 0.12));
+      const iconScale = adaptiveIconSize / Math.max(iconTexture.width, iconTexture.height);
+      const smallScale = iconScale * this.SMALL_SCALE_FACTOR;
+      
+      this.levelIconSprite.scale.set(smallScale);
+      this.levelIconSprite.x = screenWidth / 2;
+      this.levelIconSprite.y = 60 - this.ELEMENT_SPACING; // Позиция маленького значка
+      this.levelIconSprite.alpha = 1; // Видимый
+      
+      // Создаем текст с номером уровня
+      const adaptiveFontSize = Math.max(24, Math.min(40, screenWidth * 0.06));
+      const smallFontSize = adaptiveFontSize * this.SMALL_SCALE_FACTOR;
+      
+      this.levelNumberText = new Text({
+        text: level.toString(),
+        style: {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: smallFontSize,
+          fontWeight: 'bold',
+          fill: '#ffffff',
+          stroke: { width: Math.max(1, smallFontSize * 0.15), color: '#000000' },
+          dropShadow: {
+            alpha: 1,
+            angle: Math.PI / 4,
+            blur: 6,
+            distance: 3,
+            color: '#000000'
+          }
+        }
+      });
+      this.levelNumberText.anchor.set(0.5, 0.5);
+      
+      // Настройка смещения относительно значка (можно изменить здесь)
+      const horizontalOffset = 2.3; // сдвиг от центра значка
+      const verticalOffset = 0;
+      
+      this.levelNumberText.x = (screenWidth / 2) + horizontalOffset;
+      this.levelNumberText.y = (60 - this.ELEMENT_SPACING) + verticalOffset; // Позиция текста маленького значка
+      this.levelNumberText.alpha = 1; // Видимый
+      
+      // Добавляем элементы в контейнер
+      this.container.addChild(this.levelIconSprite);
+      this.container.addChild(this.levelNumberText);
+      
+    } catch (error) {
+      console.error('❌ Ошибка создания скрытого значка уровня:', error);
+    }
+  }
+
+  /**
+   * Обновить номер уровня в тексте
+   */
+  private updateLevelNumber(level: number): void {
+    if (this.levelNumberText) {
+      this.levelNumberText.text = level.toString();
+    }
+  }
+
+  /**
    * Обновить прогресс (позицию джаггернаута)
    */
   public updateProgress(current: number): void {
@@ -227,20 +354,14 @@ export class LevelDisplaySystem {
    * Плавный переход от значка уровня к прогресс-бару
    */
   private transitionToProgressBar(): void {
-    // Плавно скрываем значок уровня
-    if (this.levelIconSprite) {
-      this.fadeOut(this.levelIconSprite);
-    }
+    // Создаем прогресс-бар заранее (но скрытый)
+    this.createProgressBarHidden();
     
-    if (this.levelNumberText) {
-      this.fadeOut(this.levelNumberText, () => {
-        // После исчезновения значка показываем прогресс-бар
-        this.showProgressBar();
-      });
-    } else {
-      // Если текста нет, сразу показываем прогресс-бар
-      this.showProgressBar();
-    }
+    // Анимируем уменьшение и перемещение значка
+    this.animateIconToSmall(() => {
+      // После завершения анимации значка показываем прогресс-бар
+      this.showHiddenProgressBar();
+    });
   }
 
   /**
@@ -248,10 +369,27 @@ export class LevelDisplaySystem {
    */
   public transitionToNewLevel(newLevel: number): void {
     if (this.currentMode === DisplayMode.PROGRESS_BAR && this.progressContainer) {
+      // Очищаем старые элементы значка (если есть)
+      if (this.levelIconSprite) {
+        this.container.removeChild(this.levelIconSprite);
+        this.levelIconSprite = null;
+      }
+      if (this.levelNumberText) {
+        this.container.removeChild(this.levelNumberText);
+        this.levelNumberText = null;
+      }
+      
+      // Создаем новый значок уровня (скрытый и маленький)
+      this.createLevelIconHidden(newLevel);
+      
       // Плавно скрываем прогресс-бар
       this.fadeOut(this.progressContainer, () => {
-        // После исчезновения показываем новый значок уровня
-        this.showLevelIcon(newLevel);
+        // После исчезновения прогресс-бара анимируем увеличение значка
+        this.animateIconToLarge(() => {
+          // После завершения анимации устанавливаем правильный режим
+          this.currentMode = DisplayMode.LEVEL_ICON;
+          this.levelIconTimer = Date.now() + this.FADE_IN_DURATION;
+        });
       });
     } else {
       // Если прогресс-бара нет, сразу показываем новый значок
@@ -323,9 +461,10 @@ export class LevelDisplaySystem {
       }
       
     } else if (this.currentMode === DisplayMode.PROGRESS_BAR && this.progressContainer) {
-      // Прогресс-бар - по центру сверху
+      // Прогресс-бар - по центру с правильным расстоянием
+      const iconY = 60 - this.ELEMENT_SPACING; // Позиция значка (44)
       this.progressContainer.x = screenWidth / 2;
-      this.progressContainer.y = 60;
+      this.progressContainer.y = iconY + this.ELEMENT_SPACING * 2.5;
       
       // ИСПРАВЛЕНО: При изменении размера экрана пересоздаем полоску прогресса
       // чтобы она адаптировалась к новой ширине
@@ -482,9 +621,9 @@ export class LevelDisplaySystem {
       // Якорь по центру сверху, чтобы текст располагался под полоской по центру
       this.creepCountText.anchor.set(0.5, 0);
       
-      // Позиционируем под прогресс-баром по центру
+      // Позиционируем под прогресс-баром по центру с равным расстоянием
       this.creepCountText.x = 0; // По центру полоски
-      this.creepCountText.y = this.PROGRESS_BAR_HEIGHT / 2 + 8; // 8px отступ под полоской
+      this.creepCountText.y = this.ELEMENT_SPACING; // Равное расстояние под полоской
       
       this.progressContainer!.addChild(this.creepCountText);
       
@@ -574,6 +713,162 @@ export class LevelDisplaySystem {
         requestAnimationFrame(animate);
       } else {
         element.alpha = 0;
+        if (onComplete) onComplete();
+      }
+    };
+    
+    animate();
+  }
+
+  /**
+   * Анимация уменьшения и перемещения значка над прогресс-баром
+   */
+  private animateIconToSmall(onComplete?: () => void): void {
+    if (!this.levelIconSprite || !this.levelNumberText) return;
+    
+    const screenWidth = this.app.screen.width;
+    const startTime = Date.now();
+    
+    // Начальные позиции и размеры
+    const startX = this.levelIconSprite.x;
+    const startY = this.levelIconSprite.y;
+    const startScale = this.levelIconSprite.scale.x;
+    const startFontSize = this.levelNumberText.style.fontSize as number;
+    
+    // Целевые позиции и размеры
+    const targetX = screenWidth / 2;
+    const targetY = 60 - this.ELEMENT_SPACING; // Позиция маленького значка
+    const targetScale = startScale * this.SMALL_SCALE_FACTOR;
+    const targetFontSize = startFontSize * this.SMALL_SCALE_FACTOR;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / this.SCALE_ANIMATION_DURATION, 1);
+      
+      // Easing функция (ease-in-out)
+      const easedProgress = progress < 0.5 ? 
+        2 * progress * progress : 
+        1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      // Интерполяция позиций (с null-проверками)
+      if (this.levelIconSprite) {
+        this.levelIconSprite.x = startX + (targetX - startX) * easedProgress;
+        this.levelIconSprite.y = startY + (targetY - startY) * easedProgress;
+        this.levelIconSprite.scale.set(startScale + (targetScale - startScale) * easedProgress);
+      }
+      
+      // Интерполяция текста относительно значка (с null-проверками)
+      if (this.levelNumberText && this.levelIconSprite) {
+        // Настройка смещения (можно изменить здесь)
+        const horizontalOffset = 2.3; // сдвиг от центра значка
+        const verticalOffset = 0;
+        
+        this.levelNumberText.x = this.levelIconSprite.x + horizontalOffset;
+        this.levelNumberText.y = this.levelIconSprite.y + verticalOffset;
+        this.levelNumberText.style.fontSize = startFontSize + (targetFontSize - startFontSize) * easedProgress;
+        this.levelNumberText.style.stroke = { 
+          width: Math.max(1, (targetFontSize * 0.15) + ((startFontSize * 0.15) - (targetFontSize * 0.15)) * (1 - easedProgress)), 
+          color: '#000000' 
+        };
+      }
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Финальные значения (с null-проверками)
+        if (this.levelIconSprite) {
+          this.levelIconSprite.x = targetX;
+          this.levelIconSprite.y = targetY;
+          this.levelIconSprite.scale.set(targetScale);
+        }
+        if (this.levelNumberText) {
+          // Настройка смещения (можно изменить здесь)
+          const horizontalOffset = 2.3; // сдвиг от центра значка
+          const verticalOffset = 0;
+          
+          this.levelNumberText.x = targetX + horizontalOffset;
+          this.levelNumberText.y = targetY + verticalOffset;
+          this.levelNumberText.style.fontSize = targetFontSize;
+        }
+        
+        if (onComplete) onComplete();
+      }
+    };
+    
+    animate();
+  }
+
+  /**
+   * Анимация увеличения и перемещения значка на место прогресс-бара
+   */
+  private animateIconToLarge(onComplete?: () => void): void {
+    if (!this.levelIconSprite || !this.levelNumberText) return;
+    
+    const screenWidth = this.app.screen.width;
+    const startTime = Date.now();
+    
+    // Начальные позиции и размеры (маленький значок)
+    const startX = this.levelIconSprite.x;
+    const startY = this.levelIconSprite.y;
+    const startScale = this.levelIconSprite.scale.x;
+    const startFontSize = this.levelNumberText.style.fontSize as number;
+    
+    // Целевые позиции и размеры (большой значок)
+    const targetX = screenWidth / 2;
+    const targetY = 80; // Место где обычно показывается большой значок
+    const targetScale = startScale / this.SMALL_SCALE_FACTOR; // Увеличиваем обратно
+    const targetFontSize = startFontSize / this.SMALL_SCALE_FACTOR;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / this.SCALE_ANIMATION_DURATION, 1);
+      
+      // Easing функция (ease-in-out)
+      const easedProgress = progress < 0.5 ? 
+        2 * progress * progress : 
+        1 - Math.pow(-2 * progress + 2, 3) / 2;
+      
+      // Интерполяция позиций (с null-проверками)
+      if (this.levelIconSprite) {
+        this.levelIconSprite.x = startX + (targetX - startX) * easedProgress;
+        this.levelIconSprite.y = startY + (targetY - startY) * easedProgress;
+        this.levelIconSprite.scale.set(startScale + (targetScale - startScale) * easedProgress);
+      }
+      
+      // Интерполяция текста относительно значка (с null-проверками)
+      if (this.levelNumberText && this.levelIconSprite) {
+        // Настройка смещения (можно изменить здесь)
+        const horizontalOffset = 2.3; // сдвиг от центра значка
+        const verticalOffset = 0;
+        
+        this.levelNumberText.x = this.levelIconSprite.x + horizontalOffset;
+        this.levelNumberText.y = this.levelIconSprite.y + verticalOffset;
+        this.levelNumberText.style.fontSize = startFontSize + (targetFontSize - startFontSize) * easedProgress;
+        this.levelNumberText.style.stroke = { 
+          width: Math.max(1, (startFontSize * 0.15) + ((targetFontSize * 0.15) - (startFontSize * 0.15)) * easedProgress), 
+          color: '#000000' 
+        };
+      }
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Финальные значения (с null-проверками)
+        if (this.levelIconSprite) {
+          this.levelIconSprite.x = targetX;
+          this.levelIconSprite.y = targetY;
+          this.levelIconSprite.scale.set(targetScale);
+        }
+        if (this.levelNumberText) {
+          // Настройка смещения (можно изменить здесь)
+          const horizontalOffset = 2.3; // сдвиг от центра значка
+          const verticalOffset = 0;
+          
+          this.levelNumberText.x = targetX + horizontalOffset;
+          this.levelNumberText.y = targetY + verticalOffset;
+          this.levelNumberText.style.fontSize = targetFontSize;
+        }
+        
         if (onComplete) onComplete();
       }
     };

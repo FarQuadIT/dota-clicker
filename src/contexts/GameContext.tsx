@@ -6,6 +6,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 interface GameState {
   isPaused: boolean;
   isGameActive: boolean; // Показывает, запущена ли игра (загружена и готова)
+  isMenuBlocked: boolean; // Показывает, заблокированы ли меню (при открытии модальных окон)
 }
 
 /**
@@ -18,6 +19,8 @@ interface GameActions {
   setGameActive: (active: boolean) => void;
   setGameController: (controller: any) => void;
   gameController: any; // Добавляем доступ к GameController
+  blockMenu: () => void; // Блокировка меню (при открытии модальных окон)
+  unblockMenu: () => void; // Разблокировка меню (при закрытии модальных окон)
 }
 
 /**
@@ -34,6 +37,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [isPaused, setIsPaused] = useState(false);
   const [isGameActive, setIsGameActive] = useState(false);
+  const [isMenuBlocked, setIsMenuBlocked] = useState(false);
   const [gameController, setGameController] = useState<any>(null);
 
   // Переключение паузы
@@ -90,10 +94,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isPaused]);
 
+  // Блокировка меню
+  const blockMenu = useCallback(() => {
+    setIsMenuBlocked(true);
+  }, []);
+
+  // Разблокировка меню
+  const unblockMenu = useCallback(() => {
+    setIsMenuBlocked(false);
+  }, []);
+
   const value: GameContextType = {
     // Состояние
     isPaused,
     isGameActive,
+    isMenuBlocked,
     
     // Действия
     togglePause,
@@ -102,6 +117,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setGameActive: setGameActiveWrapper,
     setGameController: setGameControllerWrapper,
     gameController, // Добавляем доступ к GameController
+    blockMenu,
+    unblockMenu,
   };
 
   return (

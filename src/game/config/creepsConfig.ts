@@ -71,6 +71,12 @@ export interface CreepTypeConfig {
   
   /** Минимальная ширина полоски здоровья в пикселях (предотвращает слишком узкие полоски на маленьких экранах) */
   healthBarMinWidth?: number;
+  
+  /** Коррекция позиции по Y для боссов (в относительных единицах, отрицательные значения = выше) */
+  bossPositionOffsetY?: number;
+  
+  /** Множитель зоны коллизии для боссов (например, 1.5 = босс имеет в 1.5 раза большую зону коллизии чем обычный крип) */
+  bossCollisionZoneMultiplier?: number;
 }
 
 /**
@@ -104,6 +110,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     healthBarOffsetY: -150,  // На 100 пикселей выше крипа (автоматически масштабируется)
     healthBarWidthRatio: 0.4, // 60% от ширины крипа
     healthBarMinWidth: 80,    // Минимальная ширина 45px на маленьких экранах
+    bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 5% от высоты экрана
+    bossCollisionZoneMultiplier: 0.01, // Боссы имеют на 20% большую зону коллизии
   },
   
   /**
@@ -129,6 +137,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     healthBarOffsetY: -40,  // На 40 пикселей выше крипа (wolf прыгучий)
     healthBarWidthRatio: 0.5, // 70% от ширины крипа
     healthBarMinWidth: 80,    // Минимальная ширина 40px на маленьких экранах
+    bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 4% от высоты экрана
+    bossCollisionZoneMultiplier: 0.6, // Боссы имеют еще большую зону коллизии (агрессивные)
   },
   
   /**
@@ -156,6 +166,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     healthBarOffsetY: -110,  // На 45 пикселей выше (satyr большой)
     healthBarWidthRatio: 0.3, // 50% от ширины крипа (большой крип)
     healthBarMinWidth: 80,    // Минимальная ширина 55px (satyr большой)
+    bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 8% от высоты экрана (большой крип)
+    bossCollisionZoneMultiplier: 0.01, // Боссы имеют меньшую зону коллизии (нужно подойти ближе к большому крипу)
   },
   
   /**
@@ -181,6 +193,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     healthBarOffsetY: -110,  // На 30 пикселей выше (shishka летает низко)
     healthBarWidthRatio: 0.2, // 80% от ширины крипа
     healthBarMinWidth: 80,    // Минимальная ширина 50px на маленьких экранах
+    bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 6% от высоты экрана
+    bossCollisionZoneMultiplier: 0.5, // Боссы имеют большую зону коллизии (летающий, атакует издалека)
   },
   
   /**
@@ -207,6 +221,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     healthBarOffsetY: -70,  // На 25 пикселей выше (voul ползает низко)
     healthBarWidthRatio: 0.3, // 60% от ширины крипа
     healthBarMinWidth: 100,    // Минимальная ширина 42px на маленьких экранах
+    bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 4% от высоты экрана
+    bossCollisionZoneMultiplier: 0.4, // Боссы имеют увеличенную зону коллизии (танк, массивный)
   },
   
   /**
@@ -232,6 +248,8 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     healthBarOffsetY: -180,  // На 35 пикселей выше крипа
     healthBarWidthRatio: 0.5, // 70% от ширины крипа
     healthBarMinWidth: 100,    // Минимальная ширина 48px на маленьких экранах
+    bossPositionOffsetY: -0.075, // Боссы поднимаются выше на 5% от высоты экрана
+    bossCollisionZoneMultiplier: 0.5, // Боссы имеют немного меньшую зону коллизии (самый крупный, нужно ближе подойти)
   }
   
 };
