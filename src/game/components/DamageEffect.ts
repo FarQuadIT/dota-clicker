@@ -155,12 +155,28 @@ export class DamageEffect extends Container {
    * Очистка эффекта
    */
   public cleanup(): void {
-    // Удаляем все частицы
-    for (const particle of this.particles) {
-      this.removeChild(particle);
-      particle.destroy();
+    try {
+      // Создаем копию массива для безопасной итерации
+      const particlesToClean = [...this.particles];
+      
+      // Очищаем массив сразу
+      this.particles = [];
+      
+      // Удаляем все частицы
+      for (const particle of particlesToClean) {
+        try {
+          if (particle.parent) {
+            particle.parent.removeChild(particle);
+          }
+          particle.destroy();
+        } catch (error) {
+          console.warn('⚠️ Ошибка при удалении частицы эффекта:', error);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Критическая ошибка при очистке эффекта урона:', error);
+      this.particles = [];
     }
-    this.particles = [];
   }
   
   /**
@@ -262,10 +278,31 @@ export class DamageEffectManager {
    * Очистка всех эффектов
    */
   public cleanup(): void {
-    for (const effect of this.effects) {
-      this.app.stage.removeChild(effect);
-      effect.destroy();
+    console.log(`🧹 Очищаем ${this.effects.length} эффектов урона`);
+    
+    try {
+      // Создаем копию массива для безопасной итерации
+      const effectsToClean = [...this.effects];
+      
+      // Очищаем массив сразу
+      this.effects = [];
+      
+      // Удаляем все эффекты
+      for (const effect of effectsToClean) {
+        try {
+          if (effect.parent) {
+            effect.parent.removeChild(effect);
+          }
+          effect.destroy();
+        } catch (error) {
+          console.warn('⚠️ Ошибка при удалении эффекта урона:', error);
+        }
+      }
+      
+      console.log('✅ Все эффекты урона очищены');
+    } catch (error) {
+      console.error('❌ Критическая ошибка при очистке эффектов урона:', error);
+      this.effects = [];
     }
-    this.effects = [];
   }
 } 

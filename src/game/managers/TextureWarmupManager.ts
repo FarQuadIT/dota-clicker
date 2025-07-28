@@ -1,275 +1,312 @@
 /**
- * Менеджер прогрева текстур крипов
+ * Менеджер прогрева текстур крипов (НОВАЯ ВЕРСИЯ)
  * 
- * Принцип работы:
- * 1. Предварительно создает всех крипов для текущего уровня в невидимом состоянии
- * 2. Располагает их за экраном справа
- * 3. При спавне просто делает крипа видимым и перемещает в игровую зону
- * 4. Это убирает лаги при первой отрисовке новых крипов
+ * ОБНОВЛЕННЫЙ ПОДХОД для iOS оптимизации:
+ * 1. Использует TexturePreloader для загрузки только спрайтшитов без создания объектов
+ * 2. Создает крипов on-demand при спавне (решает проблему фоновых лагов)
+ * 3. Мгновенное создание крипов благодаря кешированным текстурам
  * 
- * 🧪 ТЕСТОВЫЙ РЕЖИМ БОССОВ (для настройки позиций):
+ * Преимущества:
+ * ✅ Отсутствие фоновых анимаций (0% CPU в состоянии покоя)
+ * ✅ Минимальное потребление памяти (нет предсозданных объектов)
+ * ✅ Мгновенный спавн крипов (текстуры уже загружены)
+ * ✅ Оптимизация для iOS Safari
  * 
- * ВКЛЮЧЕН ПО УМОЛЧАНИЮ! Создает только боссов выбранного типа.
- * 
- * Быстрая смена босса через консоль браузера (F12):
- *   gameController.textureWarmupManager.setTestBoss('direCreep');
- *   gameController.textureWarmupManager.setTestBoss('wolf');
- *   gameController.textureWarmupManager.setTestBoss('satyr');
- *   gameController.textureWarmupManager.setTestBoss('shishka');
- *   gameController.textureWarmupManager.setTestBoss('voul');
- *   gameController.textureWarmupManager.setTestBoss('medved');
- *   gameController.textureWarmupManager.setTestBoss(null);  // Выключить
+ * 🧪 ТЕСТОВЫЕ РЕЖИМЫ сохранены для совместимости
+ * 🔥 ОПТИМИЗИРОВАНО ДЛЯ iOS: убраны логи на мобильных устройствах
  */
 
 import { Application } from 'pixi.js';
 import { Creep } from '../entities/Creep';
-import { getCreepsForLevel, getCreepConfig } from '../config/creepsConfig';
-import { getBossForLevel } from '../config/levelsConfig';
+import { getCreepConfig } from '../config/creepsConfig';
 import { heroLevelSystem } from '../systems/HeroLevelSystem';
+import { TexturePreloader } from './TexturePreloader';
+
+// ==================================================================================
+// ОПТИМИЗАЦИЯ ДЛЯ ПРОИЗВОДИТЕЛЬНОСТИ
+// ==================================================================================
+
+/**
+ * Определение мобильных устройств для отключения логов
+ */
+const IS_MOBILE = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+/**
+ * Функция для логирования только на десктопе (производительность на мобильных)
+ */
+function mobileOptimizedLog(enableDebugLogging: boolean, message: string): void {
+  // Отключено для производительности
+}
 
 export interface WarmupConfig {
-  /** Позиция крипов за экраном (множитель от ширины экрана) */
-  offscreenPositionX: number;
+  /** Включить систему прогрева (для обратной совместимости) */
+  enableWarmup: boolean;
   
-  /** Количество крипов для прогрева на один уровень */
-  creepsPerLevel: number;
+  /** Включить подробное логирование (автоматически отключается на мобильных) */
+  enableDebugLogging: boolean;
 }
 
 export class TextureWarmupManager {
   private app: Application;
   private config: WarmupConfig;
   
-  // Очередь готовых крипов для текущего уровня
-  private warmupQueue: Creep[] = [];
+  // Новая система предзагрузки текстур
+  private texturePreloader: TexturePreloader;
   
-  // Текущий уровень для которого прогреты крипы
-  private currentWarmedLevel: number = -1;
-  
-  // Флаг активности прогрева
+  // Флаги состояния
   private isWarmupActive: boolean = true;
+  private currentWarmedLevel: number = -1;
 
-  // NEW: Очередь крипов для текущего уровня
-  private levelCreepQueue: Creep[] = [];
-  private currentLevel: number = -1;
+  // ========== ТЕСТОВЫЕ РЕЖИМЫ (сохранены для совместимости) ==========
+  private testBossMode = {
+    enabled: false,
+    bossType: 'direCreep'
+  };
+  
+  private testCreepMode = {
+    enabled: false,
+    creepType: 'direCreep'
+  };
 
   constructor(app: Application, config: Partial<WarmupConfig> = {}) {
     this.app = app;
+    
+    // ОПТИМИЗАЦИЯ: Автоматически отключаем логи на мобильных устройствах
     this.config = {
-      offscreenPositionX: 2.0,    // 2x от ширины экрана (далеко за экраном)
-      creepsPerLevel: 10,      // 9 обычных крипов + 1 босс
+      enableWarmup: true,
+      enableDebugLogging: false, // Отключено для производительности
       ...config
     };
+    
+    // Принудительно отключаем логи на мобильных
+    if (IS_MOBILE && this.config.enableDebugLogging) {
+      this.config.enableDebugLogging = false;
+    }
+    
+    // Инициализируем новую систему предзагрузки с оптимизированными настройками
+    this.texturePreloader = new TexturePreloader(app, {
+      enableDebugLogging: false, // Отключено для производительности
+      textureLoadTimeout: IS_MOBILE ? 3000 : 5000 // Меньший таймаут на мобильных
+    });
   }
 
-  // ========== ТЕСТОВЫЙ РЕЖИМ ДЛЯ БОССОВ ==========
-  // Измени bossType на нужный тип крипа для тестирования:
-  // 'direCreep', 'wolf', 'satyr', 'shishka', 'voul', 'medved'
-  private testBossMode = {
-    enabled: false,       // ← Включить/выключить тестовый режим
-    bossType: 'medved'    // ← Выбрать тип босса для тестирования
-  };
-  
   /**
    * 🧪 БЫСТРАЯ СМЕНА ТИПА БОССА ДЛЯ ТЕСТИРОВАНИЯ
-   * Вызови эту функцию в консоли браузера для смены босса:
-   * 
-   * // Переключить на тестирование медведя:
-   * gameController.textureWarmupManager.setTestBoss('medved');
-   * 
-   * // Переключить на тестирование сатира:
-   * gameController.textureWarmupManager.setTestBoss('satyr');
-   * 
-   * // Выключить тестовый режим:
-   * gameController.textureWarmupManager.setTestBoss(null);
    */
   public setTestBoss(bossType: string | null): void {
     if (bossType === null) {
       this.testBossMode.enabled = false;
-      console.log('🧪 Тестовый режим ВЫКЛЮЧЕН - возврат к обычной игре');
     } else {
       this.testBossMode.enabled = true;
       this.testBossMode.bossType = bossType;
-      console.log(`🧪 Тестовый режим: переключаемся на босса "${bossType}"`);
-      console.log('💡 Перезапусти уровень чтобы изменения вступили в силу');
     }
   }
-  // ===============================================
+  
+  /**
+   * 🧪 БЫСТРАЯ СМЕНА ТИПА ОБЫЧНОГО КРИПА ДЛЯ ТЕСТИРОВАНИЯ
+   */
+  public setTestCreep(creepType: string | null): void {
+    if (creepType === null) {
+      this.testCreepMode.enabled = false;
+    } else {
+      this.testCreepMode.enabled = true;
+      this.testCreepMode.creepType = creepType;
+    }
+  }
 
   /**
-   * Прогрев текстур для указанного уровня
+   * НОВЫЙ МЕТОД: Прогрев текстур для указанного уровня (без создания объектов)
+   * ОПТИМИЗИРОВАН: упрощенная обработка на мобильных
    */
   public async warmupLevel(level: number): Promise<void> {
-    if (this.currentWarmedLevel === level && this.warmupQueue.length > 0) {
+    if (!this.config.enableWarmup) {
+      return;
+    }
+
+    if (this.currentWarmedLevel === level) {
       return;
     }
     
-    console.log(`🔥 Прогрев текстур для уровня ${level}...`);
-    
-    // Очищаем старую очередь
-    this.clearWarmupQueue();
-    
-    // Генерируем последовательность крипов для всего уровня
-    const creepSequence = await this.generateLevelCreepSequence(level);
-    
-    // Создаем всех крипов из последовательности
-    const creationPromises = creepSequence.map(({ creepType, isBoss }) => 
-      this.createWarmupCreep(creepType, isBoss)
-    );
-    
-    // Ждем создания всех крипов
-    await Promise.all(creationPromises);
-    
-    this.currentWarmedLevel = level;
-    
-    console.log(`✅ Прогрев завершен! Готово ${this.levelCreepQueue.length} крипов для уровня ${level}`);
-    console.log(`📋 Последовательность крипов:`, creepSequence.map(c => c.isBoss ? `${c.creepType} (BOSS)` : c.creepType).join(', '));
+    try {
+      // Используем TexturePreloader для загрузки только спрайтшитов
+      await this.texturePreloader.preloadLevel(level);
+      
+      this.currentWarmedLevel = level;
+      
+    } catch (error) {
+      // Логируем ошибки только на десктопе
+      if (!IS_MOBILE) {
+        console.error(`❌ Ошибка прогрева уровня ${level}:`, error);
+      }
+      throw error;
+    }
   }
 
   /**
-   * Генерирует последовательность крипов для всего уровня
+   * НОВЫЙ МЕТОД: Создание крипа on-demand с информацией о прогрессе уровня
+   * ОПТИМИЗИРОВАН: минимальные логи на мобильных
    */
-  private async generateLevelCreepSequence(level: number): Promise<Array<{ creepType: string; isBoss: boolean }>> {
-    const { getLevelConfig } = await import('../config/levelsConfig');
-    const levelConfig = getLevelConfig(level);
-    
-    const sequence: Array<{ creepType: string; isBoss: boolean }> = [];
-    
-    // ТЕСТОВЫЙ РЕЖИМ: Создаем только боссов выбранного типа
-    if (this.testBossMode.enabled) {
-      console.log(`🧪 ТЕСТОВЫЙ РЕЖИМ: Создаем только боссов типа "${this.testBossMode.bossType}"`);
+  public async getNextLevelCreep(levelProgress?: { current: number; total: number; normalCreepsCount: number }): Promise<Creep | null> {
+    try {
+      // Определяем тип крипа для спавна с учетом прогресса уровня
+      const creepType = await this.determineCreepType(levelProgress);
+      const isBoss = this.shouldSpawnAsBoss(levelProgress);
       
-      // Создаем 10 боссов одного типа для удобного тестирования
-      for (let i = 0; i < 10; i++) {
-        sequence.push({ creepType: this.testBossMode.bossType, isBoss: true });
+      // Создаем крипа мгновенно используя кешированные текстуры
+      const creep = await this.createCreepOnDemand(creepType, isBoss);
+      
+      if (creep) {
+        return creep;
+      } else {
+        return null;
       }
       
-      return sequence;
+    } catch (error) {
+      if (!IS_MOBILE) {
+        console.error('❌ Ошибка создания крипа on-demand:', error);
+      }
+      return null;
     }
-    
-    // ОБЫЧНЫЙ РЕЖИМ: Генерируем стандартную последовательность
-    // Генерируем 9 обычных крипов
-    for (let i = 0; i < 9; i++) {
-      const availableCreeps = levelConfig.normalCreeps;
-      const randomIndex = Math.floor(Math.random() * availableCreeps.length);
-      const selectedCreep = availableCreeps[randomIndex];
-      
-      sequence.push({ creepType: selectedCreep, isBoss: false });
-    }
-    
-    // Добавляем 1 босса
-    sequence.push({ creepType: levelConfig.bossCreep, isBoss: true });
-    
-    return sequence;
   }
 
   /**
-   * Создание крипа для прогрева текстур
+   * Создание крипа on-demand с использованием кешированных текстур
+   * ОПТИМИЗИРОВАН: быстрая проверка без лишних логов
    */
-  private async createWarmupCreep(creepType: string, isBoss: boolean): Promise<void> {
-    const { Creep } = await import('../entities/Creep');
-    const { getCreepConfig } = await import('../config/creepsConfig');
-    
+  private async createCreepOnDemand(creepType: string, isBoss: boolean): Promise<Creep | null> {
     const creepConfig = getCreepConfig(creepType);
     if (!creepConfig) {
-      console.error(`❌ Не найдена конфигурация для крипа: ${creepType}`);
-      return;
+      if (!IS_MOBILE) {
+        console.error(`❌ Не найдена конфигурация для крипа: ${creepType}`);
+      }
+      return null;
     }
 
-    // Рассчитываем параметры как в игре
-    const baseScale = 0.8;
+    // Проверяем что текстуры готовы
+    const idleFrames = this.texturePreloader.getCachedCreepFrames(creepType, 'idle');
+    if (!idleFrames) {
+      if (!IS_MOBILE) {
+        console.error(`❌ Нет кешированных текстур для ${creepType}`);
+      }
+      return null;
+    }
+
+    // Рассчитываем параметры как в старой системе
     const bossMultiplier = isBoss ? 1.5 : 1.0;
-    const finalScale = baseScale * creepConfig.visualScale * bossMultiplier;
+    const finalScale = creepConfig.visualScale * bossMultiplier;
     const healthMultiplier = isBoss ? 3.0 : 1.0;
 
-    // Создаем крипа в очереди прогрева (за экраном)
+    // Создаем крипа мгновенно (текстуры уже в памяти)
     const creep = new Creep(this.app, {
       creepType: creepType,
-      positionX: this.config.offscreenPositionX, // За экраном (в 2 раза дальше правого края)
+      positionX: 1.5, // Начальная позиция за экраном
       positionY: creepConfig.positionY,
       scale: finalScale,
-      moveSpeed: 0, // Неподвижен в очереди
+      moveSpeed: 0, // Скорость установится позже в GameController
       collisionZone: creepConfig.collisionZone,
-      healthMultiplier: healthMultiplier
+      healthMultiplier: healthMultiplier,
+      isBoss: isBoss
     });
-
-    // Скрываем полоску здоровья у крипов в очереди
-    creep.createHealthBar();
-    const healthBar = creep.getHealthBar();
-    if (healthBar) {
-      healthBar.visible = false;
-    }
 
     // Добавляем к сцене
     this.app.stage.addChild(creep);
     
-    // Добавляем в очередь уровня
-    this.levelCreepQueue.push(creep);
-  }
-
-  /**
-   * Получение следующего крипа из очереди уровня
-   */
-  public getNextLevelCreep(): Creep | null {
-    if (this.levelCreepQueue.length === 0) {
-      console.log('⚠️ Очередь крипов уровня пуста');
-      return null;
-    }
-
-    const creep = this.levelCreepQueue.shift()!;
-    console.log(`✅ Взяли следующего крипа из очереди: ${creep.getCreepType()}`);
+    // Создаем полоску здоровья
+    creep.createHealthBar();
     
     return creep;
   }
 
   /**
-   * Определение является ли крип боссом по здоровью
+   * Определение типа крипа для спавна (с учетом тестовых режимов и прогресса уровня)
+   * ОПТИМИЗИРОВАН: минимальные логи на мобильных
    */
-  private async isCreepBoss(creep: Creep): Promise<boolean> {
-    const { getCreepConfig } = await import('../config/creepsConfig');
-    const creepConfig = getCreepConfig(creep.getCreepType());
-    
-    if (creepConfig) {
-      const baseHealth = creepConfig.maxHealth;
-      const creepMaxHealth = creep.getMaxHealth();
-      
-      // Если здоровье крипа в 3 раза больше базового, значит это босс
-      const healthRatio = creepMaxHealth / baseHealth;
-      return healthRatio > 2.0; // Обычный крип имеет ratio ~1.0, босс ~3.0
+  private async determineCreepType(levelProgress?: { current: number; total: number; normalCreepsCount: number }): Promise<string> {
+    // ТЕСТОВЫЙ РЕЖИМ БОССОВ
+    if (this.testBossMode.enabled) {
+      return this.testBossMode.bossType;
     }
     
-    return false;
+    // ТЕСТОВЫЙ РЕЖИМ ОБЫЧНЫХ КРИПОВ
+    if (this.testCreepMode.enabled) {
+      return this.testCreepMode.creepType;
+    }
+    
+    // ОБЫЧНЫЙ РЕЖИМ: используем конфигурацию уровня + логику GameController
+    try {
+      const currentLevel = heroLevelSystem.getCurrentLevel();
+      const { getLevelConfig } = await import('../config/levelsConfig');
+      const levelConfig = getLevelConfig(currentLevel);
+      
+      // ИНТЕГРАЦИЯ ЛОГИКИ GAMECONTROLLER: Определяем босса vs обычного крипа
+      if (levelProgress && levelProgress.current === levelProgress.normalCreepsCount) {
+        // Последний крип на уровне = босс
+        return levelConfig.bossCreep;
+      } else {
+        // Обычные крипы (случайный выбор из доступных)
+        const availableCreeps = levelConfig.normalCreeps;
+        const randomIndex = Math.floor(Math.random() * availableCreeps.length);
+        const selectedCreep = availableCreeps[randomIndex];
+        
+        return selectedCreep;
+      }
+      
+    } catch (error) {
+      if (!IS_MOBILE) {
+        console.warn('⚠️ Ошибка определения типа крипа, используем direCreep:', error);
+      }
+      return 'direCreep';
+    }
   }
 
   /**
-   * Подготовка крипа для игры
+   * Определение нужно ли создавать босса (с учетом прогресса уровня)
+   * ОПТИМИЗИРОВАН: упрощенные логи
+   */
+  private shouldSpawnAsBoss(levelProgress?: { current: number; total: number; normalCreepsCount: number }): boolean {
+    // В тестовых режимах
+    if (this.testBossMode.enabled) {
+      return true;
+    }
+    if (this.testCreepMode.enabled) {
+      return false;
+    }
+    
+    // ИНТЕГРАЦИЯ ЛОГИКИ GAMECONTROLLER: Проверяем прогресс уровня
+    if (levelProgress && levelProgress.current === levelProgress.normalCreepsCount) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /**
+   * ОБНОВЛЕННЫЙ МЕТОД: Подготовка крипа для игры
+   * ОПТИМИЗИРОВАН: меньше операций на мобильных
    */
   public async prepareCreepForGame(creep: Creep): Promise<void> {
     // Получаем конфигурацию крипа
     const creepConfig = creep.getConfig();
+    const isBoss = creep.getIsBoss();
     
-    // Определяем, является ли крип боссом по здоровью
-    const isBoss = await this.isCreepBoss(creep);
-    
-    // Устанавливаем начальную позицию для входа в игру
+    // Устанавливаем правильную позицию
     let relativeY = creepConfig.positionY!;
     
     // Применяем настройки для боссов
     if (isBoss) {
-      const { getCreepConfig } = await import('../config/creepsConfig');
       const typeConfig = getCreepConfig(creep.getCreepType());
       
       if (typeConfig) {
         // Коррекция позиции для боссов
         if (typeConfig.bossPositionOffsetY) {
           relativeY += typeConfig.bossPositionOffsetY;
-          console.log(`👑 Применена коррекция позиции для босса ${creep.getCreepType()}: ${typeConfig.bossPositionOffsetY}`);
         }
         
         // Коррекция зоны коллизии для боссов
         if (typeConfig.bossCollisionZoneMultiplier) {
           const newCollisionZone = typeConfig.collisionZone * typeConfig.bossCollisionZoneMultiplier;
           creep.setCollisionZone(newCollisionZone);
-          console.log(`⚔️ Применена коррекция зоны коллизии для босса ${creep.getCreepType()}: ${typeConfig.collisionZone} → ${newCollisionZone} (×${typeConfig.bossCollisionZoneMultiplier})`);
         }
       }
     }
@@ -281,49 +318,21 @@ export class TextureWarmupManager {
     if (healthBar) {
       healthBar.visible = true;
     }
-    
-    console.log(`🎮 Крип ${creep.getCreepType()} ${isBoss ? '(БОСС)' : ''} подготовлен для игры`);
-  }
-
-  /**
-   * Получение типов крипов для указанного уровня
-   */
-  private getCreepTypesForLevel(level: number): string[] {
-    const availableCreeps = getCreepsForLevel(level);
-    
-    // Если нет доступных крипов для уровня, используем базовых
-    if (availableCreeps.length === 0) {
-      return ['direCreep', 'wolf', 'satyr'];
-    }
-    
-    return availableCreeps;
-  }
-
-  /**
-   * Очистка очереди прогрева
-   */
-  private clearWarmupQueue(): void {
-    for (const creep of this.warmupQueue) {
-      if (creep.parent) {
-        this.app.stage.removeChild(creep);
-      }
-      creep.destroy();
-    }
-    this.warmupQueue.length = 0;
   }
 
   /**
    * Проверка готовности крипов для текущего уровня
    */
   public isLevelWarmedUp(level: number): boolean {
-    return this.currentWarmedLevel === level && this.levelCreepQueue.length > 0;
+    return this.texturePreloader.isLevelReady(level);
   }
 
   /**
-   * Получение количества крипов в очереди уровня
+   * Получение количества крипов в очереди уровня (заглушка для совместимости)
    */
   public getLevelQueueSize(): number {
-    return this.levelCreepQueue.length;
+    // В новой системе нет очереди объектов, возвращаем 1 если уровень готов
+    return this.isLevelWarmedUp(this.currentWarmedLevel) ? 1 : 0;
   }
 
   /**
@@ -331,9 +340,10 @@ export class TextureWarmupManager {
    */
   public setWarmupActive(active: boolean): void {
     this.isWarmupActive = active;
+    this.config.enableWarmup = active;
     
     if (!active) {
-      this.clearWarmupQueue();
+      this.texturePreloader.clearCache();
     }
   }
 
@@ -341,51 +351,52 @@ export class TextureWarmupManager {
    * Проверка активности системы прогрева
    */
   public isWarmupEnabled(): boolean {
-    return this.isWarmupActive;
+    return this.isWarmupActive && this.config.enableWarmup;
   }
 
   /**
    * Обновление размеров при изменении экрана
    */
   public onResize(): void {
-    // Обновляем позиции крипов в очереди
-    this.levelCreepQueue.forEach(creep => {
-      if (creep && !creep.destroyed) {
-        creep.onResize();
-      }
-    });
+    // Передаем в TexturePreloader (хотя там пустая реализация)
+    this.texturePreloader.onResize();
   }
 
   /**
    * Подготовка к новому уровню
    */
   public prepareForLevel(level: number): void {
-    if (this.currentLevel !== level) {
-      // Очищаем очередь предыдущего уровня
-      this.clearLevelQueue();
-      this.currentLevel = level;
+    if (this.currentWarmedLevel !== level) {
+      // Очищаем старый кеш
+      this.texturePreloader.clearCache();
+      this.currentWarmedLevel = -1;
     }
   }
 
   /**
-   * Очистка очереди крипов уровня
+   * Получение статистики
    */
-  private clearLevelQueue(): void {
-    this.levelCreepQueue.forEach(creep => {
-      if (creep.parent) {
-        creep.parent.removeChild(creep);
-      }
-      creep.destroy();
-    });
-    this.levelCreepQueue = [];
+  public getStats() {
+    return this.texturePreloader.getStats();
+  }
+
+  /**
+   * Логирование с префиксом (ОПТИМИЗИРОВАНО для мобильных)
+   */
+  private log(message: string): void {
+    mobileOptimizedLog(this.config.enableDebugLogging, message);
   }
 
   /**
    * Уничтожение менеджера
    */
   public destroy(): void {
-    this.clearWarmupQueue();
-    this.clearLevelQueue();
-    this.isWarmupActive = false;
-  }
+    // Уничтожаем TexturePreloader
+    if (this.texturePreloader) {
+      this.texturePreloader.destroy();
+    }
+    
+         this.isWarmupActive = false;
+     this.currentWarmedLevel = -1;
+   }
 } 

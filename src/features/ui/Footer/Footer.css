@@ -29,6 +29,9 @@
 
 .footer-item {
     flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     font-size: 1.5rem;
     color: #888;
@@ -44,9 +47,9 @@
     position: absolute;
     top: 0; /* Полоска сверху footer */
     left: 0;
-    width: 25%;
+    width: 20%; /* Обновлено для 5 пунктов меню (100% / 5 = 20%) */
     height: 3px;
-    background-color: #b62f2f;
+    background-color: #c9aa71;
     transition: left 0.3s ease;
     pointer-events: none;
 }
@@ -62,4 +65,24 @@
     pointer-events: none;
     opacity: 0.5;
     cursor: default;
+}
+
+/* Стили для SVG иконок в футере */
+.footer-svg-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    filter: grayscale(100%) brightness(0.6); /* Серый фильтр для неактивных иконок */
+    transition: all 0.3s ease;
+}
+
+/* Активная SVG иконка без фильтров */
+.footer-item.active .footer-svg-icon {
+    filter: none; /* Убираем фильтры для активной иконки - оригинальные цвета */
+}
+
+/* Специальное увеличение для иконки магазина (наковальня) */
+.footer-svg-icon[alt="shop"] {
+    width: 1.6rem;
+    height: 1.6rem;
+    transform: translateY(-1px);
 }

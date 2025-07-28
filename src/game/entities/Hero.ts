@@ -19,6 +19,8 @@ import { audioManager } from '../managers/SoundManager';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { HeroHealthBar } from '../components/HeroHealthBar';
 import { useHeroStore } from '../../contexts/heroStore';
+import { getHeroConfig } from '../config/heroConfig';
+import { heroAbilitiesManager } from '../systems/HeroAbilities';
 
 // ==================================================================================
 // ИНТЕРФЕЙСЫ И ТИПЫ
@@ -42,6 +44,17 @@ interface HeroConfig {
   
   /** Масштаб героя */
   scale: number;
+  
+  /** Зона коллизии - множитель для расстояния обнаружения крипов */
+  collisionZone: number;
+  
+  /** Настройки полосок здоровья и маны */
+  healthBars?: {
+    baseWidth: number;
+    minWidth: number;
+    offsetX: number;
+    offsetY: number;
+  };
 }
 
 /**
@@ -116,14 +129,19 @@ export class Hero extends GameEntity {
     this.app = app;
     this.heroType = heroType;
     
-    // Применяем конфигурацию по умолчанию из GAME_CONFIG
+    // Получаем базовую конфигурацию из heroConfig.ts
+    const heroConfig = getHeroConfig(heroType);
+    
+    // Применяем конфигурацию из heroConfig.ts с возможностью перезаписи
     this.config = {
       type: heroType,
-      name: heroType,
-      positionX: GAME_CONFIG.HERO.position.x,    // 20% от левого края экрана
-      positionY: GAME_CONFIG.HERO.position.y,    // 70% от верха экрана (внизу)  
-      scale: GAME_CONFIG.HERO.scale.base,        // 30% базовый масштаб
-      ...config
+      name: heroConfig?.name || heroType,
+      positionX: heroConfig?.positionX || GAME_CONFIG.HERO.position.x,
+      positionY: heroConfig?.positionY || GAME_CONFIG.HERO.position.y,
+      scale: heroConfig?.scale || GAME_CONFIG.HERO.scale.base,
+      collisionZone: heroConfig?.collisionZone || 1.0,  // Стандартная зона коллизии по умолчанию
+      healthBars: heroConfig?.healthBars || { baseWidth: 120, minWidth: 80, offsetX: 0, offsetY: -90 }, // Стандартные настройки полосок
+      ...config  // Переданные параметры перезаписывают базовые
     };
     
     this.setupHero();
@@ -154,8 +172,8 @@ export class Hero extends GameEntity {
    * Настройка полосок здоровья и маны
    */
   private setupHealthBar(): void {
-    // Создаем полоски здоровья и маны
-    this.healthBar = new HeroHealthBar();
+    // Создаем полоски здоровья и маны с индивидуальными настройками
+    this.healthBar = new HeroHealthBar(this.config.healthBars!);
     
     // НЕ добавляем как дочерний элемент - это будет делать GameController
     // чтобы полоски были поверх всех остальных элементов
@@ -175,7 +193,6 @@ export class Hero extends GameEntity {
       
       // Проверяем готовность AudioManager
       if (!audioManager.isReady()) {
-        console.log('🎵 AudioManager не готов, пропускаем звук атаки');
         return;
       }
       
@@ -197,7 +214,6 @@ export class Hero extends GameEntity {
       
       // Проверяем готовность AudioManager
       if (!audioManager.isReady()) {
-        console.log('🎵 AudioManager не готов, откладываем звук бега');
         this.shouldPlayRunSound = true; // Запомним что нужно запустить звук
         return;
       }
@@ -207,7 +223,6 @@ export class Hero extends GameEntity {
       this.isRunSoundPlaying = true;
       this.shouldPlayRunSound = false; // Сбрасываем флаг отложенного запуска
       
-      console.log('🎵 Звук бега героя запущен');
     } catch (error) {
       console.warn('⚠️ Ошибка запуска звука бега героя:', error);
       this.shouldPlayRunSound = true; // Попробуем снова позже
@@ -245,7 +260,6 @@ export class Hero extends GameEntity {
     // Retry механизм: пытаемся запустить отложенный звук бега
     if (this.shouldPlayRunSound && !this.isRunSoundPlaying && currentAnimation === 'run') {
       if (audioManager.isReady() && !audioManager.isGamePausedState()) {
-        console.log('🎵 Повторная попытка запуска звука бега');
         this.startRunSound();
       }
     }
@@ -259,7 +273,6 @@ export class Hero extends GameEntity {
     if (this.hasUserInteracted) return;
     
     this.hasUserInteracted = true;
-    console.log('🎵 Первое пользовательское взаимодействие - разблокируем звуки');
     
     // Уведомляем AudioManager о взаимодействии
     audioManager.onUserInteraction();
@@ -278,6 +291,9 @@ export class Hero extends GameEntity {
    */
   private setupAnimations(): void {
     try {
+      // Получаем конфигурацию героя для скоростей анимаций
+      const heroConfig = getHeroConfig(this.heroType);
+      
       // Получаем кадры анимаций героя из спрайтшитов
       const idleFrames = assetsManager.getHeroFrames(this.heroType, 'idle');
       const runFrames = assetsManager.getHeroFrames(this.heroType, 'run');
@@ -285,27 +301,27 @@ export class Hero extends GameEntity {
       
 
       
-      // Добавляем анимацию idle с всеми кадрами
+      // Добавляем анимацию idle с всеми кадрами (используем скорость из heroConfig)
       this.addAnimation({
         name: 'idle',
         textures: idleFrames,
-        frameRate: GAME_CONFIG.HERO.animations.idleFrameRate,
+        frameRate: heroConfig?.animationSpeeds?.idle || GAME_CONFIG.HERO.animations.idleFrameRate,
         loop: true
       });
       
-      // Добавляем анимацию run с всеми кадрами
+      // Добавляем анимацию run с всеми кадрами (используем скорость из heroConfig)
       this.addAnimation({
         name: 'run',
         textures: runFrames,
-        frameRate: GAME_CONFIG.HERO.animations.runFrameRate,
+        frameRate: heroConfig?.animationSpeeds?.run || GAME_CONFIG.HERO.animations.runFrameRate,
         loop: true
       });
       
-      // Добавляем анимацию attack с всеми кадрами
+      // Добавляем анимацию attack с всеми кадрами (используем скорость из heroConfig)
       this.addAnimation({
         name: 'attack',
         textures: attackFrames,
-        frameRate: GAME_CONFIG.HERO.animations.attackFrameRate,
+        frameRate: heroConfig?.animationSpeeds?.attack || GAME_CONFIG.HERO.animations.attackFrameRate,
         loop: false, // Атака не зацикливается
         onComplete: () => {
           // После завершения атаки переходим в idle и ждем решения GameController
@@ -436,16 +452,50 @@ export class Hero extends GameEntity {
     this.x = this.app.screen.width * this.config.positionX;
     this.y = this.app.screen.height * this.config.positionY;
   }
-
+  
   /**
    * Обновление масштаба героя
    */
   private updateScale(): void {
-    // Вычисляем масштаб на основе размера экрана
-    const baseScale = Math.min(this.app.screen.width, this.app.screen.height) / GAME_CONFIG.SCREEN.baseResolution;
-    const finalScale = baseScale * this.config.scale;
+    // ИСПРАВЛЕННАЯ ФОРМУЛА: Герой должен занимать одинаковый процент от высоты экрана
+    // на всех устройствах, независимо от размера экрана
     
-    this.scale.set(finalScale);
+    // Целевой размер героя в процентах от высоты экрана (25% как на ПК)
+    const targetHeightPercent = 0.7; 
+    
+    // Рассчитываем целевую высоту героя в пикселях
+    const targetHeightPx = this.app.screen.height * targetHeightPercent;
+    
+    // ИСПРАВЛЕНИЕ: Определяем реальный размер кадра в зависимости от качества
+    // Получаем информацию о выбранном качестве из AssetsManager
+    const qualityInfo = assetsManager.getQualityInfo();
+    let estimatedSpriteHeight = 800; // Значение по умолчанию
+    
+    // Устанавливаем размер кадра в зависимости от качества
+    switch (qualityInfo.quality) {
+      case 'hd':
+        estimatedSpriteHeight = 1024; // HD кадры 1024×1024
+        break;
+      case 'md':
+        estimatedSpriteHeight = 512;  // MD кадры 512×512
+        break;
+      case 'ld':
+        estimatedSpriteHeight = 256;  // LD кадры 256×256
+        break;
+      default:
+        estimatedSpriteHeight = 512;  // Средний размер по умолчанию
+    }
+    
+    // Вычисляем нужный масштаб для достижения целевого размера
+    const requiredScale = targetHeightPx / estimatedSpriteHeight;
+    
+    // Применяем конфигурационный множитель от heroConfig
+    const finalScale = requiredScale * this.config.scale;
+    
+    // Ограничиваем масштаб разумными пределами
+    const clampedScale = Math.max(0.1, Math.min(2.0, finalScale));
+    
+    this.scale.set(clampedScale);
   }
 
   /**
@@ -511,15 +561,17 @@ export class Hero extends GameEntity {
    */
   private updateHealthBarPosition(): void {
     if (this.healthBar) {
-      // Получаем размеры героя
-      const heroBounds = this.getBounds();
+      // ИСПРАВЛЕНИЕ: Используем this.x, this.y (центр спрайта) вместо getBounds() 
+      // так как anchor.set(0.5, 0.5) означает что this.x/this.y = центр спрайта
       
-      // Позиционируем полоски над героем
+      // Позиционируем полоски над героем (простое позиционирование)
       this.healthBar.positionAboveHero(
-        heroBounds.x,
-        heroBounds.y,
-        heroBounds.width,
-        this.scale.x
+        this.x,           // Центр спрайта по X
+        this.y,           // Центр спрайта по Y  
+        this.width,       // Ширина спрайта
+        this.height,      // Высота спрайта
+        this.scale.x,
+        this.app.screen.width
       );
     }
   }
@@ -602,6 +654,11 @@ export class Hero extends GameEntity {
     return this.config.name;
   }
   
+  /** Получение зоны коллизии героя */
+  public getCollisionZone(): number {
+    return this.config.collisionZone;
+  }
+  
   /**
    * Получение полоски здоровья героя
    */
@@ -619,13 +676,37 @@ export class Hero extends GameEntity {
   /**
    * Получение урона героем
    * Уменьшает current-health в heroStore и обновляет полоски здоровья
+   * Обрабатывает пассивные способности героя при получении урона
    * 
    * @param damage количество урона
+   * @param attacker крип, который наносит урон (для пассивных способностей)
    */
-  public takeDamage(damage: number): void {
+  public takeDamage(damage: number, attacker?: any): void {
     const currentHealth = this.getHealth();
     const newHealth = Math.max(0, currentHealth - damage);
     this.setHealth(newHealth);
+    
+    // Обрабатываем пассивные способности при получении урона
+    if (attacker) {
+      try {
+        const abilityResults = heroAbilitiesManager.handleTakeDamage(this, attacker, damage);
+        
+        // ОПТИМИЗАЦИЯ: Логируем только на десктопе и только при наличии результатов
+        if (abilityResults.length > 0) {
+          // Проверяем, убила ли какая-то пассивная способность крипа
+          const killedCreep = abilityResults.find(r => r.creepKilled);
+          if (killedCreep && (this as any).onCreepKilledByAbility) {
+            (this as any).onCreepKilledByAbility(attacker);
+          }
+        }
+      } catch (error) {
+        // Логируем ошибки только на десктопе
+        const IS_MOBILE = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!IS_MOBILE) {
+          console.warn('⚠️ Ошибка при обработке пассивных способностей:', error);
+        }
+      }
+    }
   }
 
   /**

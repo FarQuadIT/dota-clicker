@@ -9,6 +9,584 @@ import { useHeroStore } from '../../contexts/heroStore';
 import GameOverModal from '../../features/ui/GameOverModal';
 import { heroLevelSystem } from '../../game/systems/HeroLevelSystem';
 import { audioManager } from '../../game/managers/SoundManager';
+// 🔥 НОВЫЕ ИМПОРТЫ: Добавляем импорты для Hero и GameController
+import { Hero } from '../../game/entities/Hero';
+import { GameController } from '../../game/core/GameController';
+import { TEST_HERO_ID } from '../../shared/constants';
+import { mapNumericIdToHeroName } from '../../game/config/heroConfig';
+
+/**
+ * Компонент диагностики устройства
+ */
+const DeviceDiagnostic = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [diagnosticData, setDiagnosticData] = useState<any>(null);
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  // Функция определения мощности устройства
+  const detectDeviceCapability = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') as WebGLRenderingContext || 
+                  canvas.getContext('experimental-webgl') as WebGLRenderingContext;
+      
+      if (!gl) {
+        return {
+          webglSupport: false,
+          maxTextureSize: 'Не поддерживается',
+          devicePower: 'weak',
+          selectedQuality: 'md',
+          recommendation: 'Используйте другой браузер',
+          screenAnalysis: 'WebGL не поддерживается'
+        };
+      }
+
+      const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+      const maxCombinedTextures = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+      const vendor = gl.getParameter(gl.VENDOR);
+      const rendererInfo = gl.getParameter(gl.RENDERER);
+      
+      console.log('📱 GPU Information:');
+      console.log(`  Vendor: ${vendor}`);
+      console.log(`  Renderer: ${rendererInfo}`);
+      console.log(`  Max Texture Size: ${maxTextureSize}x${maxTextureSize}`);
+      console.log(`  Max Combined Textures: ${maxCombinedTextures}`);
+      
+      // Предупреждение если размер текстуры мал
+      if (maxTextureSize < 4096) {
+        console.warn('⚠️ ПРЕДУПРЕЖДЕНИЕ: Размер текстуры ограничен! Некоторые спрайтшиты могут не загрузиться.');
+        console.warn(`   Максимальный размер: ${maxTextureSize}x${maxTextureSize}`);
+        console.warn('   Спрайтшиты крипов (8192x7168) превышают этот лимит!');
+      }
+
+      // Определение мощности устройства по GPU
+      let devicePower: 'weak' | 'medium' | 'strong' = 'weak';
+      
+      if (maxTextureSize >= 8192 && maxCombinedTextures >= 16) {
+        devicePower = 'strong';
+      } else if (maxTextureSize >= 4096 && maxCombinedTextures >= 8) {
+        devicePower = 'medium';
+      } else {
+        devicePower = 'weak';
+      }
+
+      // НОВАЯ ЛОГИКА: Определение качества с учетом размера экрана и DPI
+      const screenWidth = window.screen.width;
+      const screenHeight = window.screen.height;
+      const pixelRatio = window.devicePixelRatio || 1;
+      const actualWidth = window.innerWidth;
+      const actualHeight = window.innerHeight;
+      
+      // Определяем тип экрана по физическому размеру
+      const screenArea = screenWidth * screenHeight;
+      const isSmallScreen = screenArea < 1000000; // < ~1000x1000 (мобильные)
+      const isMediumScreen = screenArea < 2000000; // < ~1414x1414 (планшеты)
+      const isLargeScreen = screenArea >= 2000000; // >= ~1414x1414 (десктопы)
+      
+      // Определяем минимальный размер спрайта на экране
+      const minSpriteSize = 120;
+      const spriteScreenRatio = 0.15; // Спрайт занимает ~15% от ширины экрана
+      const expectedSpriteSize = actualWidth * spriteScreenRatio * pixelRatio;
+      
+      // Максимальные размеры наших спрайт-листов для каждого качества
+      const maxSpritesheetSizes = {
+        hd: Math.max(7168, 6144, 5120), // Максимальный размер HD спрайт-листов (7168×6144 direCreep idle)
+        md: Math.max(3584, 3072, 2560), // Максимальный размер MD спрайт-листов (7×6×512 = 3584×3072)
+        ld: Math.max(1792, 1536, 1280)  // Максимальный размер LD спрайт-листов (7×6×256 = 1792×1536)
+      };
+      
+      // Функция проверки поддержки качества по размеру текстуры
+      const canSupportQuality = (quality: 'ld' | 'md' | 'hd'): boolean => {
+        return maxSpritesheetSizes[quality] <= maxTextureSize;
+      };
+      
+      // Определяем максимально доступное качество по размеру текстуры
+      let maxSupportedQuality: 'ld' | 'md' | 'hd' = 'ld';
+      if (canSupportQuality('hd')) {
+        maxSupportedQuality = 'hd';
+      } else if (canSupportQuality('md')) {
+        maxSupportedQuality = 'md';
+      } else {
+        maxSupportedQuality = 'ld';
+      }
+      
+      let selectedQuality: 'ld' | 'md' | 'hd' = 'md';
+      let qualityReason = '';
+      
+      // Логика выбора качества с приоритетом визуального качества на маленьких экранах
+      if (isSmallScreen) {
+        // Маленькие экраны (мобильные): приоритет качеству, иначе спрайты будут крошечными
+        if (expectedSpriteSize < minSpriteSize || pixelRatio >= 2) {
+          selectedQuality = 'hd';
+          qualityReason = 'Маленький экран + высокий DPI → желаем HD для четкости';
+        } else if (devicePower === 'weak') {
+          selectedQuality = 'md';
+          qualityReason = 'Маленький экран + слабый GPU → желаем MD компромисс';
+        } else {
+          selectedQuality = 'hd';
+          qualityReason = 'Маленький экран + хороший GPU → желаем HD для четкости';
+        }
+      } else if (isMediumScreen) {
+        // Средние экраны (планшеты): баланс производительности и качества
+        if (devicePower === 'weak') {
+          selectedQuality = 'md';
+          qualityReason = 'Средний экран + слабый GPU → желаем MD';
+        } else {
+          selectedQuality = 'hd';
+          qualityReason = 'Средний экран + хороший GPU → желаем HD';
+        }
+      } else {
+        // Большие экраны (десктопы): качество по мощности GPU
+        if (devicePower === 'weak') {
+          selectedQuality = 'md';
+          qualityReason = 'Большой экран + слабый GPU → желаем MD';
+        } else {
+          selectedQuality = 'hd';
+          qualityReason = 'Большой экран + хороший GPU → желаем HD';
+        }
+      }
+      
+      // Применяем ограничение по максимальному размеру текстуры
+      const desiredQuality = selectedQuality;
+      const finalQuality = canSupportQuality(selectedQuality) ? selectedQuality : maxSupportedQuality;
+      const wasDowngraded = finalQuality !== desiredQuality;
+      
+      if (wasDowngraded) {
+        qualityReason += ` → снижено до ${finalQuality.toUpperCase()} (GPU лимит: ${maxTextureSize}px)`;
+      }
+      
+      selectedQuality = finalQuality;
+
+      // Генерируем рекомендацию
+      const recommendation = selectedQuality === 'hd' ? 'Используются кадры 1024×1024' :
+                           selectedQuality === 'md' ? 'Используются кадры 512×512' :
+                           'Используются кадры 256×256';
+
+      // Дополнительная информация об устройстве
+      const userAgent = navigator.userAgent;
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const cores = navigator.hardwareConcurrency || 'Неизвестно';
+      const memory = (navigator as any).deviceMemory || 'Неизвестно';
+      const screenRes = `${screenWidth}×${screenHeight}`;
+
+      // Анализ экрана для диагностики
+      const screenAnalysis = {
+        type: isSmallScreen ? '📱 Маленький (мобильный)' : 
+              isMediumScreen ? '📱 Средний (планшет)' : 
+              '🖥️ Большой (десктоп)',
+        area: Math.round(screenArea / 1000000 * 10) / 10,
+        pixelRatio,
+        expectedSpriteSize: Math.round(expectedSpriteSize),
+        reason: qualityReason
+      };
+      
+      // Анализ текстур для диагностики
+      const textureAnalysis = {
+        maxTextureSize,
+        maxSpritesheetSizes,
+        maxSupportedQuality,
+        desiredQuality,
+        finalQuality: selectedQuality,
+        wasDowngraded,
+        supportedQualities: {
+          hd: canSupportQuality('hd'),
+          md: canSupportQuality('md'),
+          ld: canSupportQuality('ld')
+        }
+      };
+
+      return {
+        webglSupport: true,
+        maxTextureSize,
+        maxVertexAttribs: gl.getParameter(gl.MAX_VERTEX_ATTRIBS) as number,
+        maxRenderbufferSize: gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,
+        maxViewportDims: gl.getParameter(gl.MAX_VIEWPORT_DIMS) as Int32Array,
+        devicePower,
+        selectedQuality,
+        recommendation,
+        isMobile,
+        cores,
+        memory,
+        screenRes,
+        screenAnalysis,
+        userAgent: userAgent.slice(0, 100) + (userAgent.length > 100 ? '...' : ''),
+        textureAnalysis: textureAnalysis
+      };
+    } catch (error: any) {
+      return {
+        webglSupport: false,
+        error: error?.message || 'Неизвестная ошибка',
+        devicePower: 'unknown',
+        selectedQuality: 'md',
+        recommendation: 'Ошибка определения',
+        screenAnalysis: 'Ошибка анализа экрана'
+      };
+    }
+  };
+
+  // Загружаем данные при первом открытии
+  useEffect(() => {
+    if (isVisible && !diagnosticData) {
+      setDiagnosticData(detectDeviceCapability());
+    }
+  }, [isVisible, diagnosticData]);
+
+  // Отслеживаем изменения размера окна для адаптивности
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Определение размера устройства для адаптивных стилей
+  const isMobile = windowSize.width <= 768;
+  const isTablet = windowSize.width > 768 && windowSize.width <= 1024;
+  const isDesktop = windowSize.width > 1024;
+
+  // Анализ текущих спрайт листов
+  const analyzeCurrentSprites = () => {
+    if (!diagnosticData?.maxTextureSize) return [];
+
+    const sprites = [
+      // ГЕРОИ
+      { name: 'Джаггернаут idle', size: '3072×3072', frames: '6×6×512px', adaptive: false },
+      { name: 'Джаггернаут attack', size: '3072×2560', frames: '6×5×512px', adaptive: false },
+      { name: 'Кентавр (адаптивный)', size: 'авто', frames: 'авто', adaptive: true, category: 'hero' },
+      
+      // КРИПЫ
+      { name: 'DireCreep (адаптивный)', size: 'авто', frames: 'авто', adaptive: true, category: 'creep' },
+      { name: 'Сатир idle', size: '3584×3072', frames: '7×6×512px', adaptive: false },
+      { name: 'Wolf idle', size: '5120×5120', frames: '5×5×1024px', adaptive: false },
+      { name: 'Medved idle', size: '6144×5120', frames: '6×5×1024px', adaptive: false },
+      { name: 'Voul idle', size: '5120×7168', frames: '5×7×1024px', adaptive: false },
+      { name: 'Shishka idle', size: '5120×6144', frames: '5×6×1024px', adaptive: false }
+    ];
+
+    return sprites.map(sprite => {
+      if (sprite.adaptive) {
+        // Для адаптивных спрайт листов показываем выбранное качество
+        let qualityInfo;
+        
+        if (sprite.category === 'hero') {
+          // Кентавр: 7×6 idle, 7×6 run, 5×4 attack 
+          qualityInfo = diagnosticData.selectedQuality === 'hd' ? 
+            { size: '7168×6144', frames: '7×6×1024px', quality: 'HD' } :
+            diagnosticData.selectedQuality === 'md' ?
+            { size: '3584×3072', frames: '7×6×512px', quality: 'MD' } :
+            { size: '1792×1536', frames: '7×6×256px', quality: 'LD' };
+        } else if (sprite.category === 'creep') {
+          // DireCreep: 7×6 idle, 5×5 attack, 6×5 death
+          qualityInfo = diagnosticData.selectedQuality === 'hd' ? 
+            { size: '7168×6144', frames: '7×6×1024px', quality: 'HD' } :
+            diagnosticData.selectedQuality === 'md' ?
+            { size: '3584×3072', frames: '7×6×512px', quality: 'MD' } :
+            { size: '1792×1536', frames: '7×6×256px', quality: 'LD' };
+        } else {
+          // Общий случай
+          qualityInfo = diagnosticData.selectedQuality === 'hd' ? 
+            { size: '5120×4096', frames: '7×7×1024px', quality: 'HD' } :
+            diagnosticData.selectedQuality === 'md' ?
+            { size: '3584×3584', frames: '7×7×512px', quality: 'MD' } :
+            { size: '1792×1792', frames: '7×7×256px', quality: 'LD' };
+        }
+        
+        return {
+          ...sprite,
+          size: qualityInfo.size,
+          frames: qualityInfo.frames,
+          isSupported: true,
+          status: `✅ ${qualityInfo.quality}`
+        };
+      } else {
+        const [width, height] = sprite.size.split('×').map(Number);
+        const maxDimension = Math.max(width, height);
+        const isSupported = maxDimension <= diagnosticData.maxTextureSize;
+        
+        return {
+          ...sprite,
+          isSupported,
+          status: isSupported ? '✅' : '❌'
+        };
+      }
+    });
+  };
+
+  return (
+    <>
+             {/* Кнопка диагностики */}
+       <button
+         onClick={() => setIsVisible(!isVisible)}
+         style={{
+           position: 'fixed',
+           top: isMobile ? '45px' : '50px',
+           right: isMobile ? '5px' : '10px',
+           zIndex: 1001,
+           background: isVisible ? '#ff6b6b' : '#4CAF50',
+           color: 'white',
+           border: 'none',
+           borderRadius: '50%',
+           width: isMobile ? '45px' : '50px',
+           height: isMobile ? '45px' : '50px',
+           fontSize: isMobile ? '16px' : '18px',
+           cursor: 'pointer',
+           boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+           transition: 'all 0.3s ease'
+         }}
+         title="Диагностика устройства"
+       >
+         {isVisible ? '✕' : '🔍'}
+       </button>
+
+             {/* Окно диагностики */}
+       {isVisible && (
+         <div style={{
+           position: 'fixed',
+           top: isMobile ? '95px' : '100px',
+           right: isMobile ? '5px' : '10px',
+           left: isMobile ? '5px' : 'auto',
+           width: isMobile ? 'auto' : isTablet ? '350px' : '400px',
+           maxWidth: isMobile ? 'calc(100vw - 10px)' : isTablet ? '350px' : '400px',
+           maxHeight: isMobile ? '80vh' : '75vh',
+           background: 'rgba(0, 0, 0, 0.95)',
+           color: 'white',
+           borderRadius: isMobile ? '8px' : '10px',
+           padding: isMobile ? '12px' : '20px',
+           zIndex: 1000,
+           fontSize: isMobile ? '10px' : isTablet ? '11px' : '12px',
+           fontFamily: 'monospace',
+           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+           overflow: 'auto',
+           border: '1px solid #333'
+         }}>
+                     <h3 style={{ 
+             margin: '0 0 15px 0', 
+             color: '#4CAF50', 
+             fontSize: isMobile ? '14px' : '16px',
+             textAlign: 'center'
+           }}>
+             📱 Диагностика устройства
+           </h3>
+
+          {diagnosticData ? (
+            <div>
+              {/* Основная информация */}
+              <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px' }}>
+                                 <h4 style={{ 
+                   margin: '0 0 10px 0', 
+                   color: '#FFD700',
+                   fontSize: isMobile ? '12px' : '14px'
+                 }}>🎮 GPU Характеристики:</h4>
+                <p><strong>WebGL поддержка:</strong> {diagnosticData.webglSupport ? '✅ Да' : '❌ Нет'}</p>
+                                 <p><strong>Макс. размер текстуры:</strong> <span style={{ 
+                   color: '#4CAF50', 
+                   fontSize: isMobile ? '12px' : '14px',
+                   fontWeight: 'bold'
+                 }}>{diagnosticData.maxTextureSize}×{diagnosticData.maxTextureSize}</span></p>
+                <p><strong>Макс. вершинные атрибуты:</strong> {diagnosticData.maxVertexAttribs}</p>
+                <p><strong>Макс. размер буфера:</strong> {diagnosticData.maxRenderbufferSize}×{diagnosticData.maxRenderbufferSize}</p>
+                <p><strong>Макс. viewport:</strong> {diagnosticData.maxViewportDims ? `${diagnosticData.maxViewportDims[0]}×${diagnosticData.maxViewportDims[1]}` : 'Неизвестно'}</p>
+                
+                {/* Информация об адаптивном качестве */}
+                <div style={{ 
+                  marginTop: '10px', 
+                  padding: '8px', 
+                  background: 'rgba(76, 175, 80, 0.2)', 
+                  borderRadius: '5px',
+                  border: '1px solid #4CAF50'
+                }}>
+                  <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#4CAF50' }}>🎨 Выбранное качество:</p>
+                  <p style={{ margin: '0', fontSize: isMobile ? '10px' : '11px' }}>
+                    <strong>{diagnosticData.selectedQuality?.toUpperCase() || 'MD'}:</strong> {
+                      diagnosticData.selectedQuality === 'hd' ? 'Высокое (1024×1024)' :
+                      diagnosticData.selectedQuality === 'md' ? 'Среднее (512×512)' :
+                      diagnosticData.selectedQuality === 'ld' ? 'Низкое (256×256)' :
+                      'Среднее (512×512)'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Классификация устройства */}
+              <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px' }}>
+                <h4 style={{ 
+                  margin: '0 0 10px 0', 
+                  color: '#FFD700',
+                  fontSize: isMobile ? '12px' : '14px'
+                }}>⚡ Мощность устройства:</h4>
+                <p><strong>Категория:</strong> 
+                  <span style={{ 
+                    color: diagnosticData.devicePower === 'strong' ? '#4CAF50' : 
+                           diagnosticData.devicePower === 'medium' ? '#FF9800' : '#f44336',
+                    marginLeft: '5px',
+                    fontWeight: 'bold'
+                  }}>
+                    {diagnosticData.devicePower === 'strong' ? '💪 Мощное' : 
+                     diagnosticData.devicePower === 'medium' ? '📱 Среднее' : '🐌 Слабое'}
+                  </span>
+                </p>
+                <p><strong>Рекомендация:</strong> <span style={{ color: '#81C784' }}>{diagnosticData.recommendation}</span></p>
+              </div>
+
+              {/* НОВАЯ СЕКЦИЯ: Анализ экрана */}
+              {diagnosticData.screenAnalysis && typeof diagnosticData.screenAnalysis === 'object' && (
+                <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(33, 150, 243, 0.1)', borderRadius: '5px', border: '1px solid #2196F3' }}>
+                  <h4 style={{ 
+                    margin: '0 0 10px 0', 
+                    color: '#2196F3',
+                    fontSize: isMobile ? '12px' : '14px'
+                  }}>📱 Анализ экрана:</h4>
+                  <p><strong>Тип экрана:</strong> <span style={{ color: '#81C784' }}>{diagnosticData.screenAnalysis.type}</span></p>
+                  <p><strong>Площадь:</strong> {diagnosticData.screenAnalysis.area}M пикселей</p>
+                  <p><strong>Pixel Ratio:</strong> {diagnosticData.screenAnalysis.pixelRatio}x</p>
+                  <p><strong>Ожидаемый размер спрайта:</strong> {diagnosticData.screenAnalysis.expectedSpriteSize}px</p>
+                  <div style={{ 
+                    marginTop: '8px', 
+                    padding: '6px', 
+                    background: 'rgba(76, 175, 80, 0.2)', 
+                    borderRadius: '4px',
+                    fontSize: isMobile ? '9px' : '10px'
+                  }}>
+                    <strong>Логика выбора:</strong> {diagnosticData.screenAnalysis.reason}
+                  </div>
+                </div>
+              )}
+
+              {/* НОВАЯ СЕКЦИЯ: Анализ текстур */}
+              {diagnosticData.textureAnalysis && typeof diagnosticData.textureAnalysis === 'object' && (
+                <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(156, 39, 176, 0.1)', borderRadius: '5px', border: '1px solid #9C27B0' }}>
+                  <h4 style={{ 
+                    margin: '0 0 10px 0', 
+                    color: '#9C27B0',
+                    fontSize: isMobile ? '12px' : '14px'
+                  }}>🖼️ Анализ текстур:</h4>
+                  <p><strong>Max Texture Size:</strong> <span style={{ 
+                    color: diagnosticData.textureAnalysis.maxTextureSize >= 8192 ? '#4CAF50' : 
+                           diagnosticData.textureAnalysis.maxTextureSize >= 4096 ? '#FF9800' : '#f44336'
+                  }}>{diagnosticData.textureAnalysis.maxTextureSize}×{diagnosticData.textureAnalysis.maxTextureSize}</span></p>
+                  
+                  <div style={{ marginTop: '8px', fontSize: isMobile ? '10px' : '11px' }}>
+                    <strong>Размеры спрайт-листов:</strong>
+                    <div style={{ marginLeft: '10px' }}>
+                      <div>HD: {diagnosticData.textureAnalysis.maxSpritesheetSizes.hd}px {diagnosticData.textureAnalysis.supportedQualities.hd ? '✅' : '❌'}</div>
+                      <div>MD: {diagnosticData.textureAnalysis.maxSpritesheetSizes.md}px {diagnosticData.textureAnalysis.supportedQualities.md ? '✅' : '❌'}</div>
+                      <div>LD: {diagnosticData.textureAnalysis.maxSpritesheetSizes.ld}px {diagnosticData.textureAnalysis.supportedQualities.ld ? '✅' : '❌'}</div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ 
+                    marginTop: '8px', 
+                    padding: '6px', 
+                    background: diagnosticData.textureAnalysis.wasDowngraded ? 'rgba(244, 67, 54, 0.2)' : 'rgba(76, 175, 80, 0.2)', 
+                    borderRadius: '4px',
+                    fontSize: isMobile ? '9px' : '10px'
+                  }}>
+                    <strong>Результат:</strong> Желаемое {diagnosticData.textureAnalysis.desiredQuality?.toUpperCase()} → Финальное {diagnosticData.textureAnalysis.finalQuality?.toUpperCase()}
+                    {diagnosticData.textureAnalysis.wasDowngraded && <div style={{ color: '#f44336', marginTop: '4px' }}>⚠️ Качество понижено из-за ограничения GPU</div>}
+                  </div>
+                </div>
+              )}
+
+              {/* Системная информация */}
+              <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px' }}>
+                                 <h4 style={{ 
+                   margin: '0 0 10px 0', 
+                   color: '#FFD700',
+                   fontSize: isMobile ? '12px' : '14px'
+                 }}>📊 Системная информация:</h4>
+                <p><strong>Устройство:</strong> {diagnosticData.isMobile ? '📱 Мобильное' : '💻 Десктоп'}</p>
+                <p><strong>Ядра процессора:</strong> {diagnosticData.cores}</p>
+                <p><strong>ОЗУ:</strong> {diagnosticData.memory} GB</p>
+                <p><strong>Разрешение экрана:</strong> {diagnosticData.screenRes}</p>
+                                 <p><strong>User Agent:</strong> <span style={{ 
+                   fontSize: isMobile ? '8px' : '10px', 
+                   wordBreak: 'break-all',
+                   lineHeight: isMobile ? '1.2' : '1.4'
+                 }}>{diagnosticData.userAgent}</span></p>
+              </div>
+
+              {/* Анализ спрайт листов */}
+              <div style={{ marginBottom: '15px', padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '5px' }}>
+                                 <h4 style={{ 
+                   margin: '0 0 10px 0', 
+                   color: '#FFD700',
+                   fontSize: isMobile ? '12px' : '14px'
+                 }}>🎨 Анализ текущих спрайт листов:</h4>
+                                 {analyzeCurrentSprites().map((sprite, index) => (
+                   <div key={index} style={{ 
+                     display: isMobile ? 'block' : 'flex', 
+                     justifyContent: 'space-between', 
+                     padding: '3px 0',
+                     borderBottom: index < analyzeCurrentSprites().length - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                     fontSize: isMobile ? '9px' : '11px'
+                   }}>
+                     <span style={{ 
+                       flex: isMobile ? 'auto' : 1,
+                       display: 'block',
+                       marginBottom: isMobile ? '2px' : '0'
+                     }}>{sprite.name}</span>
+                     <span style={{ 
+                       color: sprite.isSupported ? '#4CAF50' : '#f44336', 
+                       marginLeft: isMobile ? '0' : '10px',
+                       fontWeight: 'bold'
+                     }}>
+                       {sprite.status} {sprite.size}
+                     </span>
+                   </div>
+                 ))}
+              </div>
+
+                             {/* Рекомендации */}
+               <div style={{ 
+                 padding: isMobile ? '8px' : '10px', 
+                 background: 'rgba(255,193,7,0.2)', 
+                 borderRadius: '5px', 
+                 border: '1px solid #FFC107' 
+               }}>
+                                 <h4 style={{ 
+                   margin: '0 0 10px 0', 
+                   color: '#FFC107',
+                   fontSize: isMobile ? '12px' : '14px'
+                 }}>💡 Рекомендации:</h4>
+                {diagnosticData.devicePower === 'weak' && (
+                  <p style={{ margin: '5px 0', color: '#FFE082' }}>
+                    • Используйте кадры 256×256 для лучшей производительности<br/>
+                    • Рассмотрите обновление браузера или устройства
+                  </p>
+                )}
+                {diagnosticData.devicePower === 'medium' && (
+                  <p style={{ margin: '5px 0', color: '#FFE082' }}>
+                    • Оптимальный размер кадров: 512×512<br/>
+                    • Большинство игр будут работать нормально
+                  </p>
+                )}
+                {diagnosticData.devicePower === 'strong' && (
+                  <p style={{ margin: '5px 0', color: '#FFE082' }}>
+                    • Можете использовать максимальное качество<br/>
+                    • Кадры 1024×1024 будут работать отлично
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <div style={{ fontSize: '20px', marginBottom: '10px' }}>🔄</div>
+              <p>Определение характеристик устройства...</p>
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+};
 
 /**
 * Компонент игровой страницы с полноэкранным Pixi.js канвасом
@@ -46,6 +624,10 @@ export default function GamePage() {
  // Состояние для отслеживания готовности DOM
  const [isDOMReady, setIsDOMReady] = useState(false);
 
+ // 🔥 НОВОЕ: Ref для отслеживания состояния компонента
+ const isMountedRef = useRef(true);
+ const isCleaningUpRef = useRef(false);
+
  // Состояние для Game Over модального окна
  const [isGameOver, setIsGameOver] = useState(false);
  const [sessionGold, setSessionGold] = useState(0);
@@ -57,19 +639,132 @@ export default function GamePage() {
  
  // Используем героя для получения общего золота
  const { stats } = useHeroStore();
+
+ // Если данные еще не загружены, показываем загрузку
+ if (!stats) {
+   return (
+     <div style={{ 
+       display: 'flex', 
+       justifyContent: 'center', 
+       alignItems: 'center',
+       height: '100vh',
+       color: 'white',
+       backgroundColor: '#1c2028'
+     }}>
+       <p>Загрузка данных героя для игры...</p>
+     </div>
+   );
+ }
  
  // Навигация для переходов между страницами
  const navigate = useNavigate();
 
+ // 🔥 НОВОЕ: Принудительная очистка ресурсов
+ const forceCleanupResources = () => {
+   if (isCleaningUpRef.current) return; // Предотвращаем множественные cleanup
+   isCleaningUpRef.current = true;
+   
+   console.log('🧹 Принудительная очистка ресурсов...');
+   
+   try {
+     // Останавливаем игру через контекст
+     setGameActive(false);
+     
+     // Очищаем звуковую систему
+     audioManager.stopAllSounds();
+     audioManager.resetGamePause();
+     
+     // Очищаем GameController
+     if (gameController) {
+       if (typeof gameController.destroy === 'function') {
+         gameController.destroy();
+       }
+       setGameController(null);
+     }
+     
+     // Очищаем PIXI приложение
+     if (pixiApp) {
+       try {
+         // Останавливаем все ticker'ы
+         if (pixiApp.ticker) {
+           pixiApp.ticker.stop();
+           pixiApp.ticker.remove((pixiApp as any).heroUpdateTicker);
+           pixiApp.ticker.remove((pixiApp as any).gameControllerUpdateTicker);
+         }
+         
+         // Очищаем обработчик resize
+         if ((pixiApp as any).removeResizeListener) {
+           (pixiApp as any).removeResizeListener();
+         }
+         
+         // Удаляем canvas из DOM
+         if (gameContainerRef.current && pixiApp.canvas) {
+           try {
+             gameContainerRef.current.removeChild(pixiApp.canvas);
+           } catch (e) {
+             // Canvas уже удален
+           }
+         }
+         
+         // Уничтожаем приложение
+         pixiApp.destroy(true, { children: true, texture: true });
+         setPixiApp(null);
+       } catch (error) {
+         console.warn('Ошибка при очистке PIXI:', error);
+       }
+     }
+     
+     // Очищаем контейнер
+     if (gameContainerRef.current) {
+       gameContainerRef.current.innerHTML = '';
+     }
+     
+     console.log('✅ Принудительная очистка завершена');
+   } catch (error) {
+     console.error('❌ Ошибка при принудительной очистке:', error);
+   }
+ };
+
+ // 🔥 НОВОЕ: Отслеживание видимости страницы для мобильных устройств
+ useEffect(() => {
+   const handleVisibilityChange = () => {
+     if (document.hidden) {
+       console.log('📱 Страница потеряла видимость - принудительная очистка');
+       forceCleanupResources();
+     }
+   };
+
+   const handleBeforeUnload = () => {
+     console.log('📱 Страница выгружается - принудительная очистка');
+     forceCleanupResources();
+   };
+
+   const handlePageHide = () => {
+     console.log('📱 Событие pagehide - принудительная очистка');
+     forceCleanupResources();
+   };
+
+   // Добавляем слушатели для всех событий потери фокуса
+   document.addEventListener('visibilitychange', handleVisibilityChange);
+   window.addEventListener('beforeunload', handleBeforeUnload);
+   window.addEventListener('pagehide', handlePageHide);
+
+   return () => {
+     document.removeEventListener('visibilitychange', handleVisibilityChange);
+     window.removeEventListener('beforeunload', handleBeforeUnload);
+     window.removeEventListener('pagehide', handlePageHide);
+   };
+ }, [gameController, pixiApp]);
+
  // Эффект для проверки готовности DOM
  useEffect(() => {
-       const checkDOMReady = () => {
-      if (gameContainerRef.current) {
-        setIsDOMReady(true);
-      } else {
-        requestAnimationFrame(checkDOMReady);
-      }
-    };
+   const checkDOMReady = () => {
+     if (gameContainerRef.current && isMountedRef.current) {
+       setIsDOMReady(true);
+     } else if (isMountedRef.current) {
+       requestAnimationFrame(checkDOMReady);
+     }
+   };
    
    checkDOMReady();
  }, []);
@@ -78,7 +773,8 @@ export default function GamePage() {
  useEffect(() => {
    if (!isDOMReady) return;
    
-   let isMounted = true; // Флаг для предотвращения race conditions
+   // 🔥 ИСПРАВЛЕНИЕ: Проверяем что компонент все еще mounted и не очищается
+   if (!isMountedRef.current || isCleaningUpRef.current) return;
    
    /**
     * Основная функция инициализации игры
@@ -90,11 +786,10 @@ export default function GamePage() {
     */
    async function initializeGame() {
      try {
-       // Проверяем что приложение еще не создано и компонент все еще mounted
-       if (pixiApp || !isMounted) {
+       // 🔥 ЗАЩИТА: Проверяем что приложение еще не создано и компонент не очищается
+       if (pixiApp || !isMountedRef.current || isCleaningUpRef.current) {
          return;
        }
-       
 
        setIsInitializing(true);
        setError(null);
@@ -102,9 +797,8 @@ export default function GamePage() {
        // Шаг 1: Создание и настройка Pixi Application
        const app = await initializePixiApp();
        
-       // Проверяем что компонент все еще mounted перед установкой состояния
-       if (!isMounted) {
-         // Если компонент размонтирован во время инициализации - уничтожаем приложение
+       // 🔥 ЗАЩИТА: Проверяем состояние после асинхронной операции
+       if (!isMountedRef.current || isCleaningUpRef.current) {
          app.destroy(true, { children: true, texture: true });
          return;
        }
@@ -113,22 +807,19 @@ export default function GamePage() {
        setIsInitializing(false);
 
        // Шаг 2: Загрузка игровых ресурсов
-       if (!isMounted) return;
+       if (!isMountedRef.current || isCleaningUpRef.current) return;
        setIsLoadingAssets(true);
        await loadGameAssets();
        
-       if (!isMounted) return;
+       if (!isMountedRef.current || isCleaningUpRef.current) return;
        setIsLoadingAssets(false);
 
        // Шаг 3: Создание игровой сцены
-       if (!isMounted) return;
+       if (!isMountedRef.current || isCleaningUpRef.current) return;
        await createGameScene(app);
-       
-
-
 
      } catch (err) {
-       if (!isMounted) return;
+       if (!isMountedRef.current || isCleaningUpRef.current) return;
        console.error('❌ Ошибка инициализации игры:', err);
        setError(`Ошибка инициализации: ${err instanceof Error ? err.message : String(err)}`);
        setIsInitializing(false);
@@ -175,7 +866,52 @@ export default function GamePage() {
        
        // Автоматическая плотность пикселей
        autoDensity: true,
+       
+       // Настройки для мобильных устройств
+       preference: 'webgl',
+       powerPreference: 'high-performance',
      });
+
+     // 🔍 ДИАГНОСТИКА: Проверяем ограничения устройства
+     try {
+       // Проверяем тип рендерера и получаем WebGL контекст
+       const renderer = app.renderer as any;
+       let gl: WebGLRenderingContext | null = null;
+       
+       // Для WebGLRenderer
+       if (renderer.gl) {
+         gl = renderer.gl;
+       }
+                // Для случаев когда используется canvas context
+         else if (app.canvas && app.canvas.getContext) {
+           gl = app.canvas.getContext('webgl') as WebGLRenderingContext || 
+                app.canvas.getContext('experimental-webgl') as WebGLRenderingContext;
+         }
+       
+       if (gl) {
+         const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+         const maxCombinedTextures = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+         const vendor = gl.getParameter(gl.VENDOR);
+         const rendererInfo = gl.getParameter(gl.RENDERER);
+         
+         console.log('📱 GPU Information:');
+         console.log(`  Vendor: ${vendor}`);
+         console.log(`  Renderer: ${rendererInfo}`);
+         console.log(`  Max Texture Size: ${maxTextureSize}x${maxTextureSize}`);
+         console.log(`  Max Combined Textures: ${maxCombinedTextures}`);
+         
+         // Предупреждение если размер текстуры мал
+         if (maxTextureSize < 4096) {
+           console.warn('⚠️ ПРЕДУПРЕЖДЕНИЕ: Размер текстуры ограничен! Некоторые спрайтшиты могут не загрузиться.');
+           console.warn(`   Максимальный размер: ${maxTextureSize}x${maxTextureSize}`);
+           console.warn('   Спрайтшиты крипов (8192x7168) превышают этот лимит!');
+         }
+       } else {
+         console.warn('⚠️ WebGL контекст недоступен - возможны проблемы с текстурами на мобильных');
+       }
+     } catch (error) {
+       console.warn('⚠️ Ошибка при проверке GPU ограничений:', error);
+     }
 
      
 
@@ -336,7 +1072,16 @@ export default function GamePage() {
        app.ticker.add((time) => {
          // Двигаем фон только если установлен флаг движения
          if (isBackgroundMoving) {
-           backgroundTiling.tilePosition.x -= scrollSpeed * time.deltaTime;
+           // ✅ СИНХРОНИЗАЦИЯ: Используем deltaMS как у крипов
+           // Нормализуем deltaMS (16.67 при 60 FPS) к стандартному значению
+           const normalizedDelta = time.deltaMS / 16.67;
+           const backgroundSpeed = scrollSpeed * normalizedDelta;
+           backgroundTiling.tilePosition.x -= backgroundSpeed;
+           
+           // 🔍 ОТЛАДКА: Логируем скорости каждые 60 кадров
+           if (Math.floor(Date.now() / 1000) % 2 === 0 && Math.random() < 0.01) {
+             console.log(`🎮 Фон: deltaMS=${time.deltaMS.toFixed(2)}, normalizedDelta=${normalizedDelta.toFixed(2)}, speed=${backgroundSpeed.toFixed(2)}`);
+           }
          }
        });
        
@@ -381,150 +1126,140 @@ export default function GamePage() {
     * Создает героя и игровой контроллер для управления циклом боя
     */
    async function createGameController(app: Application): Promise<void> {
+      try {
+        console.log('🎮 Создание GameController...');
+        
+        // 🔥 НОВОЕ: Очищаем все существующие ticker'ы перед созданием нового контроллера
+        if (app.ticker) {
+          // Удаляем все пользовательские обработчики
+          app.ticker.remove((app as any).heroUpdateTicker);
+          app.ticker.remove((app as any).gameControllerUpdateTicker);
+          
+          // Очищаем ссылки
+          (app as any).heroUpdateTicker = null;
+          (app as any).gameControllerUpdateTicker = null;
+        }
+        
+        // Создаем нового героя
+        const hero = await createHero(app);
+        
+        // Создаем новый игровой контроллер
+        const gameController = new GameController(app, hero);
+        
+        // 🔥 НОВОЕ: Связываем героя с контроллером для нанесения урона после атаки
+        hero.setAttackCallback(() => {
+          gameController.dealDamageToCreep();
+        });
+        
+        // Добавляем героя на сцену
+        app.stage.addChild(hero);
+        
+        // 🔥 ИСПРАВЛЕНИЕ: Сохраняем ссылки на ticker функции для последующего удаления
+        const heroUpdateTicker = (time: any) => {
+          // ИСПРАВЛЕНИЕ: Проверяем что игра запущена перед обновлением героя
+          if (gameController.isRunning()) {
+            // ✅ МИЛЛИСЕКУНДЫ: GameController ожидает deltaMS для таймеров
+            hero.update(time.deltaMS);
+          }
+        };
+        
+        const gameControllerUpdateTicker = (time: any) => {
+          // ИСПРАВЛЕНИЕ: Проверяем что игра запущена перед обновлением контроллера
+          if (gameController.isRunning()) {
+            // ✅ МИЛЛИСЕКУНДЫ: GameController ожидает deltaMS для таймеров
+            gameController.update(time.deltaMS);
+          }
+        };
+        
+        // Добавляем героя в игровой цикл для обновления анимаций
+        app.ticker.add(heroUpdateTicker);
+        
+        // Добавляем контроллер в игровой цикл
+        app.ticker.add(gameControllerUpdateTicker);
+        
+        // 🔥 НОВОЕ: Сохраняем ссылки на ticker функции для возможности их удаления
+        (app as any).heroUpdateTicker = heroUpdateTicker;
+        (app as any).gameControllerUpdateTicker = gameControllerUpdateTicker;
+        
+        // Сохраняем ссылки для обработки resize
+        (app as any).gameHero = hero;
+        (app as any).gameController = gameController;
+        
+        // Передаем контроллер в игровой контекст
+        setGameController(gameController);
+        
+        // Прогресс уровня теперь отображается в Pixi.js HUD автоматически
+        
+        // Устанавливаем callback для Game Over
+       gameController.setGameOverCallback((sessionGoldEarned: number) => {
+         setSessionGold(sessionGoldEarned);
+         setIsGameOver(true);
+         setGameActive(false); // Деактивируем игру
+       });
+       
+       // ИСПРАВЛЕНИЕ: Принудительно сбрасываем состояние Game Over при создании новой игры
+       // Это нужно для случая когда пользователь возвращается в игру после смерти героя
+       setIsGameOver(false);
+       setSessionGold(0);
+       
+       // Устанавливаем игру как активную
+       setGameActive(true);
+        
+        // Запускаем игровой цикл
+        gameController.startGameLoop();
+        
+        console.log('✅ GameController успешно создан и запущен');
+        
+      } catch (error) {
+        console.error('❌ Ошибка создания игрового контроллера:', error);
+      }
+    }
+
+   /**
+    * 🔥 НОВОЕ: Создание героя
+    * 
+    * Создает экземпляр героя с настройками из useHeroStore
+    */
+   async function createHero(app: Application): Promise<Hero> {
+     // Получаем активного героя из данных загруженных с сервера (через heroStore)
+     // Если данные еще не загружены, используем значение по умолчанию
+     const currentStats = stats;
+     const heroId = currentStats?.heroId ? parseInt(currentStats.heroId) : parseInt(TEST_HERO_ID);
      
-
-     try {
-       // Импортируем необходимые классы
-       const { Hero } = await import('../../game/entities/Hero');
-       const { GameController } = await import('../../game/core/GameController');
-       
-       // Инициализируем систему уровней героя для тестирования
-       
-       
-       // Тестируем события
-       heroLevelSystem.on('levelUp', (newLevel: number) => {
-         
-       });
-       
-       // Делаем систему доступной глобально для тестирования
-       (window as any).heroLevelSystem = heroLevelSystem;
-       
-       // Создаем игровой контроллер
-       const gameController = new GameController(app, new Hero(app, 'juggernaut', {
-         positionX: GAME_CONFIG.HERO.position.x,  // 20% от левого края
-         positionY: GAME_CONFIG.HERO.position.y,  // 70% от верха (внизу экрана)
-         scale: GAME_CONFIG.HERO.scale.gamePage   // 150% размера
-       }));
-       
-       // Характеристики героя теперь загружаются автоматически в App.tsx через API
-       
-       const hero = gameController.getHero();
-       
-       // Связываем героя с контроллером для нанесения урона после атаки
-       hero.setAttackCallback(() => {
-         gameController.dealDamageToCreep();
-       });
-       
-       // Добавляем героя на сцену
-       app.stage.addChild(hero);
-       
-       // Добавляем героя в игровой цикл для обновления анимаций
-       app.ticker.add((time) => {
-         // ИСПРАВЛЕНИЕ: Проверяем что игра запущена перед обновлением героя
-         if (gameController.isRunning()) {
-           hero.update(time.deltaMS);
-         }
-       });
-       
-
-       
-       // Добавляем контроллер в игровой цикл
-       app.ticker.add((time) => {
-         // ИСПРАВЛЕНИЕ: Проверяем что игра запущена перед обновлением контроллера
-         if (gameController.isRunning()) {
-           gameController.update(time.deltaMS);
-         }
-       });
-       
-       // Сохраняем ссылки для обработки resize
-       (app as any).gameHero = hero;
-       (app as any).gameController = gameController;
-       
-       // Передаем контроллер в игровой контекст
-       setGameController(gameController);
-       
-       // Прогресс уровня теперь отображается в Pixi.js HUD автоматически
-       
-             // Устанавливаем callback для Game Over
-      gameController.setGameOverCallback((sessionGoldEarned: number) => {
-        setSessionGold(sessionGoldEarned);
-        setIsGameOver(true);
-        setGameActive(false); // Деактивируем игру
-      });
-      
-      // ИСПРАВЛЕНИЕ: Принудительно сбрасываем состояние Game Over при создании новой игры
-      // Это нужно для случая когда пользователь возвращается в игру после смерти героя
-      setIsGameOver(false);
-      setSessionGold(0);
-      
-      // Устанавливаем игру как активную
-      setGameActive(true);
-       
-       // Запускаем игровой цикл
-       gameController.startGameLoop();
-       
-       
-
-       
-     } catch (error) {
-       console.error('❌ Ошибка создания игрового контроллера:', error);
-     }
+     const { mapNumericIdToHeroName } = await import('../../game/config/heroConfig');
+     const heroType = mapNumericIdToHeroName(heroId);
+     
+     console.log(`🎮 Создаем героя: ID=${heroId}, тип=${heroType}`);
+     
+     // Создаем экземпляр героя
+     const hero = new Hero(app, heroType);
+     
+     // Настройка callback'ов, которые были в оригинальном коде
+     heroLevelSystem.on('levelUp', (newLevel: number) => {
+       console.log(`🆙 Герой достиг уровня ${newLevel}`);
+     });
+     
+     // Связываем героя с системой уровней для тестирования
+     (window as any).heroLevelSystem = heroLevelSystem;
+     
+     // Связываем героя с контроллером для нанесения урона после атаки
+     // (это будет настроено в createGameController)
+     
+     return hero;
    }
 
    // Запускаем инициализацию игры
    initializeGame();
 
-   // Функция очистки при размонтировании компонента
+   // 🔥 УЛУЧШЕННАЯ функция очистки при размонтировании компонента
    return () => {
+     console.log('🧹 Компонент размонтируется - запуск очистки');
+     
      // Отмечаем что компонент размонтирован
-     isMounted = false;
+     isMountedRef.current = false;
      
-     // ИСПРАВЛЕНИЕ: Сбрасываем состояние паузы при выходе из игры
-     try {
-       audioManager.resetGamePause();
-     } catch (error) {
-       console.warn('Ошибка при сбросе состояния паузы:', error);
-     }
-     
-     if (pixiApp) {
-       try {
-         // Очищаем обработчик изменения размера
-         if ((pixiApp as any).removeResizeListener) {
-           (pixiApp as any).removeResizeListener();
-         }
-         
-         // Очищаем интервал обновления прогресса
-         if ((pixiApp as any).progressInterval) {
-           clearInterval((pixiApp as any).progressInterval);
-         }
-         
-         // Останавливаем все анимации
-         if (pixiApp.ticker) {
-           pixiApp.ticker.stop();
-         }
-         
-         // Очищаем контейнер перед уничтожением приложения
-         if (gameContainerRef.current && pixiApp.canvas) {
-           try {
-             gameContainerRef.current.removeChild(pixiApp.canvas);
-           } catch (e) {
-             // Игнорируем ошибки если canvas уже удален
-             console.warn('Canvas уже удален из контейнера:', e);
-           }
-         }
-         
-         // Уничтожаем приложение и освобождаем ресурсы
-         pixiApp.destroy(true, { children: true, texture: true });
-         
-       } catch (error) {
-         console.warn('Ошибка при очистке PixiJS приложения:', error);
-       }
-     }
-     
-     // Очищаем контейнер на всякий случай
-     if (gameContainerRef.current) {
-       gameContainerRef.current.innerHTML = '';
-     }
+     // Запускаем принудительную очистку
+     forceCleanupResources();
    };
  }, [isDOMReady]); // Зависит от готовности DOM
 
@@ -866,6 +1601,9 @@ export default function GamePage() {
      {/* Экран загрузки */}
      {(isInitializing || isLoadingAssets) && <LoadingScreen />}
 
+     {/* Диагностика устройства */}
+     <DeviceDiagnostic />
+
      {/* HUD прогресса уровня теперь встроен в Pixi.js игру */}
 
      {/* Кнопки управления игрой теперь находятся в Header */}
@@ -874,51 +1612,46 @@ export default function GamePage() {
      {error && (
        <div style={{
          position: 'absolute',
-         top: 0,
-         left: 0,
-         width: '100%',
-         height: '100%',
-         backgroundColor: 'rgba(0, 0, 0, 0.9)',
-         display: 'flex',
-         flexDirection: 'column',
-         justifyContent: 'center',
-         alignItems: 'center',
-         zIndex: 20,
+         top: '50%',
+         left: '50%',
+         transform: 'translate(-50%, -50%)',
+         background: 'rgba(255, 0, 0, 0.9)',
          color: 'white',
-         fontSize: '18px',
-         textAlign: 'center',
          padding: '20px',
+         borderRadius: '10px',
+         textAlign: 'center',
+         zIndex: 1000,
+         maxWidth: '80%'
        }}>
-         <div style={{ marginBottom: '20px', fontSize: '24px' }}>❌</div>
-         <div style={{ marginBottom: '20px', color: '#ff6b6b' }}>
-           {error}
-         </div>
+         <h3>Ошибка инициализации игры</h3>
+         <p>{error}</p>
          <button
-           onClick={handleRetry}
+           onClick={() => window.location.reload()}
            style={{
-             padding: '10px 20px',
-             backgroundColor: '#4CAF50',
-             color: 'white',
+             background: '#fff',
+             color: '#000',
              border: 'none',
+             padding: '10px 20px',
              borderRadius: '5px',
              cursor: 'pointer',
-             fontSize: '16px',
+             marginTop: '10px'
            }}
          >
-           Попробовать снова
+           Перезагрузить страницу
          </button>
        </div>
      )}
 
-     {/* Game Over модальное окно */}
+     {/* Модальное окно окончания игры */}
+     {isGameOver && (
      <GameOverModal
        isVisible={isGameOver}
        sessionGold={sessionGold}
-       totalGold={stats?.coins || 0}
+         totalGold={1000} // Временное значение для общего золота
        onRestart={handleGameRestart}
        onMainMenu={handleMainMenu}
      />
-
+     )}
    </div>
  );
 }

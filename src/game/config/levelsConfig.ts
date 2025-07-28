@@ -11,6 +11,9 @@ export interface LevelConfig {
   /** Номер уровня (1-30) */
   level: number;
   
+  /** Количество обычных крипов (без учета босса) */
+  creepCount: number;
+  
   /** Крипы в первой девятке (случайный порядок) */
   normalCreeps: string[];
   
@@ -32,131 +35,151 @@ const LEVELS_CONFIG: LevelConfig[] = [
   // БРОНЗА (1-5)
   {
     level: 1,
-    normalCreeps: ['satyr', 'wolf'],
-    bossCreep: 'shishka',
+    creepCount: 4,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
     newCreepIntroduced: 'shishka',
-    description: 'Начальный уровень. Встречаются Сатир и Волк. Босс - Шишка.'
+    description: 'Начальный уровень. Встречаются Dire Creep. Босс - Dire Creep.'
   },
   {
     level: 2,
-    normalCreeps: ['satyr', 'wolf', 'shishka'],
+    creepCount: 5,
+    normalCreeps: ['direCreep'],
     bossCreep: 'direCreep',
     newCreepIntroduced: 'direCreep',
-    description: 'Шишка теперь обычный крип. Новый босс - Dire Creep.'
+    description: 'Dire Creep обычный крип. Босс - Dire Creep.'
   },
   {
     level: 3,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep'],
-    bossCreep: 'voul',
+    creepCount: 3,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
     newCreepIntroduced: 'voul',
-    description: 'Dire Creep стал обычным крипом. Новый босс - Voul с ядом.'
+    description: 'Dire Creep стал обычным крипом. Босс - Dire Creep.'
   },
   {
     level: 4,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul'],
-    bossCreep: 'medved',
+    creepCount: 12,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
     newCreepIntroduced: 'medved',
-    description: 'Voul стал обычным крипом. Новый босс - Медведь.'
+    description: 'Dire Creep стал обычным крипом. Босс - Dire Creep.'
   },
   {
     level: 5,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'satyr', // Цикличность - возвращаемся к первому крипу как боссу
-    description: 'Все крипы освоены. Босс - усиленный Сатир.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep', // Цикличность - возвращаемся к первому крипу как боссу
+    description: 'Все крипы освоены. Босс - усиленный Dire Creep.'
   },
 
   // СЕРЕБРО (6-10)
   {
     level: 6,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'wolf',
-    description: 'Серебряный уровень. Босс - усиленный Волк.'
+    creepCount: 1,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Серебряный уровень. Босс - усиленный Dire Creep.'
   },
   {
     level: 7,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'shishka',
-    description: 'Босс - усиленная Шишка.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Босс - усиленный Dire Creep.'
   },
   {
     level: 8,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
     bossCreep: 'direCreep',
     description: 'Босс - усиленный Dire Creep.'
   },
   {
     level: 9,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'voul',
-    description: 'Босс - усиленный Voul с ядом.'
+    creepCount: 16,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Босс - усиленный Dire Creep.'
   },
   {
     level: 10,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'medved',
-    description: 'Финал серебра. Босс - усиленный Медведь.'
+    creepCount: 16,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Финал серебра. Босс - усиленный Dire Creep.'
   },
 
   // ЗОЛОТО (11-15)
   {
     level: 11,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'satyr',
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
     description: 'Золотой уровень. Все враги усилены.'
   },
   {
     level: 12,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'wolf',
-    description: 'Золотой уровень. Босс - золотой Волк.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Золотой уровень. Босс - золотой Dire Creep.'
   },
   {
     level: 13,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'shishka',
-    description: 'Золотой уровень. Босс - золотая Шишка.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Золотой уровень. Босс - золотой Dire Creep.'
   },
   {
     level: 14,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
     bossCreep: 'direCreep',
     description: 'Золотой уровень. Босс - золотой Dire Creep.'
   },
   {
     level: 15,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'voul',
-    description: 'Финал золота. Босс - золотой Voul с мощным ядом.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Финал золота. Босс - золотой Dire Creep.'
   },
 
   // ПЛАТИНА (16-20)
   {
     level: 16,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'medved',
-    description: 'Платиновый уровень. Босс - платиновый Медведь.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Платиновый уровень. Босс - платиновый Dire Creep.'
   },
   {
     level: 17,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'satyr',
-    description: 'Платиновый уровень. Босс - платиновый Сатир.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Платиновый уровень. Босс - платиновый Dire Creep.'
   },
   {
     level: 18,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'wolf',
-    description: 'Платиновый уровень. Босс - платиновый Волк.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Платиновый уровень. Босс - платиновый Dire Creep.'
   },
   {
     level: 19,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'shishka',
-    description: 'Платиновый уровень. Босс - платиновая Шишка.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Платиновый уровень. Босс - платиновый Dire Creep.'
   },
   {
     level: 20,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
     bossCreep: 'direCreep',
     description: 'Финал платины. Босс - платиновый Dire Creep.'
   },
@@ -164,65 +187,75 @@ const LEVELS_CONFIG: LevelConfig[] = [
   // МАСТЕР (21-25)
   {
     level: 21,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'voul',
-    description: 'Мастерский уровень. Босс - мастерский Voul.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Мастерский уровень. Босс - мастерский Dire Creep.'
   },
   {
     level: 22,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'medved',
-    description: 'Мастерский уровень. Босс - мастерский Медведь.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Мастерский уровень. Босс - мастерский Dire Creep.'
   },
   {
     level: 23,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'satyr',
-    description: 'Мастерский уровень. Босс - мастерский Сатир.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Мастерский уровень. Босс - мастерский Dire Creep.'
   },
   {
     level: 24,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'wolf',
-    description: 'Мастерский уровень. Босс - мастерский Волк.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Мастерский уровень. Босс - мастерский Dire Creep.'
   },
   {
     level: 25,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'shishka',
-    description: 'Финал мастера. Босс - мастерская Шишка.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Финал мастера. Босс - мастерский Dire Creep.'
   },
 
   // ГРАНДМАСТЕР (26-30)
   {
     level: 26,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
     bossCreep: 'direCreep',
     description: 'Грандмастерский уровень. Босс - грандмастерский Dire Creep.'
   },
   {
     level: 27,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'voul',
-    description: 'Грандмастерский уровень. Босс - грандмастерский Voul.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Грандмастерский уровень. Босс - грандмастерский Dire Creep.'
   },
   {
     level: 28,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'medved',
-    description: 'Грандмастерский уровень. Босс - грандмастерский Медведь.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Грандмастерский уровень. Босс - грандмастерский Dire Creep.'
   },
   {
     level: 29,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'satyr',
-    description: 'Предпоследний уровень. Босс - грандмастерский Сатир.'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'Предпоследний уровень. Босс - грандмастерский Dire Creep.'
   },
   {
     level: 30,
-    normalCreeps: ['satyr', 'wolf', 'shishka', 'direCreep', 'voul', 'medved'],
-    bossCreep: 'wolf',
-    description: 'ФИНАЛЬНЫЙ УРОВЕНЬ! Босс - легендарный Волк!'
+    creepCount: 9,
+    normalCreeps: ['direCreep'],
+    bossCreep: 'direCreep',
+    description: 'ФИНАЛЬНЫЙ УРОВЕНЬ! Босс - легендарный Dire Creep!'
   }
 ];
 
@@ -251,6 +284,14 @@ export function getAvailableCreepsForLevel(level: number): string[] {
 export function getBossForLevel(level: number): string {
   const config = getLevelConfig(level);
   return config.bossCreep;
+}
+
+/**
+ * Получить количество обычных крипов для указанного уровня
+ */
+export function getCreepCountForLevel(level: number): number {
+  const config = getLevelConfig(level);
+  return config.creepCount;
 }
 
 /**
@@ -291,6 +332,7 @@ if (typeof window !== 'undefined') {
   (window as any).getLevelConfig = getLevelConfig;
   (window as any).getAvailableCreepsForLevel = getAvailableCreepsForLevel;
   (window as any).getBossForLevel = getBossForLevel;
+  (window as any).getCreepCountForLevel = getCreepCountForLevel;
   (window as any).getNewCreepIntroduced = getNewCreepIntroduced;
   (window as any).getLevelDescription = getLevelDescription;
   (window as any).isCreepAvailableOnLevel = isCreepAvailableOnLevel;

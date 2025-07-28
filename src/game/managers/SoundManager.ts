@@ -11,6 +11,11 @@
  * Основано на звуках из старого проекта
  */
 
+// ==================================================================================
+// ВРЕМЕННОЕ ОТКЛЮЧЕНИЕ ЗВУКОВ ДЛЯ ОПТИМИЗАЦИИ
+// ==================================================================================
+const DISABLE_SOUNDS = true; // 🔇 ИЗМЕНИ НА false ЧТОБЫ ВКЛЮЧИТЬ ЗВУКИ ОБРАТНО
+
 export interface AudioSettings {
   volume: number;
   isMuted: boolean;
@@ -86,6 +91,13 @@ export class AudioManager {
   public async initialize(): Promise<void> {
     if (this.isInitialized) return;
     
+    // 🔇 ОТКЛЮЧЕНИЕ ЗВУКОВ ДЛЯ ОПТИМИЗАЦИИ
+    if (DISABLE_SOUNDS) {
+      console.log('🔇 Загрузка звуков ОТКЛЮЧЕНА для оптимизации');
+      this.isInitialized = true;
+      return;
+    }
+    
     console.log('🎵 Инициализация звуковой системы...');
     
     try {
@@ -110,6 +122,12 @@ export class AudioManager {
    * Загрузка всех звуков из плана
    */
   private async loadAllSounds(): Promise<void> {
+    // 🔇 БЛОКИРОВКА ЗАГРУЗКИ ЗВУКОВ
+    if (DISABLE_SOUNDS) {
+      console.log('🔇 Загрузка звуков заблокирована флагом DISABLE_SOUNDS');
+      return;
+    }
+    
     const loadPromises: Promise<void>[] = [];
     
     // Звуки героя
@@ -136,6 +154,10 @@ export class AudioManager {
     loadPromises.push(this.loadSound('ui_click', '/media/main/sounds/click.wav'));
     loadPromises.push(this.loadSound('open_modal', '/media/interface_sounds/open_modal.mpeg'));
     loadPromises.push(this.loadSound('purchase_failed', '/media/shop/sounds/nonono.mpeg'));
+    
+    // Звуки событий уровня
+    loadPromises.push(this.loadSound('level_up', '/media/game/sounds/events/LVL_UP.mpeg'));
+    loadPromises.push(this.loadSound('rank_up', '/media/game/sounds/events/RANK_UP.mpeg'));
     
     // Ждем загрузки всех звуков
     await Promise.all(loadPromises);
@@ -287,6 +309,9 @@ export class AudioManager {
    * Воспроизведение звука
    */
   public playSound(key: string, loop: boolean = false): void {
+    // 🔇 БЛОКИРОВКА ВОСПРОИЗВЕДЕНИЯ ЗВУКОВ
+    if (DISABLE_SOUNDS) return;
+    
     if (!this.isAudioSupported() || this.settings.isMuted) return;
     
     // Проверяем инициализацию AudioManager
@@ -355,6 +380,9 @@ export class AudioManager {
    * Воспроизведение случайного звука из массива
    */
   public playRandomSound(key: string): void {
+    // 🔇 БЛОКИРОВКА ВОСПРОИЗВЕДЕНИЯ ЗВУКОВ
+    if (DISABLE_SOUNDS) return;
+    
     if (!this.isAudioSupported() || this.settings.isMuted) return;
     
     // Проверяем инициализацию AudioManager
@@ -732,7 +760,7 @@ export class AudioManager {
    * Предзагрузка критичных звуков для немедленного воспроизведения
    */
   public preloadCriticalSounds(): void {
-    const criticalSounds = ['hero_attack', 'hero_run', 'ui_click', 'open_modal', 'purchase_failed'];
+    const criticalSounds = ['hero_attack', 'hero_run', 'ui_click', 'open_modal', 'purchase_failed', 'level_up', 'rank_up'];
     
     criticalSounds.forEach(soundKey => {
       const soundArray = this.sounds.get(soundKey);
@@ -778,7 +806,8 @@ export class AudioManager {
       'hero_attack', 'hero_run',
       'creep_attack_start', 'creep_attack_end',
       'creep_death_dire', 'creep_death_medved', 'creep_death_satyr',
-      'creep_death_shishka', 'creep_death_voul', 'creep_death_wolf'
+      'creep_death_shishka', 'creep_death_voul', 'creep_death_wolf',
+      'level_up', 'rank_up'
     ];
     
     return gameSoundTypes.includes(key);

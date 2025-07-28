@@ -27,6 +27,8 @@ export enum GameState {
   LOADING = 'loading',
   /** Начальная инициализация: герой стоит 2 секунды, крипы не спавнятся */
   INITIALIZATION = 'initialization',
+  /** Ожидание клика для начала путешествия: герой в idle, показан текст */
+  WAITING_FOR_START = 'waiting_for_start',
   /** Игра активна: герой бежит, крипы движутся */
   RUNNING = 'running',
   /** Бой: оба атакуют, мир остановлен */

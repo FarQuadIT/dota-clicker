@@ -7,6 +7,7 @@
  * 3. Разбивает спрайтшиты на отдельные кадры для анимаций
  * 4. Предоставляет информацию о прогрессе загрузки
  * 5. Использует PixiJS Assets API для оптимальной загрузки
+ * 6. Поддерживает адаптивную загрузку спрайт листов в зависимости от мощности устройства
  * 
  * Документация: 
  * - PixiJS Assets: https://pixijs.download/release/docs/assets.Assets.html
@@ -14,15 +15,32 @@
  */
 
 import { Assets, Texture, Rectangle } from 'pixi.js';
+import { getAllHeroTypes, getHeroConfig } from '../config/heroConfig';
+import { getAllCreepTypes, getCreepConfig, getCreepAnimationConfig } from '../config/creepsConfig';
 
 // ==================================================================================
 // ТИПЫ ДАННЫХ ДЛЯ МЕНЕДЖЕРА РЕСУРСОВ
 // ==================================================================================
 
 /**
+ * Уровни качества спрайт листов
+ */
+export type QualityLevel = 'ld' | 'md' | 'hd';
+
+/**
+ * Типы устройств для выбора качества спрайт листов
+ */
+export type DeviceType = 'desktop' | 'tablet' | 'smartphone';
+
+/**
+ * Мощность устройства
+ */
+export type DevicePower = 'weak' | 'medium' | 'strong';
+
+/**
  * Конфигурация спрайтшита для анимации
  */
-interface SpriteSheetConfig {
+export interface SpriteSheetConfig {
   /** Путь к файлу спрайтшита */
   path: string;
   
@@ -40,6 +58,18 @@ interface SpriteSheetConfig {
   
   /** Общее количество используемых кадров (исключая пустые ячейки) */
   totalFrames: number;
+}
+
+/**
+ * Адаптивная конфигурация спрайтшита с несколькими уровнями качества
+ */
+export interface AdaptiveSpriteSheetConfig {
+  /** Конфигурация для слабых устройств (256x256) */
+  ld: SpriteSheetConfig;
+  /** Конфигурация для средних устройств (512x512) */
+  md: SpriteSheetConfig;
+  /** Конфигурация для мощных устройств (1024x1024) */
+  hd: SpriteSheetConfig;
 }
 
 /**
@@ -167,6 +197,10 @@ class AssetsManager {
   // Флаг, указывающий на завершение загрузки всех ресурсов
   private isLoaded = false;
 
+  // Определенная мощность устройства и выбранный уровень качества
+  private devicePower: DevicePower = 'medium';
+  private selectedQuality: QualityLevel = 'md';
+
   /**
    * Статический метод для получения единственного экземпляра менеджера (Singleton)
    * Если экземпляр не существует, он будет создан
@@ -177,6 +211,293 @@ class AssetsManager {
       AssetsManager.instance = new AssetsManager();
     }
     return AssetsManager.instance;
+  }
+
+  /**
+   * Определение мощности устройства по WebGL характеристикам
+   * @returns Мощность устройства: weak/medium/strong
+   */
+  public detectDevicePower(): DevicePower {
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') as WebGLRenderingContext || 
+                  canvas.getContext('experimental-webgl') as WebGLRenderingContext;
+      
+      if (!gl) {
+        console.warn('⚠️ WebGL не поддерживается, используем слабую конфигурацию');
+        return 'weak';
+      }
+
+      const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+      const maxVertexAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS) as number;
+      const maxRenderbufferSize = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number;
+      
+      console.log(`📊 GPU характеристики:`, {
+        maxTextureSize,
+        maxVertexAttribs,
+        maxRenderbufferSize
+      });
+
+      // Определяем мощность по характеристикам GPU
+      if (maxTextureSize >= 8192 && maxVertexAttribs >= 16) {
+        return 'strong';   // Дискретная видеокарта
+      } else if (maxTextureSize >= 4096 && maxVertexAttribs >= 8) {
+        return 'medium';   // Современная интегрированная графика
+      } else {
+        return 'weak';     // Старая/слабая графика
+      }
+    } catch (error) {
+      console.error('❌ Ошибка определения мощности устройства:', error);
+      return 'weak'; // По умолчанию слабая конфигурация
+    }
+  }
+
+  /**
+   * Определение типа устройства для выбора качества спрайт листов
+   * @returns Тип устройства: desktop/tablet/smartphone
+   */
+  public detectDeviceType(): DeviceType {
+    try {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const screenWidth = window.screen.width;
+      const screenHeight = window.screen.height;
+      const pixelRatio = window.devicePixelRatio || 1;
+      
+      // Проверяем User Agent на наличие мобильных устройств
+      const isMobile = /mobile|android|iphone|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+      const isTablet = /tablet|ipad|playbook|silk/i.test(userAgent);
+      
+      // Определяем размер экрана
+      const smallestDimension = Math.min(screenWidth, screenHeight);
+      const largestDimension = Math.max(screenWidth, screenHeight);
+      
+      console.log(`📱 Анализ устройства:`, {
+        userAgent: userAgent.substring(0, 100) + '...',
+        screenWidth,
+        screenHeight,
+        pixelRatio,
+        isMobile,
+        isTablet,
+        smallestDimension,
+        largestDimension
+      });
+      
+      // Логика определения типа устройства:
+      // 1. Сначала проверяем User Agent
+      if (isTablet) {
+        console.log('🖥️ Обнаружен планшет по User Agent');
+        return 'tablet';
+      }
+      
+      if (isMobile) {
+        // Для мобильных устройств дополнительно проверяем размер экрана
+        // Смартфоны обычно имеют самую маленькую сторону < 500px
+        // Планшеты в портретном режиме могут быть помечены как mobile, но имеют большие размеры
+        if (smallestDimension >= 500) {
+          console.log('📱 Обнаружен планшет (большой экран мобильного устройства)');
+          return 'tablet';
+        } else {
+          console.log('📱 Обнаружен смартфон');
+          return 'smartphone';
+        }
+      }
+      
+      // 2. Если User Agent не содержит мобильных признаков, анализируем размер экрана
+      // Смартфоны: самая маленькая сторона < 500px
+      if (smallestDimension < 500) {
+        console.log('📱 Обнаружен смартфон по размеру экрана');
+        return 'smartphone';
+      }
+      
+      // Планшеты: самая маленькая сторона 500-900px
+      if (smallestDimension >= 500 && smallestDimension < 900) {
+        console.log('🖥️ Обнаружен планшет по размеру экрана');
+        return 'tablet';
+      }
+      
+      // ПК/десктопы: все остальные случаи (обычно самая маленькая сторона >= 900px)
+      console.log('🖥️ Обнаружен ПК/десктоп');
+      return 'desktop';
+      
+    } catch (error) {
+      console.error('❌ Ошибка определения типа устройства:', error);
+      return 'desktop'; // По умолчанию считаем ПК
+    }
+  }
+
+  /**
+   * Определение iOS устройства
+   * @returns true если устройство работает на iOS
+   */
+  private isIOS(): boolean {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.userAgent.includes('Macintosh') && 'ontouchend' in document);
+  }
+
+  /**
+   * Выбор уровня качества спрайт листов в зависимости от типа устройства и его мощности
+   * 
+   * Адаптивная логика:
+   * - ПК (десктоп): HD качество (с учетом мощности может быть снижено до MD/LD)
+   * - Планшет: MD качество (с учетом мощности может быть снижено до LD)
+   * - Смартфон: MD качество для мощных устройств с хорошими экранами, иначе LD качество
+   * 
+   * @param devicePower - мощность устройства
+   * @returns Уровень качества: ld/md/hd
+   */
+  public selectQualityLevel(devicePower: DevicePower): QualityLevel {
+    // Определяем тип устройства
+    const deviceType = this.detectDeviceType();
+    
+    console.log(`🎮 Определение качества спрайт листов:`);
+    console.log(`📱 Тип устройства: ${deviceType}`);
+    console.log(`⚡ Мощность GPU: ${devicePower}`);
+    
+    // Получаем максимальный размер текстуры GPU для проверки ограничений
+    let maxTextureSize = 4096; // Безопасное значение по умолчанию
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') as WebGLRenderingContext;
+      if (gl) {
+        maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+      }
+    } catch (error) {
+      console.warn('⚠️ Не удалось определить max texture size, используем 4096');
+    }
+    
+    // Максимальные размеры наших спрайт-листов для каждого качества
+    const maxSpritesheetSizes = {
+      hd: Math.max(7168, 6144, 5120), // Максимальный размер HD спрайт-листов (7168×6144 direCreep idle)
+      md: Math.max(3584, 3072, 2560), // Максимальный размер MD спрайт-листов (7×6×512 = 3584×3072)
+      ld: Math.max(1792, 1536, 1280)  // Максимальный размер LD спрайт-листов (7×6×256 = 1792×1536)
+    };
+    
+    // Функция проверки поддержки качества по размеру текстуры
+    const canSupportQuality = (quality: QualityLevel): boolean => {
+      return maxSpritesheetSizes[quality] <= maxTextureSize;
+    };
+    
+    // Определяем максимально доступное качество по размеру текстуры
+    let maxSupportedQuality: QualityLevel = 'ld';
+    if (canSupportQuality('hd')) {
+      maxSupportedQuality = 'hd';
+    } else if (canSupportQuality('md')) {
+      maxSupportedQuality = 'md';
+    } else {
+      maxSupportedQuality = 'ld';
+    }
+    
+    console.log(`🎯 Максимально поддерживаемое качество по GPU: ${maxSupportedQuality.toUpperCase()} (max texture: ${maxTextureSize}px)`);
+    
+    // Новая логика выбора качества по типу устройства
+    let desiredQuality: QualityLevel;
+    let qualityReason: string;
+    
+    switch (deviceType) {
+      case 'desktop':
+        // ПК (десктоп): стремимся к HD, но учитываем мощность
+        if (devicePower === 'strong') {
+          desiredQuality = 'hd';
+          qualityReason = 'ПК + мощный GPU → HD качество';
+        } else if (devicePower === 'medium') {
+          desiredQuality = 'hd'; // Попробуем HD, но можем снизить если GPU не потянет
+          qualityReason = 'ПК + средний GPU → пробуем HD качество';
+        } else {
+          desiredQuality = 'md';
+          qualityReason = 'ПК + слабый GPU → MD качество';
+        }
+        break;
+        
+      case 'tablet':
+        // Планшет: стремимся к MD, можем снизить до LD при слабом GPU
+        if (devicePower === 'weak') {
+          desiredQuality = 'ld';
+          qualityReason = 'Планшет + слабый GPU → LD качество';
+        } else {
+          desiredQuality = 'md';
+          qualityReason = 'Планшет + хороший GPU → MD качество';
+        }
+        break;
+        
+      case 'smartphone':
+        // Смартфон: проверяем возможности устройства для MD качества
+        if (devicePower !== 'weak' && canSupportQuality('md')) {
+          // Дополнительно проверяем характеристики экрана для обоснованности MD качества
+          const screenWidth = window.screen.width;
+          const screenHeight = window.screen.height;
+          const pixelRatio = window.devicePixelRatio || 1;
+          const hasHighDPI = pixelRatio >= 2;
+          const hasDecentScreen = Math.min(screenWidth, screenHeight) >= 360; // Современные смартфоны
+          
+          if ((hasHighDPI || hasDecentScreen) && devicePower === 'strong') {
+            desiredQuality = 'md';
+            qualityReason = 'Смартфон + мощный GPU + хороший экран → MD качество для четкости';
+          } else if (hasHighDPI && devicePower === 'medium') {
+            desiredQuality = 'md';
+            qualityReason = 'Смартфон + средний GPU + High DPI → MD качество для четкости';
+          } else {
+            desiredQuality = 'ld';
+            qualityReason = 'Смартфон + слабые характеристики → LD качество для производительности';
+          }
+        } else {
+          desiredQuality = 'ld';
+          qualityReason = 'Смартфон + слабый GPU или ограничения текстур → LD качество для производительности';
+        }
+        break;
+        
+      default:
+        // Fallback на средние настройки
+        desiredQuality = 'md';
+        qualityReason = 'Неизвестное устройство → MD качество по умолчанию';
+    }
+    
+    // Проверяем ограничения iOS (дополнительная безопасность)
+    const isIOSDevice = this.isIOS();
+    if (isIOSDevice && desiredQuality === 'hd') {
+      console.log('📱 iOS устройство - ограничиваем HD до MD для стабильности');
+      desiredQuality = 'md';
+      qualityReason += ' → снижено до MD (iOS ограничение)';
+    }
+    
+    // Применяем ограничение по максимальному размеру текстуры GPU
+    const finalQuality = canSupportQuality(desiredQuality) ? desiredQuality : maxSupportedQuality;
+    
+    if (finalQuality !== desiredQuality) {
+      console.log(`⚠️ Снижаем качество с ${desiredQuality.toUpperCase()} до ${finalQuality.toUpperCase()} из-за ограничения GPU`);
+      qualityReason += ` → снижено до ${finalQuality.toUpperCase()} (GPU лимит: ${maxTextureSize}px)`;
+    } else {
+      console.log(`✅ Используем желаемое качество ${finalQuality.toUpperCase()}`);
+    }
+    
+    console.log(`📝 Обоснование: ${qualityReason}`);
+    
+    return finalQuality;
+  }
+
+  /**
+   * Получение выбранного уровня качества для адаптивных спрайт листов
+   * @param adaptiveConfig - конфигурация с несколькими уровнями качества
+   * @returns Конфигурация спрайт листа для текущего устройства
+   */
+  public getAdaptiveConfig(adaptiveConfig: AdaptiveSpriteSheetConfig): SpriteSheetConfig {
+    return adaptiveConfig[this.selectedQuality];
+  }
+
+  /**
+   * Получение информации о выбранном качестве
+   */
+  public getQualityInfo(): { devicePower: DevicePower; quality: QualityLevel; description: string } {
+    const descriptions = {
+      ld: 'Низкое качество (256×256) - для слабых устройств',
+      md: 'Среднее качество (512×512) - для средних устройств', 
+      hd: 'Высокое качество (1024×1024) - для мощных устройств'
+    };
+
+    return {
+      devicePower: this.devicePower,
+      quality: this.selectedQuality,
+      description: descriptions[this.selectedQuality]
+    };
   }
 
   /**
@@ -193,10 +514,23 @@ class AssetsManager {
    * Использует PixiJS Assets API для эффективной загрузки
    * Организует процесс загрузки по категориям ресурсов
    * Отслеживает прогресс и уведомляет подписчиков
+   * Автоматически определяет мощность устройства и выбирает оптимальное качество
    */
   public async loadGameAssets(): Promise<void> {
     try {
+      console.log('🎮 Загрузка игровых ресурсов...');
 
+      // Определяем мощность устройства и выбираем уровень качества
+      this.devicePower = this.detectDevicePower();
+      this.selectedQuality = this.selectQualityLevel(this.devicePower);
+      
+      console.log(`🔧 Мощность устройства: ${this.devicePower}`);
+      console.log(`🎨 Выбранное качество: ${this.selectedQuality}`);
+      console.log(`📝 ${this.getQualityInfo().description}`);
+      
+      // Проверяем ограничения мобильных устройств
+      const maxTextureSize = this.detectMaxTextureSize();
+      console.log(`📱 Максимальный размер текстуры: ${maxTextureSize}x${maxTextureSize}`);
       
       // Создаем манифест - структуру, описывающую все ресурсы для загрузки
       const assetManifest = this.createAssetManifest();
@@ -231,6 +565,142 @@ class AssetsManager {
   }
 
   /**
+   * Генерирует манифест героев из heroConfig.ts
+   * Автоматически адаптирует спрайт листы под мощность устройства
+   * 
+   * @returns Объект с конфигурациями спрайтшитов всех героев
+   */
+  private generateHeroManifest(): Record<string, any> {
+    const heroManifest: Record<string, any> = {};
+    
+    // Получаем всех героев из конфигурации
+    const heroTypes = getAllHeroTypes();
+    
+    for (const heroId of heroTypes) {
+      const heroConfig = getHeroConfig(heroId);
+      
+      // Создаем объект анимаций для этого героя
+      heroManifest[heroId] = {
+        idle: this.resolveAnimationConfig(heroConfig.animations.idle),
+        run: this.resolveAnimationConfig(heroConfig.animations.run),
+        attack: this.resolveAnimationConfig(heroConfig.animations.attack)
+      };
+    }
+    
+    return heroManifest;
+  }
+
+  /**
+   * Генерирует манифест иконок героев из heroConfig.ts
+   * Автоматически извлекает пути к иконкам всех героев
+   * 
+   * @returns Объект с путями к иконкам всех героев
+   */
+  private generateHeroIconManifest(): Record<string, string> {
+    const heroIconManifest: Record<string, string> = {};
+    
+    // Получаем всех героев из конфигурации
+    const heroTypes = getAllHeroTypes();
+    
+    for (const heroId of heroTypes) {
+      const heroConfig = getHeroConfig(heroId);
+      
+      // Добавляем путь к иконке героя
+      heroIconManifest[heroId] = heroConfig.icon;
+    }
+    
+    return heroIconManifest;
+  }
+
+  /**
+   * Генерирует манифест крипов из creepsConfig.ts
+   * Автоматически адаптирует спрайт листы под мощность устройства
+   * 
+   * 🧪 ТЕСТОВЫЙ РЕЖИМ iOS: Сейчас загружается только direCreep
+   * 
+   * Чтобы вернуть загрузку всех крипов:
+   * 1. Закомментировать строку: const creepTypes = allCreepTypes.filter(...)
+   * 2. Раскомментировать строку: const creepTypes = getAllCreepTypes();
+   * 3. Раскомментировать fallbackCreeps в createAssetManifest()
+   * 
+   * @returns Объект с конфигурациями спрайтшитов всех крипов
+   */
+  private generateCreepManifest(): Record<string, any> {
+    const creepManifest: Record<string, any> = {};
+    
+    // ВРЕМЕННО: Загружаем только direCreep для тестирования iOS
+    // Получаем всех крипов из конфигурации
+    const allCreepTypes = getAllCreepTypes();
+    
+    // Фильтруем только direCreep для тестирования
+    const creepTypes = allCreepTypes.filter(creepType => creepType === 'direCreep');
+    
+    // РАСКОММЕНТИРОВАТЬ КОГДА ВСЕ КРИПЫ БУДУТ ГОТОВЫ:
+    // const creepTypes = getAllCreepTypes();
+    
+    for (const creepType of creepTypes) {
+      const creepConfig = getCreepConfig(creepType);
+      if (!creepConfig) continue;
+      
+      // Создаем объект анимаций для этого крипа
+      const creepAnimations: Record<string, any> = {};
+      
+      // Получаем анимации из конфигурации или используем fallback для старых крипов
+      const idleConfig = getCreepAnimationConfig(creepType, 'idle');
+      const attackConfig = getCreepAnimationConfig(creepType, 'attack');
+      const deathConfig = getCreepAnimationConfig(creepType, 'death');
+      
+      if (idleConfig) {
+        creepAnimations.idle = this.resolveAnimationConfig(idleConfig);
+      }
+      if (attackConfig) {
+        creepAnimations.attack = this.resolveAnimationConfig(attackConfig);
+      }
+      if (deathConfig) {
+        creepAnimations.death = this.resolveAnimationConfig(deathConfig);
+      }
+      
+      // Если есть анимации, добавляем в манифест
+      if (Object.keys(creepAnimations).length > 0) {
+        creepManifest[creepType] = creepAnimations;
+      }
+    }
+    
+    console.log(`🧪 ТЕСТОВЫЙ РЕЖИМ: Загружаем только крипов: ${creepTypes.join(', ')}`);
+    
+    return creepManifest;
+  }
+
+  /**
+   * Разрешает конфигурацию анимации - выбирает подходящий уровень качества
+   * для адаптивных спрайт листов или возвращает обычную конфигурацию
+   * 
+   * @param config - конфигурация анимации (обычная или адаптивная)
+   * @returns Конкретная конфигурация спрайт листа для текущего устройства
+   */
+  private resolveAnimationConfig(config: SpriteSheetConfig | AdaptiveSpriteSheetConfig): SpriteSheetConfig {
+    // Проверяем, является ли конфигурация адаптивной
+    if (this.isAdaptiveConfig(config)) {
+      // Возвращаем конфигурацию соответствующую мощности устройства
+      return this.getAdaptiveConfig(config);
+    } else {
+      // Возвращаем обычную конфигурацию как есть
+      return config;
+    }
+  }
+
+  /**
+   * Проверяет, является ли конфигурация адаптивной
+   * 
+   * @param config - конфигурация для проверки
+   * @returns true если конфигурация адаптивная, false если обычная
+   */
+  private isAdaptiveConfig(config: SpriteSheetConfig | AdaptiveSpriteSheetConfig): config is AdaptiveSpriteSheetConfig {
+    // Адаптивная конфигурация имеет свойства ld, md, hd вместо path, frameWidth и т.д.
+    return 'ld' in config && 'md' in config && 'hd' in config;
+  }
+
+  /**
    * Создание манифеста всех игровых ресурсов
    * 
    * Манифест описывает какие файлы нужно загрузить и где они находятся
@@ -239,65 +709,15 @@ class AssetsManager {
    * @returns Объект, описывающий все пути к ресурсам
    */
   private createAssetManifest() {
-    return {
-      // Ресурсы героев - конфигурации спрайтшитов для разных анимаций
-      heroes: {
-        juggernaut: {
-          idle: {
-            path: '/media/game/assets/heroes/juggernaut_idle.png',
-            frameWidth: 512,
-            frameHeight: 512,
-            framesX: 6,
-            framesY: 6,
-            totalFrames: 35
-          },
-          run: {
-            path: '/media/game/assets/heroes/juggernaut_run.png',
-            frameWidth: 512,
-            frameHeight: 512,
-            framesX: 7,
-            framesY: 3,
-            totalFrames: 21
-          },
-          attack: {
-            path: '/media/game/assets/heroes/juggernaut_attack.png',
-            frameWidth: 512,
-            frameHeight: 512,
-            framesX: 6,
-            framesY: 5,
-            totalFrames: 30
-          }
-        }
-      },
-      
-      // Ресурсы врагов (крипов) - конфигурации спрайтшитов для разных анимаций
-      creeps: {
-        direCreep: {
-          idle: {
-            path: '/media/game/assets/creeps/dire_creep_idle.png',
-            frameWidth: 1024,
-            frameHeight: 1024,
-            framesX: 8,
-            framesY: 7,
-            totalFrames: 52
-          },
-          attack: {
-            path: '/media/game/assets/creeps/dire_creep_attack.png',
-            frameWidth: 1024,
-            frameHeight: 1024,
-            framesX: 6,
-            framesY: 5,
-            totalFrames: 29
-          },
-          death: {
-            path: '/media/game/assets/creeps/dire_creep_death.png',
-            frameWidth: 1024,
-            frameHeight: 1024,
-            framesX: 6,
-            framesY: 5,
-            totalFrames: 29
-          }
-        },
+    // Генерируем манифест крипов автоматически из creepsConfig.ts
+    const creepManifest = this.generateCreepManifest();
+    
+    // Добавляем fallback для крипов без адаптивных спрайт-листов
+    const fallbackCreeps = {
+        // ВРЕМЕННО ЗАКОММЕНТИРОВАНО ДЛЯ ТЕСТИРОВАНИЯ iOS:
+        // Раскомментировать когда все крипы будут готовы в разных качествах
+        
+        /*
         medved: {
           idle: {
             path: '/media/game/assets/creeps/medved_idle.png',
@@ -428,7 +848,20 @@ class AssetsManager {
             totalFrames: 18
           }
         }
-      },
+        */
+    };
+    
+    // Объединяем автоматически сгенерированные конфигурации с fallback
+    const finalCreepManifest = { ...creepManifest, ...fallbackCreeps };
+    
+    console.log(`🧪 ИТОГО крипов в манифесте: ${Object.keys(finalCreepManifest).join(', ')}`);
+
+    return {
+      // Ресурсы героев - автоматически генерируются из heroConfig.ts
+      heroes: this.generateHeroManifest(),
+      
+      // Ресурсы врагов (крипов) - автоматически из creepsConfig.ts + fallback
+      creeps: finalCreepManifest,
       
       // Фоновые изображения для игровых локаций
       backgrounds: {
@@ -452,10 +885,8 @@ class AssetsManager {
         grandmaster: '/media/game/assets/levels/grandmaster.webp'
       },
       
-      // Иконки героев для прогресс-бара
-      heroIcons: {
-        juggernaut: '/media/game/assets/heroes/Juggernaut_minimap_icon.webp'
-      }
+      // Иконки героев для прогресс-бара - автоматически генерируются из heroConfig.ts
+      heroIcons: this.generateHeroIconManifest()
     };
   }
 
@@ -941,6 +1372,41 @@ class AssetsManager {
   public getProgress(): LoadingProgress {
     // Возвращаем копию объекта прогресса, чтобы избежать мутаций
     return { ...this.loadingProgress };
+  }
+
+  /**
+   * Определение максимального размера текстуры устройства
+   * 
+   * Используется для адаптации под ограничения мобильных устройств
+   * @returns Максимальный размер текстуры в пикселях
+   */
+  private detectMaxTextureSize(): number {
+    try {
+      // Создаем временный canvas для получения WebGL контекста
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') as WebGLRenderingContext || 
+                  canvas.getContext('experimental-webgl') as WebGLRenderingContext;
+      
+      if (gl) {
+        const maxSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+        console.log(`🔍 Обнаружен максимальный размер текстуры: ${maxSize}x${maxSize}`);
+        
+        // Предупреждение для устройств с ограничениями
+        if (maxSize < 4096) {
+          console.warn('⚠️ Устройство поддерживает ограниченный размер текстур!');
+          console.warn(`   Максимум: ${maxSize}x${maxSize}, но спрайтшиты крипов: 8192x7168`);
+          console.warn('   Некоторые спрайты могут отображаться как черные квадраты');
+        }
+        
+        return maxSize;
+      } else {
+        console.warn('⚠️ WebGL недоступен, используем безопасное значение: 2048x2048');
+        return 2048; // Безопасное значение для старых устройств
+      }
+    } catch (error) {
+      console.warn('⚠️ Ошибка определения размера текстуры:', error);
+      return 2048; // Безопасное значение
+    }
   }
 }
 

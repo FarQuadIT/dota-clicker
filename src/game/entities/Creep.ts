@@ -32,6 +32,8 @@ interface CreepConfig {
   collisionZone?: number;
   /** Множитель здоровья для боссов (по умолчанию 1.0) */
   healthMultiplier?: number;
+  /** Является ли этот крип боссом (определяется при создании волны) */
+  isBoss?: boolean;
 }
 
 /**
@@ -47,6 +49,7 @@ export class Creep extends AnimatedSprite {
   private deathOffsetY: number;
   private creepType: string;
   private collisionZone: number;
+  private isBoss: boolean; // Является ли крип боссом (устанавливается при создании волны)
   
   // Система здоровья
   private maxHealth!: number;
@@ -95,6 +98,7 @@ export class Creep extends AnimatedSprite {
     this.deathOffsetX = config.deathOffsetX ?? GAME_CONFIG.CREEP.death.offsetX;
     this.deathOffsetY = config.deathOffsetY ?? GAME_CONFIG.CREEP.death.offsetY;
     this.collisionZone = config.collisionZone ?? 1.0; // По умолчанию стандартная зона коллизии
+    this.isBoss = config.isBoss ?? false; // По умолчанию не является боссом
 
     // Настройка адаптивной позиции и масштаба
     this.updatePosition();
@@ -124,11 +128,60 @@ export class Creep extends AnimatedSprite {
    * Обновление масштаба крипа (адаптивное)
    */
   private updateScale(): void {
-    // Вычисляем масштаб на основе размера экрана (аналогично герою)
-    const baseScale = Math.min(this.app.screen.width, this.app.screen.height) / GAME_CONFIG.SCREEN.baseResolution;
-    const finalScale = baseScale * this.config.scale!;
+    // ИСПРАВЛЕННАЯ ФОРМУЛА: Крип должен занимать одинаковый процент от высоты экрана
+    // на всех устройствах, независимо от размера экрана
     
-    this.scale.set(finalScale);
+    // ИСПРАВЛЕНИЕ: Увеличиваем целевой размер крипа для лучшей видимости
+    const targetHeightPercent = 0.6; // Увеличено с 0.4 до 0.6 (60% от высоты экрана)
+    
+    // Рассчитываем целевую высоту крипа в пикселях
+    const targetHeightPx = this.app.screen.height * targetHeightPercent;
+    
+    // ИСПРАВЛЕНИЕ: Определяем реальный размер кадра в зависимости от качества
+    // Получаем информацию о выбранном качестве из AssetsManager
+    const qualityInfo = assetsManager.getQualityInfo();
+    let estimatedSpriteHeight = 700; // Значение по умолчанию
+    
+    // Устанавливаем размер кадра в зависимости от качества
+    switch (qualityInfo.quality) {
+      case 'hd':
+        estimatedSpriteHeight = 1024; // HD кадры 1024×1024
+        break;
+      case 'md':
+        estimatedSpriteHeight = 512;  // MD кадры 512×512
+        break;
+      case 'ld':
+        estimatedSpriteHeight = 256;  // LD кадры 256×256
+        break;
+      default:
+        estimatedSpriteHeight = 512;  // Средний размер по умолчанию
+    }
+    
+    // Вычисляем нужный масштаб для достижения целевого размера
+    const requiredScale = targetHeightPx / estimatedSpriteHeight;
+    
+    // Применяем конфигурационный множитель (visualScale из creepsConfig)
+    const finalScale = requiredScale * this.config.scale!;
+    
+    // Ограничиваем масштаб разумными пределами
+    const clampedScale = Math.max(0.1, Math.min(3.0, finalScale));
+    
+    console.log(`🐻 Creep scaling (${this.creepType}):`, {
+      screenHeight: this.app.screen.height,
+      targetHeightPercent,
+      targetHeightPx,
+      quality: qualityInfo.quality,
+      estimatedSpriteHeight,
+      requiredScale,
+      configScale: this.config.scale,
+      finalScale,
+      clampedScale,
+      actualSpriteHeight: estimatedSpriteHeight * clampedScale,
+      actualScreenPercent: (estimatedSpriteHeight * clampedScale) / this.app.screen.height
+    });
+    
+    // Применяем итоговый масштаб
+    this.scale.set(clampedScale);
   }
 
   /**
@@ -138,9 +191,9 @@ export class Creep extends AnimatedSprite {
     this.updatePosition();
     this.updateScale();
     
-    // Обновляем полоску здоровья при изменении размера экрана с адаптивными параметрами
+    // Обновляем полоску здоровья при изменении размера экрана (простое позиционирование)
     if (this.healthBar) {
-      this.healthBar.onResize(this.x, this.y, this.width, this.scale.x);
+      this.healthBar.onResize(this.x, this.y, this.width, this.height, this.scale.x);
     }
   }
 
@@ -271,11 +324,21 @@ export class Creep extends AnimatedSprite {
   /**
    * Обновление крипа (движение)
    */
-  public updateCreep(_deltaTime: number, hero?: Hero): void {
+  public updateCreep(deltaTime: number, hero?: Hero): void {
     // Крип движется в состояниях IDLE и DYING (продолжает двигаться во время смерти)
     // Останавливается только во время атаки
     if (this.currentState === EntityState.IDLE || this.currentState === EntityState.DYING) {
-      this.x -= this.moveSpeed;
+      // ✅ ИДЕАЛЬНАЯ СИНХРОНИЗАЦИЯ: Используем ТУ ЖЕ нормализацию что и фон!
+      // В GamePage.tsx: scrollSpeed * (deltaMS / 16.67)
+      // Здесь:           moveSpeed * (deltaTime / 16.67) где deltaTime это deltaMS
+      const normalizedDelta = deltaTime / 16.67;
+      const creepSpeed = this.moveSpeed * normalizedDelta;
+      this.x -= creepSpeed;
+      
+      // 🔍 ОТЛАДКА: Логируем скорость крипа для сравнения с фоном
+      if (Math.floor(Date.now() / 1000) % 2 === 0 && Math.random() < 0.01) {
+        console.log(`🐻 Крип: deltaTime=${deltaTime.toFixed(2)}, normalizedDelta=${normalizedDelta.toFixed(2)}, moveSpeed=${this.moveSpeed.toFixed(2)}, speed=${creepSpeed.toFixed(2)}`);
+      }
     }
 
     // Проверяем кадр атаки если герой передан и крип атакует
@@ -390,11 +453,12 @@ export class Creep extends AnimatedSprite {
   private updateHealthBar(): void {
     if (!this.healthBar) return;
 
-    // Обновляем позицию полоски относительно крипа
+    // Обновляем позицию полоски относительно крипа (простое позиционирование)
     this.healthBar.updatePosition(
       this.x,
       this.y,
       this.width,
+      this.height,  // Добавляем высоту крипа
       this.scale.x
     );
 
@@ -566,6 +630,13 @@ export class Creep extends AnimatedSprite {
   }
 
   /**
+   * Проверка, является ли крип боссом
+   */
+  public getIsBoss(): boolean {
+    return this.isBoss;
+  }
+
+  /**
    * Проверка может ли крип атаковать героя
    * 
    * @returns true если крип может атаковать
@@ -590,8 +661,21 @@ export class Creep extends AnimatedSprite {
       return;
     }
 
-    // Наносим базовый урон
-    hero.takeDamage(creepConfig.damage);
+    // Наносим базовый урон (передаем ссылку на себя для пассивных способностей)
+    hero.takeDamage(creepConfig.damage, this);
+    
+    // Создаем визуальный эффект урона герою
+    if ((this.app as any).gameController && (this.app as any).gameController.damageEffectManager) {
+      (this.app as any).gameController.damageEffectManager.createHeroDamageEffect(hero.x, hero.y);
+    }
+    
+    // Создаем число урона над healthbar героя
+    if ((this.app as any).gameController && (this.app as any).gameController.damageNumberManager) {
+      (this.app as any).gameController.damageNumberManager.createHeroDamageNumberAboveHealthBar(
+        creepConfig.damage,
+        hero
+      );
+    }
 
     // Применяем особые способности согласно старому проекту
     this.applySpecialAbilities(hero, creepConfig);
@@ -624,6 +708,14 @@ export class Creep extends AnimatedSprite {
             // Получаем GameController через app для доступа к эффектам
             if ((this.app as any).gameController && (this.app as any).gameController.damageEffectManager) {
               (this.app as any).gameController.damageEffectManager.createManaburnEffect(hero.x, hero.y);
+            }
+            
+            // Создаем число урона по мане над healthbar героя
+            if ((this.app as any).gameController && (this.app as any).gameController.damageNumberManager) {
+              (this.app as any).gameController.damageNumberManager.createManaDamageNumberAboveHealthBar(
+                manaburnAmount,
+                hero
+              );
             }
           }
           break;

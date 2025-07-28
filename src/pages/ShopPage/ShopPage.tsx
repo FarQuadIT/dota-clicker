@@ -79,7 +79,11 @@ export default function ShopPage() {
     setError(null);
     
     try {
-      const fetchedItems = await fetchHeroItems(TEST_USER_ID, TEST_HERO_ID);
+      // Получаем ID активного героя из heroStore (НЕ константу!)
+      const currentStats = stats;
+      const activeHeroId = currentStats?.heroId || TEST_HERO_ID; // Fallback к константе только если нет данных
+      
+      const fetchedItems = await fetchHeroItems(TEST_USER_ID, activeHeroId);
       
       // Проверяем, что компонент все еще смонтирован
       if (!isMountedRef.current) return;
@@ -204,10 +208,12 @@ export default function ShopPage() {
       // Получаем обновленные характеристики героя
       const currentStats = useHeroStore.getState().stats!;
       
-      // Создаем данные для отправки на сервер
+      // Создаем данные для отправки на сервер для АКТИВНОГО героя
+      const activeHeroId = currentStats.heroId || TEST_HERO_ID; // Получаем из текущих характеристик
+      
       const payload = {
         userId: TEST_USER_ID,
-        heroId: TEST_HERO_ID,
+        heroId: activeHeroId, // Используем активного героя!
         itemId: item.id,
         currentLevel: updatedItem.level,
         currentValue: newStatValue,

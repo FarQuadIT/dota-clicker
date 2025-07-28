@@ -77,10 +77,53 @@
     gap: 2px;
 }
 
-.right-icon {
+/* Левый блок с осколками */
+.left-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 100%;
+}
+
+.diamonds-container {
+    background: rgba(20, 25, 30, 0.9);
+    border: 1px solid rgba(100, 120, 140, 0.3);
+    border-radius: 15px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+}
+
+.diamonds-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+.diamonds-amount {
+    color: #ff8c00; /* Оранжевый цвет для значения */
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Правый блок с настройками */
+.right-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
 .settings-icon {
@@ -90,6 +133,11 @@
     font-size: 1.5rem;
     cursor: pointer;
     transition: transform 0.1s ease, color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
 }
 
 .settings-icon.active {
@@ -100,17 +148,16 @@
     outline: none;
 }
 
-.left-icon svg {
-    fill: rgb(121, 121, 121);
+/* Стили для SVG иконки настроек */
+.settings-svg-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    transition: transform 0.1s ease;
+    display: block;
+    transform-origin: center center; /* Вращение вокруг центра */
 }
 
-/* Заблокированное состояние Header */
-.settings-button.blocked {
-    pointer-events: none;
-    opacity: 0.5;
-    filter: blur(1px);
+.settings-icon.active .settings-svg-icon {
+    transform: rotate(180deg);
 }
 
-.settings-button.blocked .left-icon svg {
-    fill: rgb(80, 80, 80);
-}

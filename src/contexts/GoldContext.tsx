@@ -4,12 +4,14 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { TEST_USER_ID, TEST_HERO_ID, API_BASE_URL } from '../shared/constants';
 
 /**
- * Интерфейс для контекста золота
+ * Интерфейс для контекста золота и осколков
  */
 interface GoldContextProps {
   gold: number;                  // Текущее количество золота
+  diamonds: number;              // Текущее количество осколков  
   passiveIncome: number;         // Пассивный доход (золота в секунду)
   setGold: (value: number | ((prev: number) => number)) => void;
+  setDiamonds: (value: number | ((prev: number) => number)) => void;
   setPassiveIncome: (value: number | ((prev: number) => number)) => void;
   lastServerSyncTime: number;    // Время последней синхронизации с сервером
   setLastServerSyncTime: (value: number) => void;
@@ -26,11 +28,14 @@ const GOLD_DIFFERENCE_THRESHOLD = 0.1; // Порог для обновления
 const INCOME_DIFFERENCE_THRESHOLD = 0.001; // Порог для обновления дохода
 
 /**
- * Провайдер контекста золота
+ * Провайдер контекста золота и осколков
  */
 export const GoldProvider = ({ children }: { children: ReactNode }) => {
   // Состояние для хранения текущего количества золота
   const [gold, setGold] = useState(0);
+  
+  // Состояние для хранения текущего количества осколков
+  const [diamonds, setDiamonds] = useState(0);
   
   // Состояние для хранения пассивного дохода в секунду
   const [passiveIncome, setPassiveIncome] = useState(0);
@@ -76,7 +81,13 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
       // При первой синхронизации или при принудительном обновлении отправляем актуальный доход
       const incomeToSend = (!currentWasIncomeUpdated || forceUpdateIncome) ? currentPassiveIncome : 0;
       
-      // 1. Отправляем запрос на сервер для обновления золота
+      // 1. Получаем ID активного героя из heroStore (НЕ константу!)
+      const { useHeroStore } = await import('./heroStore');
+      const currentStats = useHeroStore.getState().stats;
+      const activeHeroId = currentStats?.heroId || TEST_HERO_ID; // Fallback к константе только если нет данных
+
+
+      // 1. Отправляем запрос на сервер для обновления золота АКТИВНОГО героя
       const response = await fetch(`${API_BASE_URL}/update_user_money`, {
         method: 'POST',
         headers: {
@@ -84,7 +95,7 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
         },
         body: JSON.stringify({
           userId: TEST_USER_ID,
-          heroId: TEST_HERO_ID,
+          heroId: activeHeroId, // Используем активного героя!
           income: incomeToSend
         })
       });
@@ -102,11 +113,12 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
       // 3. Извлекаем данные из ответа
       const updateResponse = await response.json();
 
-      // 4. Запрашиваем актуальные данные героя
-      const heroDataResponse = await fetch(`${API_BASE_URL}/hero_data?userId=${TEST_USER_ID}&heroId=${TEST_HERO_ID}`);
+      // 4. Запрашиваем актуальные данные АКТИВНОГО героя (не конкретного!)
+      // НЕ передаем heroId - сервер вернет данные активного героя
+      const heroDataResponse = await fetch(`${API_BASE_URL}/hero_data?userId=${TEST_USER_ID}`);
       
       if (!heroDataResponse.ok) {
-        throw new Error(`Ошибка при получении данных героя: ${heroDataResponse.status} ${heroDataResponse.statusText}`);
+        throw new Error(`Ошибка при получении данных активного героя: ${heroDataResponse.status} ${heroDataResponse.statusText}`);
       }
       
       // 5. Обрабатываем полученные данные
@@ -196,10 +208,12 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
    * 
    * @param serverGold - Начальное значение золота с сервера
    * @param serverIncome - Начальное значение дохода с сервера
+   * @param serverDiamonds - Начальное значение осколков с сервера (опционально)
    */
-  const initializeGoldFromServer = useCallback((serverGold: number, serverIncome: number) => {
+  const initializeGoldFromServer = useCallback((serverGold: number, serverIncome: number, serverDiamonds = 0) => {
     // Устанавливаем начальные значения
     setGold(serverGold);
+    setDiamonds(serverDiamonds); // Инициализируем осколки
     setPassiveIncome(serverIncome);
     setLastServerSyncTime(Date.now());
     setIsInitialized(true);
@@ -224,30 +238,74 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   /**
+   * Функция для получения накопленного пассивного дохода с момента последней синхронизации
+   * @returns накопленное количество золота от пассивного дохода
+   */
+  const getAccumulatedPassiveIncome = useCallback(() => {
+    const currentTime = Date.now();
+    const timeSinceLastSync = (currentTime - lastServerSyncTime) / 1000; // в секундах
+    const accumulated = passiveIncomeRef.current * timeSinceLastSync;
+    return Math.max(0, accumulated); // не может быть отрицательным
+  }, [lastServerSyncTime]);
+
+  /**
+   * Функция для обновления времени последней синхронизации (вызывается после успешной отправки на сервер)
+   */
+  const updateLastSyncTime = useCallback(() => {
+    const currentTime = Date.now();
+    console.log(`⏰ Обновление времени последней синхронизации: ${new Date(currentTime).toLocaleTimeString()}`);
+    setLastServerSyncTime(currentTime);
+  }, []);
+
+  /**
    * Глобальные функции, доступные извне компонента
    * Используются для интеграции с игрой и инициализации
    */
   useEffect(() => {
     (window as any).initializeGoldContext = initializeGoldFromServer;
     (window as any).updateGoldFromGameController = updateGoldFromGame;
+    (window as any).getAccumulatedPassiveIncome = getAccumulatedPassiveIncome;
+    (window as any).updateLastSyncTime = updateLastSyncTime;
+    
+    // Добавляем функцию для обновления осколков из внешних источников
+    (window as any).updateDiamondsFromExternal = (newDiamondsAmount: number) => {
+      setDiamonds(newDiamondsAmount);
+    };
+    
+    // Добавляем функцию для установки осколков (для инициализации)
+    (window as any).initializeDiamonds = (initialDiamonds: number) => {
+      setDiamonds(initialDiamonds);
+    };
+    
+    // Добавляем функцию для получения текущего количества осколков
+    (window as any).getCurrentDiamonds = () => {
+      return diamonds;
+    };
     
     // Очищаем глобальные функции при размонтировании компонента
     return () => {
       delete (window as any).initializeGoldContext;
       delete (window as any).updateGoldFromGameController;
+      delete (window as any).updateDiamondsFromExternal;
+      delete (window as any).getCurrentDiamonds;
+      delete (window as any).initializeDiamonds;
+      delete (window as any).getAccumulatedPassiveIncome;
+      delete (window as any).updateLastSyncTime;
     };
-  }, [initializeGoldFromServer, updateGoldFromGame]);
+  }, [initializeGoldFromServer, updateGoldFromGame, diamonds, getAccumulatedPassiveIncome, updateLastSyncTime]); // Добавляем diamonds в зависимости
 
   // Мемоизируем значение контекста, чтобы избежать лишних ре-рендеров
   const contextValue = useMemo(() => ({ 
     gold, 
+    diamonds,
     passiveIncome, 
     setGold, 
+    setDiamonds,
     setPassiveIncome, 
     lastServerSyncTime, 
     setLastServerSyncTime,
     syncGoldWithServer
-  }), [gold, passiveIncome, lastServerSyncTime, syncGoldWithServer]);
+  }), [gold, diamonds, passiveIncome, lastServerSyncTime, syncGoldWithServer]);
 
   // Предоставляем все необходимые значения через контекст
   return (

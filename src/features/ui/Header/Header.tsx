@@ -1,10 +1,12 @@
 // src/features/ui/Header/Header.tsx
 
 import { useState, useCallback, useMemo } from 'react';
-import { useGold } from '../../../contexts/GoldContext'; // Импортируем хук для золота
+import { useGold } from '../../../contexts/GoldContext'; // Импортируем хук для золота и осколков
 import { useGame } from '../../../contexts/GameContext'; // Импортируем хук для игры
 import SettingsModal from '../SettingsModal'; // Импортируем модальное окно настроек
 import { audioManager } from '../../../game/managers/SoundManager'; // Импортируем звуковой менеджер
+import settingsIconUrl from '/media/interface_icons/settings.svg';
+import diamondsIconUrl from '/media/interface_icons/diamonds.png';
 import './Header.css';
 
 /**
@@ -16,6 +18,11 @@ import './Header.css';
  * @returns Отформатированная строка
  */
 const formatNumber = (value: number, decimals = 2): string => {
+  if (decimals === 0) {
+    // Для целых чисел просто округляем и возвращаем без дробной части
+    return Math.round(value).toString();
+  }
+  
   const formatted = value.toFixed(decimals);
   return formatted.replace(/\.?0+$/, '');
 };
@@ -23,11 +30,11 @@ const formatNumber = (value: number, decimals = 2): string => {
 /**
  * Компонент заголовка
  * 
- * Отображает верхнюю панель с золотом, пассивным доходом и кнопками управления
+ * Отображает верхнюю панель с золотом, осколками, пассивным доходом и кнопками управления
  */
 export default function Header() {
-  // Получаем золото и пассивный доход из контекста
-  const { gold, passiveIncome } = useGold();
+  // Получаем золото, осколки и пассивный доход из контекста
+  const { gold, diamonds, passiveIncome } = useGold();
   
   // Получаем игровой контекст для управления паузой
   const { isPaused, isGameActive, pauseGame, resumeGame, blockMenu, unblockMenu, isMenuBlocked } = useGame();
@@ -35,8 +42,9 @@ export default function Header() {
   // Состояние для отображения/скрытия настроек
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Мемоизируем отформатированные значения золота и дохода
+  // Мемоизируем отформатированные значения золота, осколков и дохода
   const formattedGold = useMemo(() => formatNumber(gold), [gold]);
+  const formattedDiamonds = useMemo(() => formatNumber(diamonds, 0), [diamonds]); // Осколки без дробной части
   const formattedIncome = useMemo(() => formatNumber(passiveIncome), [passiveIncome]);
   
   // Обработчик для открытия настроек
@@ -81,13 +89,18 @@ export default function Header() {
 
   return (
     <header className="top-bar">
-      {/* Левая иконка (возврат) */}
-      <div id="resume-button" className={`settings-button ${isMenuBlocked ? 'blocked' : ''}`}>
-        <div className="left-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 472.615 472.615" width="24" height="24">
-            <path d="M167.158,117.315l-0.001-77.375L0,193.619l167.157,153.679v-68.555c200.338,0.004,299.435,153.932,299.435,153.932 
-              c3.951-19.967,6.023-40.609,6.023-61.736C472.615,196.295,341.8,117.315,167.158,117.315z" />
-          </svg>
+      {/* Левый блок с осколками */}
+      <div className="left-icon">
+        <div className="diamonds-container">
+          <img 
+            src={diamondsIconUrl} 
+            alt="Осколки" 
+            className="diamonds-icon"
+            width="18" 
+            height="18" 
+            loading="lazy"
+          />
+          <span className="diamonds-amount">{formattedDiamonds}</span>
         </div>
       </div>
 
@@ -127,7 +140,7 @@ export default function Header() {
           aria-label="Настройки"
           title="Настройки"
         >
-          <i className="fas fa-cog"></i>
+          <img src={settingsIconUrl} alt="Настройки" className="settings-svg-icon" />
         </button>
       </div>
 

@@ -103,7 +103,7 @@ export class CoinAnimationManager {
     
     // Создаем текст "+X" (стиль аналогичен предупреждению о мане)
     const goldText = new Text({
-      text: `+${goldAmount}`,
+      text: `${goldAmount}`,
       style: {
         fontFamily: 'Doka',
         fontSize: 24, // Крупнее для лучшей видимости
@@ -161,8 +161,13 @@ export class CoinAnimationManager {
         coinSprite.height = 24;
         coinSprite.anchor.set(0.5, 0.5);
         
-        // Размещаем монету слева от текста с небольшим пробелом
-        coinSprite.x = -30;
+        // ИСПРАВЛЕНИЕ: Динамически рассчитываем позицию иконки на основе ширины текста
+        // Сначала нужно получить границы текста после установки стиля
+        const textBounds = goldText.getBounds();
+        const textWidth = textBounds.width;
+        
+        // Размещаем монету слева от текста с учетом его реальной ширины + отступ
+        coinSprite.x = -(textWidth / 2) - 15; // Половина ширины текста + 15px отступ
         coinSprite.y = 0;
         
         container.addChild(coinSprite);
@@ -239,15 +244,31 @@ export class CoinAnimationManager {
    * Очистить все активные анимации
    */
   public cleanup(): void {
-    // Удаляем все активные анимации
-    for (const animation of this.activeAnimations) {
-      if (animation.container.parent) {
-        animation.container.parent.removeChild(animation.container);
-      }
-      animation.container.destroy({ children: true, texture: false });
-    }
     
-    this.activeAnimations = [];
+    try {
+      // Создаем копию массива для безопасной итерации
+      const animationsToClean = [...this.activeAnimations];
+      
+      // Очищаем массив сразу
+      this.activeAnimations = [];
+      
+      // Удаляем все активные анимации
+      for (const animation of animationsToClean) {
+        try {
+          if (animation.container.parent) {
+            animation.container.parent.removeChild(animation.container);
+          }
+          animation.container.destroy({ children: true, texture: false });
+        } catch (error) {
+          console.warn('⚠️ Ошибка при удалении анимации монеты:', error);
+        }
+      }
+      
+      console.log('✅ Все анимации монет очищены');
+    } catch (error) {
+      console.error('❌ Критическая ошибка при очистке анимаций монет:', error);
+      this.activeAnimations = [];
+    }
   }
 
   /**

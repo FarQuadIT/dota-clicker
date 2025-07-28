@@ -1,5 +1,16 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { HeroStats } from '../../shared/types';
+import { assetsManager } from '../managers/AssetsManager';
+
+/**
+ * Интерфейс настроек полосок здоровья и маны
+ */
+interface HealthBarConfig {
+  baseWidth: number;
+  minWidth: number;
+  offsetX: number;
+  offsetY: number;
+}
 
 /**
  * Компонент для отображения полосок здоровья и маны героя
@@ -16,12 +27,11 @@ export class HeroHealthBar extends Container {
   private manaBarFill!: Graphics;
   private manaText!: Text;
   
-  // Параметры полосок (из старого проекта)
-  private baseBarWidth: number = 120;      // Базовая ширина при масштабе 1.0
-  private minBarWidth: number = 80;        // Минимальная ширина для удобства использования
-  private barWidth: number = 120;          // Текущая ширина (динамическая)
+  // Параметры полосок (настраиваемые из конфигурации героя)
+  private config: HealthBarConfig;
+  private barWidth: number;                // Текущая ширина (динамическая)
   private readonly barHeight: number = 20;
-  private readonly barSpacing: number = 5;
+  private readonly barSpacing: number = 0;
   
   // Параметры шрифта
   private baseFontSize: number = 12;       // Базовый размер шрифта при масштабе 1.0
@@ -40,8 +50,12 @@ export class HeroHealthBar extends Container {
   private isFirstUpdate: boolean = true;
 
   
-  constructor() {
+  constructor(config: HealthBarConfig) {
     super();
+    
+    // Сохраняем конфигурацию
+    this.config = config;
+    this.barWidth = config.baseWidth; // Инициализируем базовой шириной
     
     // Устанавливаем высокий zIndex чтобы полоски были поверх героя
     this.zIndex = 1000;
@@ -62,12 +76,20 @@ export class HeroHealthBar extends Container {
     this.healthBarFill = new Graphics();
     this.addChild(this.healthBarFill);
     
-    // Текст здоровья
+    // Текст здоровья с улучшенным стилем
     const healthTextStyle = new TextStyle({
       fontFamily: 'Doka',
       fontSize: 12,
       fill: '#ffffff',
-      align: 'center'
+      align: 'center',
+      stroke: { color: '#000000', width: 1, alpha: 0.7 }, // Тонкая полупрозрачная обводка
+      dropShadow: {
+        color: '#000000',
+        blur: 2,
+        angle: Math.PI / 6,
+        distance: 1,
+        alpha: 0.8
+      }
     });
     
     this.healthText = new Text({
@@ -91,12 +113,20 @@ export class HeroHealthBar extends Container {
     this.manaBarFill = new Graphics();
     this.addChild(this.manaBarFill);
     
-    // Текст маны
+    // Текст маны с улучшенным стилем
     const manaTextStyle = new TextStyle({
       fontFamily: 'Doka',
       fontSize: 12,
       fill: '#ffffff',
-      align: 'center'
+      align: 'center',
+      stroke: { color: '#000000', width: 1, alpha: 0.7 }, // Тонкая полупрозрачная обводка
+      dropShadow: {
+        color: '#000000',
+        blur: 2,
+        angle: Math.PI / 6,
+        distance: 1,
+        alpha: 0.8
+      }
     });
     
     this.manaText = new Text({
@@ -185,29 +215,55 @@ export class HeroHealthBar extends Container {
    */
   private drawHealthBar(currentHealth: number, maxHealth: number, healthRegen: number): void {
     const healthPercentage = Math.max(0, Math.min(1, currentHealth / maxHealth));
+    const cornerRadius = 3; // Скругленные углы для современного вида
     
     // Очищаем графику
     this.healthBarBg.clear();
     this.healthBarFill.clear();
     
-    // Цвета из старого проекта
-    const bgColor = healthRegen > 0 ? 0xff0000 : 0x426600; // Красный или зеленый фон
-    const bgAlpha = 0.8;
-    const fillColor = healthRegen > 0 ? 0xff4d4d : 0x88cc00; // Красное или зеленое заполнение
+    // Зеленые цвета для здоровья героя
+    const bgColor = 0x1a2d00; // Темно-зеленый фон
+    const borderColor = 0x2d4400; // Темная зеленая рамка
+    const fillColor = 0x4d9900; // Спокойный зеленый (не яркий)
+    const fillHighlight = 0x66bb00; // Светло-зеленый градиент сверху
     
-    // Рисуем фон полоски
-    this.healthBarBg.rect(0, 0, this.barWidth, this.barHeight);
-    this.healthBarBg.fill({ color: bgColor, alpha: bgAlpha });
+    // Рисуем тень полоски (чуть сдвинута вниз и вправо)
+    this.healthBarBg.roundRect(1, 1, this.barWidth, this.barHeight, cornerRadius);
+    this.healthBarBg.fill({ color: 0x000000, alpha: 0.4 });
     
-    // Рисуем заполнение полоски
+    // Рисуем основной фон полоски со скругленными углами
+    this.healthBarBg.roundRect(0, 0, this.barWidth, this.barHeight, cornerRadius);
+    this.healthBarBg.fill({ color: bgColor, alpha: 0.9 });
+    
+    // Рисуем рамку
+    this.healthBarBg.roundRect(0, 0, this.barWidth, this.barHeight, cornerRadius);
+    this.healthBarBg.stroke({ color: borderColor, width: 1, alpha: 0.8 });
+    
+    // Рисуем заполнение полоски с градиентом
     if (healthPercentage > 0) {
-      this.healthBarFill.rect(0, 0, this.barWidth * healthPercentage, this.barHeight);
-      this.healthBarFill.fill({ color: fillColor });
+      const fillWidth = this.barWidth * healthPercentage;
+      
+      // Основное заполнение
+      this.healthBarFill.roundRect(1, 1, fillWidth - 2, this.barHeight - 2, cornerRadius - 1);
+      this.healthBarFill.fill({ color: fillColor, alpha: 0.9 });
+      
+      // Верхний блик для объема (градиент эффект)
+      const highlightHeight = Math.max(1, (this.barHeight - 2) * 0.4);
+      this.healthBarFill.roundRect(1, 1, fillWidth - 2, highlightHeight, cornerRadius - 1);
+      this.healthBarFill.fill({ color: fillHighlight, alpha: 0.3 });
+      
+      // Внутренняя рамка заполнения для четкости
+      this.healthBarFill.roundRect(1, 1, fillWidth - 2, this.barHeight - 2, cornerRadius - 1);
+      this.healthBarFill.stroke({ color: fillColor, width: 0.5, alpha: 0.6 });
     }
     
     // Обновляем текст с плавной анимацией и округлением до целых чисел для игрового вида
     const displayedHealthRounded = Math.round(this.displayedHealth);
     this.healthText.text = `${displayedHealthRounded}/${maxHealth}`;
+    
+    // Автоматически подгоняем размер шрифта чтобы текст помещался в полоску
+    this.fitTextToBar(this.healthText, this.barWidth);
+    
     this.healthText.x = this.barWidth / 2;
     this.healthText.y = this.barHeight / 2;
   }
@@ -217,6 +273,7 @@ export class HeroHealthBar extends Container {
    */
   private drawManaBar(currentMana: number, maxMana: number, manaRegen: number): void {
     const manaPercentage = Math.max(0, Math.min(1, currentMana / maxMana));
+    const cornerRadius = 3; // Скругленные углы для современного вида
     
     // Позиция полоски маны (под полоской здоровья)
     const manaY = this.barHeight + this.barSpacing;
@@ -225,73 +282,179 @@ export class HeroHealthBar extends Container {
     this.manaBarBg.clear();
     this.manaBarFill.clear();
     
-    // Цвета из старого проекта
-    const bgColor = manaRegen > 0 ? 0x0000ff : 0x000029; // Синий или темно-синий фон
-    const bgAlpha = 0.8;
-    const fillColor = 0x00bfff; // Голубое заполнение
+    // Улучшенные цвета в стиле Dota (синие тона)
+    const bgColor = manaRegen > 0 ? 0x00001a : 0x000808; // Темно-синий фон
+    const borderColor = manaRegen > 0 ? 0x003366 : 0x001122; // Темная синяя рамка
+    const fillColor = 0x0099ff; // Яркий синий
+    const fillHighlight = 0x33aaff; // Светло-синий градиент сверху
     
-    // Рисуем фон полоски
-    this.manaBarBg.rect(0, manaY, this.barWidth, this.barHeight);
-    this.manaBarBg.fill({ color: bgColor, alpha: bgAlpha });
+    // Рисуем тень полоски (чуть сдвинута вниз и вправо)
+    this.manaBarBg.roundRect(1, manaY + 1, this.barWidth, this.barHeight, cornerRadius);
+    this.manaBarBg.fill({ color: 0x000000, alpha: 0.4 });
     
-    // Рисуем заполнение полоски
+    // Рисуем основной фон полоски со скругленными углами
+    this.manaBarBg.roundRect(0, manaY, this.barWidth, this.barHeight, cornerRadius);
+    this.manaBarBg.fill({ color: bgColor, alpha: 0.9 });
+    
+    // Рисуем рамку
+    this.manaBarBg.roundRect(0, manaY, this.barWidth, this.barHeight, cornerRadius);
+    this.manaBarBg.stroke({ color: borderColor, width: 1, alpha: 0.8 });
+    
+    // Рисуем заполнение полоски с градиентом
     if (manaPercentage > 0) {
-      this.manaBarFill.rect(0, manaY, this.barWidth * manaPercentage, this.barHeight);
-      this.manaBarFill.fill({ color: fillColor });
+      const fillWidth = this.barWidth * manaPercentage;
+      
+      // Основное заполнение
+      this.manaBarFill.roundRect(1, manaY + 1, fillWidth - 2, this.barHeight - 2, cornerRadius - 1);
+      this.manaBarFill.fill({ color: fillColor, alpha: 0.9 });
+      
+      // Верхний блик для объема (градиент эффект)
+      const highlightHeight = Math.max(1, (this.barHeight - 2) * 0.4);
+      this.manaBarFill.roundRect(1, manaY + 1, fillWidth - 2, highlightHeight, cornerRadius - 1);
+      this.manaBarFill.fill({ color: fillHighlight, alpha: 0.3 });
+      
+      // Внутренняя рамка заполнения для четкости
+      this.manaBarFill.roundRect(1, manaY + 1, fillWidth - 2, this.barHeight - 2, cornerRadius - 1);
+      this.manaBarFill.stroke({ color: fillColor, width: 0.5, alpha: 0.6 });
     }
     
     // Обновляем текст с плавной анимацией и округлением до целых чисел для игрового вида
     const displayedManaRounded = Math.round(this.displayedMana);
     this.manaText.text = `${displayedManaRounded}/${maxMana}`;
+    
+    // Автоматически подгоняем размер шрифта чтобы текст помещался в полоску
+    this.fitTextToBar(this.manaText, this.barWidth);
+    
     this.manaText.x = this.barWidth / 2;
     this.manaText.y = manaY + this.barHeight / 2;
   }
   
   /**
-   * Установка позиции полосок над героем
+   * УПРОЩЕННОЕ позиционирование полосок над героем
+   * 
+   * Полоска маны - всегда в центре верхнего края спрайта
+   * Полоска здоровья - всегда над полоской маны
    * 
    * @param heroX - позиция героя по X
    * @param heroY - позиция героя по Y 
    * @param heroWidth - ширина героя
+   * @param heroHeight - высота героя
    * @param heroScale - масштаб героя
+   * @param screenWidth - ширина экрана для ограничения позиции
    */
-  public positionAboveHero(heroX: number, heroY: number, heroWidth: number, heroScale: number): void {
+  public positionAboveHero(heroX: number, heroY: number, heroWidth: number, heroHeight: number, heroScale: number, screenWidth?: number): void {
     // Обновляем ширину полосок в зависимости от масштаба героя (с минимальным ограничением)
-    this.barWidth = Math.max(this.minBarWidth, this.baseBarWidth * heroScale);
+    this.barWidth = Math.max(this.config.minWidth, this.config.baseWidth * heroScale);
     
     // Обновляем размер шрифта в зависимости от масштаба героя (с минимальным ограничением)
     this.currentFontSize = Math.max(this.minFontSize, this.baseFontSize * heroScale);
     this.updateTextStyles();
     
-    // Позиционируем полоски чуть выше героя
-    const offsetX = (heroWidth - this.barWidth) / 2;
-    const offsetY = 90 * heroScale; // Динамическое смещение вверх в зависимости от масштаба
+    // НАСТРАИВАЕМОЕ позиционирование с учетом anchor.set(0.5, 0.5)
+    // У героя anchor.set(0.5, 0.5), поэтому heroX/heroY указывают на ЦЕНТР спрайта
+    const centerX = heroX; // heroX уже центр спрайта (anchor 0.5)
+    const topY = heroY - heroHeight / 2; // Верхний край = центр - половина высоты
     
-    this.x = heroX + offsetX;
-    this.y = heroY + offsetY;
+    // Базовая позиция: полоска маны на верхнем краю спрайта с отступом
+    const baseManaBarY = topY - 30; // 30px над спрайтом
+    
+    // Применяем пользовательские смещения из конфигурации героя
+    // ВАЖНО: Учитываем размер спрайт-листа для пропорциональных смещений
+    const spriteAdaptationFactor = this.getSpriteSheetAdaptationFactor();
+    const offsetX = this.config.offsetX * heroScale * spriteAdaptationFactor; // Смещение с учетом масштаба И размера спрайт-листа
+    const offsetY = this.config.offsetY * heroScale * spriteAdaptationFactor; // Смещение с учетом масштаба И размера спрайт-листа
+    
+    const manaBarY = baseManaBarY + offsetY; // Применяем смещение по Y
+    const healthBarY = manaBarY - this.barHeight - this.barSpacing; // Здоровье над маной
+    
+    // Центрируем по X + пользовательское смещение
+    let finalX = centerX - this.barWidth / 2 + offsetX;
+    
+    // Определяем ширину экрана для ограничений
+    let actualScreenWidth = screenWidth || 800;
+    
+    if (!screenWidth) {
+      actualScreenWidth = 800; // fallback
+      
+      if (this.parent && 'screen' in this.parent) {
+        actualScreenWidth = (this.parent as any).screen.width;
+      } else if (this.parent?.parent && 'screen' in this.parent.parent) {
+        actualScreenWidth = (this.parent.parent as any).screen.width;
+      } else if (this.parent) {
+        const bounds = this.parent.getBounds();
+        actualScreenWidth = bounds.width > 0 ? bounds.width : 800;
+      }
+    }
+    
+    // Ограничиваем позицию полосок границами экрана с отступом
+    const margin = 20; // Минимальный отступ от краев экрана
+    const minX = margin;
+    const maxX = actualScreenWidth - this.barWidth - margin;
+    
+    // Применяем ограничения
+    finalX = Math.max(minX, Math.min(maxX, finalX));
+    
+    // Устанавливаем позицию полосок
+    this.x = finalX;
+    this.y = healthBarY; // Полоски начинаются с полоски здоровья (верхняя)
   }
   
   /**
    * Обновление стилей текста в зависимости от текущего размера шрифта
    */
   private updateTextStyles(): void {
-    // Обновляем стиль текста здоровья
+    // Обновляем стиль текста здоровья с улучшенным оформлением
     const healthTextStyle = new TextStyle({
       fontFamily: 'Doka',
       fontSize: this.currentFontSize,
       fill: '#ffffff',
-      align: 'center'
+      align: 'center',
+      stroke: { color: '#000000', width: 1, alpha: 0.7 }, // Тонкая полупрозрачная обводка
+      dropShadow: {
+        color: '#000000',
+        blur: 2,
+        angle: Math.PI / 6,
+        distance: 1,
+        alpha: 0.8
+      }
     });
     this.healthText.style = healthTextStyle;
     
-    // Обновляем стиль текста маны
+    // Обновляем стиль текста маны с улучшенным оформлением
     const manaTextStyle = new TextStyle({
       fontFamily: 'Doka',
       fontSize: this.currentFontSize,
       fill: '#ffffff',
-      align: 'center'
+      align: 'center',
+      stroke: { color: '#000000', width: 1, alpha: 0.7 }, // Тонкая полупрозрачная обводка
+      dropShadow: {
+        color: '#000000',
+        blur: 2,
+        angle: Math.PI / 6,
+        distance: 1,
+        alpha: 0.8
+      }
     });
-    this.manaText.style = manaTextStyle;
+        this.manaText.style = manaTextStyle;
+  }
+
+  /**
+   * Вычисляет коэффициент адаптации на основе размера спрайт-листа
+   * 
+   * Обеспечивает пропорциональные смещения независимо от качества:
+   * - HD (1024×1024): коэффициент = 1.0 (базовый размер)
+   * - MD (512×512): коэффициент = 0.5 (вдвое меньше смещения)  
+   * - LD (256×256): коэффициент = 0.25 (вчетверо меньше смещения)
+   */
+  private getSpriteSheetAdaptationFactor(): number {
+    const qualityInfo = assetsManager.getQualityInfo();
+    
+    switch (qualityInfo.quality) {
+      case 'hd': return 1.0;    // 1024px - базовый размер (смещения как есть)
+      case 'md': return 0.5;    // 512px - вдвое меньше смещения  
+      case 'ld': return 0.25;   // 256px - вчетверо меньше смещения
+      default: return 1.0;      // Fallback на базовый размер
+    }
   }
   
   /**
@@ -302,6 +465,43 @@ export class HeroHealthBar extends Container {
     // Дополнительная логика при необходимости
   }
   
+  /**
+   * Автоматически подгоняет размер шрифта текста чтобы он помещался в полоску
+   * 
+   * @param textElement - элемент текста для подгонки
+   * @param maxWidth - максимальная ширина полоски
+   */
+  private fitTextToBar(textElement: Text, maxWidth: number): void {
+    const padding = 8; // Отступ от краев полоски
+    const availableWidth = maxWidth - padding;
+    
+    // Получаем изначальный размер шрифта
+    let fontSize = this.currentFontSize;
+    
+    // Уменьшаем размер шрифта пока текст не поместится
+    while (textElement.width > availableWidth && fontSize > this.minFontSize) {
+      fontSize = Math.max(this.minFontSize, fontSize - 1);
+      
+      // Создаем новый стиль с уменьшенным размером шрифта
+      const newStyle = new TextStyle({
+        fontFamily: 'Doka',
+        fontSize: fontSize,
+        fill: '#ffffff',
+        align: 'center',
+        stroke: { color: '#000000', width: 1, alpha: 0.7 },
+        dropShadow: {
+          color: '#000000',
+          blur: 2,
+          angle: Math.PI / 6,
+          distance: 1,
+          alpha: 0.8
+        }
+      });
+      
+      textElement.style = newStyle;
+    }
+  }
+
   /**
    * Очистка ресурсов
    */
@@ -335,14 +535,21 @@ export class HeroHealthBar extends Container {
 
     // Создаем текст предупреждения если его нет
     if (!this.manaWarningText) {
-             const warningStyle = new TextStyle({
-         fontFamily: 'Doka',
-         fontSize: 14,
-         fill: '#ff6b6b',
-         stroke: { color: '#000000', width: 2 },
-         align: 'center',
-         fontWeight: 'bold'
-       });
+      const warningStyle = new TextStyle({
+        fontFamily: 'Doka',
+        fontSize: 14,
+        fill: '#ff4444',
+        align: 'center',
+        fontWeight: 'bold',
+        stroke: { color: '#000000', width: 3 }, // Более толстая обводка для выделения
+        dropShadow: {
+          color: '#660000',
+          blur: 4,
+          angle: Math.PI / 6,
+          distance: 2,
+          alpha: 0.9
+        }
+      });
 
       this.manaWarningText = new Text({
         text: 'Недостаточно маны!',
@@ -397,5 +604,27 @@ export class HeroHealthBar extends Container {
       this.manaWarningText.alpha = 0;
 
     }
+  }
+
+  /**
+   * Получение центра healthbar по X координате
+   * Используется для точного позиционирования чисел урона
+   */
+  public getCenterX(): number {
+    return this.x + this.barWidth / 2;
+  }
+  
+  /**
+   * Получение Y координаты healthbar для позиционирования над ним
+   */
+  public getTopY(): number {
+    return this.y;
+  }
+  
+  /**
+   * Получение ширины healthbar
+   */
+  public getBarWidth(): number {
+    return this.barWidth;
   }
 } 

@@ -5,6 +5,7 @@ import MainPage from './pages/MainPage/MainPage';
 import ShopPage from './pages/ShopPage/ShopPage';
 import GamePage from './pages/GamePage/GamePage';
 import HelpPage from './pages/HelpPage/HelpPage';
+import RatingPage from './pages/RatingPage/RatingPage';
 import Header from './features/ui/Header/Header';
 import Footer from './features/ui/Footer/Footer';
 import { useEffect, useState, useRef } from 'react';
@@ -12,7 +13,7 @@ import { useHeroStore } from './contexts/heroStore';
 import { GameProvider } from './contexts/GameContext';
 import type { HeroStats } from './shared/types';
 import { TEST_USER_ID, TEST_HERO_ID } from './shared/constants';
-import { fetchHeroStats } from './shared/api/apiService';
+import { fetchActiveHeroStats, fetchUserInfo, type UserInfo } from './shared/api/apiService';
 import { audioManager } from './game/managers/SoundManager';
 
 /**
@@ -68,25 +69,38 @@ function AppContent() {
       setIsLoading(true); 
       setError(null);
       
-      // Запрашиваем данные героя с сервера
-      fetchHeroStats(TEST_USER_ID, TEST_HERO_ID)
-      .then(result => {
+      // Сначала загружаем информацию о пользователе (включая осколки)
+      fetchUserInfo(TEST_USER_ID)
+      .then((userInfo: UserInfo | null) => {
+        // Затем запрашиваем данные АКТИВНОГО героя с сервера
+        return fetchActiveHeroStats(TEST_USER_ID).then(result => ({
+          userInfo,
+          heroData: result
+        }));
+      })
+      .catch((error) => {
+        // Если не удалось загрузить userInfo, продолжаем только с данными героя
+        return fetchActiveHeroStats(TEST_USER_ID).then(result => ({
+          userInfo: null,
+          heroData: result
+        }));
+      })
+      .then(({ userInfo, heroData }: any) => {
         // Проверяем, что компонент все еще смонтирован
         if (!isMountedRef.current) return;
         
-        if (result) {
+        if (heroData) {
           // Устанавливаем характеристики героя в хранилище
-          setStats(result.stats);
+          setStats(heroData.stats);
           
-
-          
-          // Инициализируем золото и доход
-          if (result.gold !== undefined && result.income !== undefined) {
-            // Инициализируем контекст золота
+          // Инициализируем золото, доход И осколки одновременно
+          if (heroData.gold !== undefined && heroData.income !== undefined) {
+            const diamonds = userInfo?.diamonds ?? 0; // Получаем осколки из userInfo
+            
+            // Инициализируем контекст золота с осколками
             if ((window as any).initializeGoldContext) {
-              (window as any).initializeGoldContext(result.gold, result.income);
+              (window as any).initializeGoldContext(heroData.gold, heroData.income, diamonds);
             }
-
           }
         } else {
             // Обрабатываем ошибку при загрузке данных
@@ -97,7 +111,7 @@ function AppContent() {
             setDefaultHeroStats();
           }
         })
-        .catch(err => {
+        .catch((err: any) => {
           // Проверяем, что компонент все еще смонтирован
           if (!isMountedRef.current) return;
           
@@ -200,6 +214,7 @@ function AppContent() {
             <Route path="/shop" element={<ShopPage />} />
             <Route path="/game" element={<GamePage />} />
             <Route path="/help" element={<HelpPage />} />
+            <Route path="/rating" element={<RatingPage />} />
           </Routes>
         )}
       </main>

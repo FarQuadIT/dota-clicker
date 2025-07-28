@@ -6,10 +6,14 @@
  * - Визуальные параметры (размер, позиция)
  * - Зона коллизии
  * - Сложность (для балансировки уровней)
+ * - Адаптивные спрайт-листы для разных устройств
  * 
  * ПРИМЕЧАНИЕ: Скорость движения у всех крипов одинаковая,
  * привязана к скорости фона и настраивается в GameConfig.ts
  */
+
+// Импорт интерфейсов для спрайт-листов
+import type { SpriteSheetConfig, AdaptiveSpriteSheetConfig } from '../managers/AssetsManager';
 
 /**
  * Интерфейс конфигурации типа крипа
@@ -77,6 +81,20 @@ export interface CreepTypeConfig {
   
   /** Множитель зоны коллизии для боссов (например, 1.5 = босс имеет в 1.5 раза большую зону коллизии чем обычный крип) */
   bossCollisionZoneMultiplier?: number;
+  
+  // === КОНФИГУРАЦИЯ СПРАЙТ-ЛИСТОВ ===
+  
+  /** Конфигурации анимаций крипа (может быть обычной или адаптивной) */
+  animations?: {
+    /** Анимация покоя (idle) */
+    idle?: SpriteSheetConfig | AdaptiveSpriteSheetConfig;
+    
+    /** Анимация атаки (attack) */
+    attack?: SpriteSheetConfig | AdaptiveSpriteSheetConfig;
+    
+    /** Анимация смерти (death) */
+    death?: SpriteSheetConfig | AdaptiveSpriteSheetConfig;
+  };
 }
 
 /**
@@ -90,6 +108,7 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
   /**
    * Dire Creep - стандартный базовый крип
    * Хорошо сбалансированный, подходит для любого уровня
+   * ОБНОВЛЕН: теперь использует адаптивные спрайт-листы
    */
   direCreep: {
     name: 'Dire Creep',
@@ -97,21 +116,114 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     difficulty: 2,    // Легкий-средний
     description: 'Стандартный крип, хорошо сбалансированный',
     // Визуальные параметры из GameConfig.ts
-    visualScale: 1.0,    // Стандартный размер
+    visualScale: 0.7,    // ИСПРАВЛЕНО: Увеличен с 0.75 до 1.0 для лучшей видимости
     positionY: 0.72,     // 72% от высоты экрана
-    collisionZone: 1.0,  // Стандартная зона коллизии
+    collisionZone: 1.5,  // Стандартная зона коллизии
     // Боевые характеристики из старого проекта
-    maxHealth: 10000,    // creepHealthTotal: 10000 (для тестирования регенерации)
-    damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
-    goldReward: 1,       // coinsEarned: 1
+    maxHealth: 10,    // creepHealthTotal: 10000 (для тестирования регенерации)
+    damage: 1,        // creepDamage: 1000 (для тестирования регенерации)
+    goldReward: 100,       // coinsEarned: 1
     requiredHeroLevel: 0, // unlockedLevel: 0
-    // Позиционирование полоски здоровья (адаптивное масштабирование)
-    healthBarOffsetX: 120,   // На 60 пикселей влево от центра крипа (автоматически масштабируется)
-    healthBarOffsetY: -150,  // На 100 пикселей выше крипа (автоматически масштабируется)
+    // Позиционирование полоски здоровья (настраиваемое от центра верхнего края спрайта)
+    // ВАЖНО: Значения задаются для HD качества (1024×1024), система автоматически 
+    // адаптирует их для MD (512×512) и LD (256×256) пропорционально
+    healthBarOffsetX: 120,   // Смещение по X от центра спрайта (+ вправо, - влево) [базово для HD]
+    healthBarOffsetY: 200,   // Смещение по Y от базовой позиции (+ вниз, - вверх) [базово для HD]
     healthBarWidthRatio: 0.4, // 60% от ширины крипа
     healthBarMinWidth: 80,    // Минимальная ширина 45px на маленьких экранах
     bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 5% от высоты экрана
     bossCollisionZoneMultiplier: 0.01, // Боссы имеют на 20% большую зону коллизии
+    
+    // Адаптивные конфигурации спрайт-листов с тремя уровнями качества
+    animations: {
+      idle: {
+        // HD качество (1024x1024) - для мощных устройств
+        hd: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_idle/direCreep_idle_hd.webp',
+          frameWidth: 1024,
+          frameHeight: 1024,
+          framesX: 7,
+          framesY: 6,
+          totalFrames: 40
+        },
+        // MD качество (512x512) - для средних устройств
+        md: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_idle/direCreep_idle_md.webp',
+          frameWidth: 512,
+          frameHeight: 512,
+          framesX: 7,
+          framesY: 6,
+          totalFrames: 40
+        },
+        // LD качество (256x256) - для слабых устройств
+        ld: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_idle/direCreep_idle_ld.webp',
+          frameWidth: 256,
+          frameHeight: 256,
+          framesX: 7,
+          framesY: 6,
+          totalFrames: 40
+        }
+      },
+      attack: {
+        // HD качество (1024x1024) - для мощных устройств
+        hd: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_attack/direCreep_attack_hd.webp',
+          frameWidth: 1024,
+          frameHeight: 1024,
+          framesX: 5,
+          framesY: 5,
+          totalFrames: 23
+        },
+        // MD качество (512x512) - для средних устройств
+        md: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_attack/direCreep_attack_md.webp',
+          frameWidth: 512,
+          frameHeight: 512,
+          framesX: 5,
+          framesY: 5,
+          totalFrames: 23
+        },
+        // LD качество (256x256) - для слабых устройств
+        ld: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_attack/direCreep_attack_ld.webp',
+          frameWidth: 256,
+          frameHeight: 256,
+          framesX: 5,
+          framesY: 5,
+          totalFrames: 23
+        }
+      },
+      death: {
+        // HD качество (1024x1024) - для мощных устройств
+        hd: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_death/direCreep_death_hd.webp',
+          frameWidth: 1024,
+          frameHeight: 1024,
+          framesX: 6,
+          framesY: 5,
+          totalFrames: 27
+        },
+        // MD качество (512x512) - для средних устройств
+        md: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_death/direCreep_death_md.webp',
+          frameWidth: 512,
+          frameHeight: 512,
+          framesX: 6,
+          framesY: 5,
+          totalFrames: 27
+        },
+        // LD качество (256x256) - для слабых устройств
+        ld: {
+          path: '/media/game/assets/creeps/direCreep/direCreep_death/direCreep_death_ld.webp',
+          frameWidth: 256,
+          frameHeight: 256,
+          framesX: 6,
+          framesY: 5,
+          totalFrames: 27
+        }
+      }
+    }
   },
   
   /**
@@ -132,9 +244,9 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 3, // unlockedLevel: 3
-    // Позиционирование полоски здоровья
-    healthBarOffsetX: 0,    // По центру крипа
-    healthBarOffsetY: -40,  // На 40 пикселей выше крипа (wolf прыгучий)
+    // Позиционирование полоски здоровья (настраиваемое от центра верхнего края спрайта)
+    healthBarOffsetX: -15,   // Смещение по X от центра спрайта (wolf - чуть левее)
+    healthBarOffsetY: 0,     // Смещение по Y от базовой позиции (стандартное)
     healthBarWidthRatio: 0.5, // 70% от ширины крипа
     healthBarMinWidth: 80,    // Минимальная ширина 40px на маленьких экранах
     bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 4% от высоты экрана
@@ -161,9 +273,9 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     requiredHeroLevel: 4, // unlockedLevel: 4
     specialAbilities: ["manaburn"], // Лишение маны при ударе
     manaburnPercent: 20, // Отнимает 15% от максимальной маны героя
-    // Позиционирование полоски здоровья
-    healthBarOffsetX: 70,   // Немного влево от центра
-    healthBarOffsetY: -110,  // На 45 пикселей выше (satyr большой)
+    // Позиционирование полоски здоровья (настраиваемое от центра верхнего края спрайта)
+    healthBarOffsetX: 10,    // Смещение по X от центра спрайта (satyr - чуть правее)
+    healthBarOffsetY: -15,   // Смещение по Y от базовой позиции (satyr большой, выше)
     healthBarWidthRatio: 0.3, // 50% от ширины крипа (большой крип)
     healthBarMinWidth: 80,    // Минимальная ширина 55px (satyr большой)
     bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 8% от высоты экрана (большой крип)
@@ -188,9 +300,9 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 1, // unlockedLevel: 1
-    // Позиционирование полоски здоровья
-    healthBarOffsetX: -120,    // По центру крипа
-    healthBarOffsetY: -110,  // На 30 пикселей выше (shishka летает низко)
+    // Позиционирование полоски здоровья (настраиваемое от центра верхнего края спрайта)
+    healthBarOffsetX: -5,    // Смещение по X от центра спрайта (shishka - чуть левее)
+    healthBarOffsetY: 5,     // Смещение по Y от базовой позиции (shishka летает, ниже)
     healthBarWidthRatio: 0.2, // 80% от ширины крипа
     healthBarMinWidth: 80,    // Минимальная ширина 50px на маленьких экранах
     bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 6% от высоты экрана
@@ -216,9 +328,9 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 5, // unlockedLevel: 5
     specialAbilities: ["poison"], // Отравление - отключает регенерацию HP на 1 секунду
-    // Позиционирование полоски здоровья
-    healthBarOffsetX: 5,    // Немного вправо от центра
-    healthBarOffsetY: -70,  // На 25 пикселей выше (voul ползает низко)
+    // Позиционирование полоски здоровья (настраиваемое от центра верхнего края спрайта)
+    healthBarOffsetX: 20,    // Смещение по X от центра спрайта (voul - правее)
+    healthBarOffsetY: -5,    // Смещение по Y от базовой позиции (voul ползает, чуть выше)
     healthBarWidthRatio: 0.3, // 60% от ширины крипа
     healthBarMinWidth: 100,    // Минимальная ширина 42px на маленьких экранах
     bossPositionOffsetY: -0.05, // Боссы поднимаются выше на 4% от высоты экрана
@@ -243,9 +355,9 @@ export const CREEP_TYPES: Record<string, CreepTypeConfig> = {
     damage: 1000,        // creepDamage: 1000 (для тестирования регенерации)
     goldReward: 1,       // coinsEarned: 1
     requiredHeroLevel: 2, // unlockedLevel: 2
-    // Позиционирование полоски здоровья
-    healthBarOffsetX: 0,    // По центру крипа
-    healthBarOffsetY: -180,  // На 35 пикселей выше крипа
+    // Позиционирование полоски здоровья (настраиваемое от центра верхнего края спрайта)
+    healthBarOffsetX: 0,     // Смещение по X от центра спрайта (medved - по центру)
+    healthBarOffsetY: -20,   // Смещение по Y от базовой позиции (medved большой, выше)
     healthBarWidthRatio: 0.5, // 70% от ширины крипа
     healthBarMinWidth: 100,    // Минимальная ширина 48px на маленьких экранах
     bossPositionOffsetY: -0.075, // Боссы поднимаются выше на 5% от высоты экрана
@@ -400,6 +512,51 @@ export function creepHasAbility(creepType: string, ability: string): boolean {
   if (!config || !config.specialAbilities) return false;
   
   return config.specialAbilities.includes(ability);
+}
+
+/**
+ * Получить конфигурацию анимации для конкретного крипа
+ * 
+ * @param creepType - тип крипа
+ * @param animationType - тип анимации ('idle', 'attack', 'death')
+ * @returns Конфигурация спрайт-листа для анимации (обычная или адаптивная) или null
+ */
+export function getCreepAnimationConfig(creepType: string, animationType: 'idle' | 'attack' | 'death'): SpriteSheetConfig | AdaptiveSpriteSheetConfig | null {
+  const creepConfig = getCreepConfig(creepType);
+  if (!creepConfig || !creepConfig.animations) {
+    return null;
+  }
+  
+  const animationConfig = creepConfig.animations[animationType];
+  return animationConfig || null;
+}
+
+/**
+ * Проверить, использует ли крип адаптивные спрайт-листы
+ * 
+ * @param creepType - тип крипа
+ * @returns true если крип использует адаптивные спрайт-листы
+ */
+export function creepUsesAdaptiveSprites(creepType: string): boolean {
+  const config = getCreepConfig(creepType);
+  if (!config || !config.animations) return false;
+  
+  // Проверяем есть ли хотя бы одна адаптивная анимация
+  const animations = config.animations;
+  const hasAdaptiveIdle = Boolean(animations.idle && typeof animations.idle === 'object' && 'hd' in animations.idle);
+  const hasAdaptiveAttack = Boolean(animations.attack && typeof animations.attack === 'object' && 'hd' in animations.attack);
+  const hasAdaptiveDeath = Boolean(animations.death && typeof animations.death === 'object' && 'hd' in animations.death);
+  
+  return hasAdaptiveIdle || hasAdaptiveAttack || hasAdaptiveDeath;
+}
+
+/**
+ * Получить список крипов, использующих адаптивные спрайт-листы
+ * 
+ * @returns Массив типов крипов с адаптивными спрайт-листами
+ */
+export function getAdaptiveCreeps(): string[] {
+  return getAllCreepTypes().filter(creepType => creepUsesAdaptiveSprites(creepType));
 }
 
  

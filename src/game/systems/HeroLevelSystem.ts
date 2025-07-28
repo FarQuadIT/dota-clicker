@@ -1,69 +1,93 @@
+/**
+ * @fileoverview Система уровней героя (1-30) 
+ * 
+ * Реализует логику повышения уровня героя с сохранением в API сервера.
+ * Поддерживает 6 градаций уровней от Бронзы до Грандмастера.
+ * Использует EventEmitter для уведомления о событиях изменения уровня.
+ */
+
+import { SimpleEventEmitter } from '../../game/core/EventEmitter';
+import { levelUpActiveHero, getActiveHeroLevel } from '../../shared/api/apiService';
+import { TEST_USER_ID } from '../../shared/constants';
+
+/**
+ * Интерфейс для данных уровня героя
+ */
 export interface HeroLevelData {
   currentLevel: number;
   maxLevel: number;
   levelName: string;
 }
 
-// Простая реализация EventEmitter для браузера
-class SimpleEventEmitter {
-  private events: Map<string, Function[]> = new Map();
-
-  emit(event: string, ...args: any[]): void {
-    const listeners = this.events.get(event);
-    if (listeners) {
-      listeners.forEach(listener => listener(...args));
-    }
-  }
-
-  on(event: string, listener: Function): void {
-    if (!this.events.has(event)) {
-      this.events.set(event, []);
-    }
-    this.events.get(event)!.push(listener);
-  }
-
-  off(event: string, listener: Function): void {
-    const listeners = this.events.get(event);
-    if (listeners) {
-      const index = listeners.indexOf(listener);
-      if (index > -1) {
-        listeners.splice(index, 1);
-      }
-    }
-  }
-}
-
+/**
+ * Система уровней героя
+ * 
+ * Управляет уровнем активного героя (1-30) с сохранением на сервере.
+ * Предоставляет события для отслеживания изменений уровня.
+ */
 export class HeroLevelSystem extends SimpleEventEmitter {
+  // Явно объявляем методы EventEmitter для TypeScript
+  declare emit: (event: string, ...args: any[]) => void;
+  declare on: (event: string, listener: Function) => void;
+  declare off: (event: string, listener: Function) => void;
   private currentLevel: number = 1;
   private readonly maxLevel: number = 30;
-  private readonly STORAGE_KEY = 'heroLevel';
+  private isLoading: boolean = false;
 
   constructor() {
     super();
-    this.loadFromStorage();
+    this.loadFromServer();
   }
 
   /**
-   * Получить текущий уровень героя (1-30)
+   * Получить текущий уровень героя
    */
   getCurrentLevel(): number {
     return this.currentLevel;
   }
 
   /**
-   * Повысить уровень героя на 1
+   * Повысить уровень героя на 1 (через API)
    */
-  levelUp(): void {
-    if (this.canLevelUp()) {
-      this.currentLevel++;
-      this.saveToStorage();
-      this.emit('levelUp', this.currentLevel);
-  
+  async levelUp(): Promise<void> {
+    if (!this.canLevelUp() || this.isLoading) {
+      console.warn('⚠️ Нельзя повысить уровень: максимум достигнут или идет загрузка');
+      return;
+    }
+
+    this.isLoading = true;
+    
+    try {
+      console.log(`⬆️ Повышаем уровень героя с ${this.currentLevel} на сервере...`);
+      
+      // Вызываем API для повышения уровня
+      const success = await levelUpActiveHero(TEST_USER_ID);
+      
+      if (success) {
+        // Получаем обновленный уровень с сервера
+        const newLevel = await getActiveHeroLevel(TEST_USER_ID);
+        
+        if (newLevel !== null && newLevel > this.currentLevel) {
+          const oldLevel = this.currentLevel;
+          this.currentLevel = newLevel;
+          
+          console.log(`✅ Уровень повышен с ${oldLevel} до ${newLevel}`);
+          this.emit('levelUp', this.currentLevel);
+        } else {
+          console.warn('⚠️ Сервер не подтвердил повышение уровня');
+        }
+      } else {
+        console.error('❌ Не удалось повысить уровень на сервере');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при повышении уровня:', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
   /**
-   * Получить максимальный уровень (30)
+   * Получить максимальный уровень
    */
   getMaxLevel(): number {
     return this.maxLevel;
@@ -77,28 +101,27 @@ export class HeroLevelSystem extends SimpleEventEmitter {
   }
 
   /**
-   * Получить название градации уровня
+   * Получить название уровня в зависимости от текущего уровня
    */
   getLevelName(): string {
     if (this.currentLevel >= 1 && this.currentLevel <= 5) {
-      return 'Бронза';
+      return "Бронза";
     } else if (this.currentLevel >= 6 && this.currentLevel <= 10) {
-      return 'Серебро';
+      return "Серебро";
     } else if (this.currentLevel >= 11 && this.currentLevel <= 15) {
-      return 'Золото';
+      return "Золото";
     } else if (this.currentLevel >= 16 && this.currentLevel <= 20) {
-      return 'Платина';
+      return "Платина";
     } else if (this.currentLevel >= 21 && this.currentLevel <= 25) {
-      return 'Мастер';
+      return "Мастер";
     } else if (this.currentLevel >= 26 && this.currentLevel <= 30) {
-      return 'Грандмастер';
-    } else {
-      return 'Неизвестно';
+      return "Грандмастер";
     }
+    return "Неизвестно";
   }
 
   /**
-   * Получить полную информацию об уровне
+   * Получить полные данные об уровне
    */
   getLevelData(): HeroLevelData {
     return {
@@ -109,62 +132,81 @@ export class HeroLevelSystem extends SimpleEventEmitter {
   }
 
   /**
-   * Установить уровень напрямую (для тестирования)
+   * Установить уровень героя (для синхронизации с сервером)
    */
   setLevel(level: number): void {
     if (level >= 1 && level <= this.maxLevel) {
+      const oldLevel = this.currentLevel;
       this.currentLevel = level;
-      this.saveToStorage();
+      console.log(`🔄 Уровень синхронизирован: ${oldLevel} -> ${level}`);
       this.emit('levelChanged', this.currentLevel);
-
-    } else {
-      // Некорректный уровень - игнорируем
     }
   }
 
   /**
-   * Сброс уровня до 1 (для перерождения)
+   * Сбросить уровень к начальному
    */
   resetLevel(): void {
     this.currentLevel = 1;
-    this.saveToStorage();
+    console.log('🔄 Уровень сброшен к начальному');
     this.emit('levelReset');
-
   }
 
   /**
-   * Сохранение в localStorage
+   * Загрузка уровня с сервера
    */
-  private saveToStorage(): void {
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
-        currentLevel: this.currentLevel,
-        timestamp: Date.now()
-      }));
-    } catch (error) {
-      console.error('❌ Ошибка сохранения уровня героя:', error);
-    }
-  }
-
-  /**
-   * Загрузка из localStorage
-   */
-  private loadFromStorage(): void {
-    try {
-      const saved = localStorage.getItem(this.STORAGE_KEY);
-      if (saved) {
-        const data = JSON.parse(saved);
-        if (data.currentLevel && data.currentLevel >= 1 && data.currentLevel <= this.maxLevel) {
-          this.currentLevel = data.currentLevel;
+  private async loadFromServer(): Promise<void> {
+    if (this.isLoading) return;
     
+    this.isLoading = true;
+    
+    try {
+      console.log('📥 Загружаем уровень героя с сервера...');
+      
+      const level = await getActiveHeroLevel(TEST_USER_ID);
+      
+      if (level !== null && level >= 1 && level <= this.maxLevel) {
+        const oldLevel = this.currentLevel;
+        this.currentLevel = level;
+        console.log(`✅ Уровень загружен с сервера: ${level}`);
+        
+        if (oldLevel !== level) {
+          this.emit('levelChanged', this.currentLevel);
         }
+      } else {
+        console.warn('⚠️ Некорректный уровень с сервера, используем значение по умолчанию');
+        this.currentLevel = 1;
       }
     } catch (error) {
-      console.error('❌ Ошибка загрузки уровня героя:', error);
+      console.error('❌ Ошибка загрузки уровня с сервера:', error);
       this.currentLevel = 1; // Сброс на начальный уровень при ошибке
+    } finally {
+      this.isLoading = false;
     }
+  }
+
+  /**
+   * Принудительная перезагрузка уровня с сервера
+   */
+  async reloadFromServer(): Promise<void> {
+    await this.loadFromServer();
   }
 }
 
-// Экспорт единственного экземпляра (Singleton)
-export const heroLevelSystem = new HeroLevelSystem(); 
+/**
+ * Глобальный экземпляр системы уровней героя
+ */
+export const heroLevelSystem = new HeroLevelSystem();
+
+// Добавляем глобальные функции для отладки
+if (typeof window !== 'undefined') {
+  (window as any).heroLevelSystem = heroLevelSystem;
+  
+  // Функция для обновления уровня из внешних источников
+  (window as any).updateHeroLevelFromServer = (newLevel: number) => {
+    if (newLevel && newLevel >= 1 && newLevel <= 30) {
+      heroLevelSystem.setLevel(newLevel);
+      console.log(`🔄 Уровень обновлен извне: ${newLevel}`);
+    }
+  };
+} 

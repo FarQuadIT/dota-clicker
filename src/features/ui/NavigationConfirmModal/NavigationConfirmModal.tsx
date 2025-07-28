@@ -7,7 +7,7 @@ import './NavigationConfirmModal.css';
 interface NavigationConfirmModalProps {
   /** Показывать ли модальное окно */
   isVisible: boolean;
-  /** Название целевой вкладки ('main' | 'shop' | 'help') */
+  /** Название целевой вкладки ('main' | 'shop' | 'help' | 'rating') */
   targetTab: string;
   /** Золото заработанное за текущую сессию */
   sessionGold: number;
@@ -25,6 +25,7 @@ const getTabDisplayName = (tab: string): string => {
     case 'main': return 'ГЛАВНАЯ';
     case 'shop': return 'МАГАЗИН';
     case 'help': return 'ПОМОЩЬ';
+    case 'rating': return 'РЕЙТИНГ';
     default: return tab.toUpperCase();
   }
 };

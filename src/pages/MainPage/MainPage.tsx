@@ -6,6 +6,12 @@ import { shopCategories } from '../../shared/constants/shopConfig';
 import HeroDisplay from '../../features/ui/HeroDisplay';
 import { heroLevelSystem, type HeroLevelData } from '../../game/systems/HeroLevelSystem';
 import HeroesModal from '../../features/ui/HeroesModal';
+import QuestsModal from '../../features/ui/QuestsModal';
+import { heroAbilitiesManager, type PassiveAbility } from '../../game/systems/HeroAbilities';
+import { TEST_HERO_ID, TEST_USER_ID } from '../../shared/constants';
+import { mapNumericIdToHeroName, getHeroConfigByNumericId } from '../../game/config/heroConfig';
+import { switchActiveHero, fetchActiveHeroStats } from '../../shared/api/apiService';
+import { useGold } from '../../contexts/GoldContext';
 
 /**
  * Главная страница с анимированным героем
@@ -13,6 +19,26 @@ import HeroesModal from '../../features/ui/HeroesModal';
 export default function MainPage() {
   // Получаем характеристики героя из хранилища
   const stats = useHeroStore((state) => state.stats);
+  const setStats = useHeroStore((state) => state.setStats);
+  
+  // Получаем функции для работы с золотом
+  const { syncGoldWithServer } = useGold();
+
+  // Если данные еще не загружены, показываем загрузку
+  if (!stats) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        height: '100vh',
+        color: 'white',
+        backgroundColor: '#1c2028'
+      }}>
+        <p>Загрузка данных героя...</p>
+      </div>
+    );
+  }
   
   // Состояние для размеров экрана
   const [screenWidth, setScreenWidth] = useState(800);
@@ -39,9 +65,53 @@ export default function MainPage() {
 
   // Состояние для уровня героя
   const [heroLevelData, setHeroLevelData] = useState<HeroLevelData>(heroLevelSystem.getLevelData());
+
+  // Перезагрузка данных героя при входе на страницу
+  useEffect(() => {
+    const reloadHeroData = async () => {
+      try {
+        console.log('🔄 Перезагружаем данные героя на главной странице...');
+        const activeHeroData = await fetchActiveHeroStats(TEST_USER_ID);
+        if (activeHeroData && activeHeroData.stats) {
+          setStats(activeHeroData.stats);
+          console.log('✅ Данные героя обновлены на главной странице');
+          
+          // Синхронизируем уровень с сервера
+          if (activeHeroData.stats.level) {
+            const currentSystemLevel = heroLevelSystem.getCurrentLevel();
+            if (activeHeroData.stats.level !== currentSystemLevel) {
+              console.log(`🔄 Синхронизируем уровень после обновления: система=${currentSystemLevel}, сервер=${activeHeroData.stats.level}`);
+              heroLevelSystem.setLevel(activeHeroData.stats.level);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Ошибка при перезагрузке данных героя:', error);
+      }
+    };
+
+    // Загружаем данные при монтировании компонента
+    reloadHeroData();
+  }, []); // Выполняется только при монтировании
   
   // Состояние для модального окна героев
   const [isHeroesModalOpen, setIsHeroesModalOpen] = useState(false);
+
+  // Состояние для модального окна заданий
+  const [isQuestsModalOpen, setIsQuestsModalOpen] = useState(false);
+
+  // Интерфейс для отображения способности в UI
+  interface UIAbility extends PassiveAbility {
+    icon: string;
+    type: 'passive' | 'active';
+  }
+
+  // Состояние для всплывающего блока способности
+  const [selectedAbility, setSelectedAbility] = useState<{ ability: UIAbility; position: { x: number; y: number } } | null>(null);
+  const [abilityTooltipVisible, setAbilityTooltipVisible] = useState(false);
+  const [abilityTooltipMounted, setAbilityTooltipMounted] = useState(false);
+  const abilityTooltipRef = useRef<HTMLDivElement>(null);
+  const abilityFadeTimeoutRef = useRef<number | null>(null);
 
   // Отслеживаем изменения уровня героя
   useEffect(() => {
@@ -54,13 +124,23 @@ export default function MainPage() {
     heroLevelSystem.on('levelChanged', updateLevelData);
     heroLevelSystem.on('levelReset', updateLevelData);
 
+    // Синхронизация уровня с данными героя при загрузке
+    if (stats && stats.level) {
+      // Если уровень в герое отличается от системы уровней, синхронизируем
+      const currentSystemLevel = heroLevelSystem.getCurrentLevel();
+      if (stats.level !== currentSystemLevel) {
+        console.log(`🔄 Синхронизируем уровень: система=${currentSystemLevel}, сервер=${stats.level}`);
+        heroLevelSystem.setLevel(stats.level);
+      }
+    }
+
     // Очищаем подписки при размонтировании
     return () => {
       heroLevelSystem.off('levelUp', updateLevelData);
       heroLevelSystem.off('levelChanged', updateLevelData);
       heroLevelSystem.off('levelReset', updateLevelData);
     };
-  }, []);
+  }, [stats]); // Добавляем stats в зависимости
 
   // Отслеживаем изменения размера экрана
   useEffect(() => {
@@ -94,7 +174,22 @@ export default function MainPage() {
     }
   };
 
-  // Глобальный слушатель кликов для скрытия тултипа
+  // Обработчик глобального клика для скрытия всплывающего блока способности
+  const handleAbilityGlobalClick = () => {
+    if (abilityTooltipMounted) {
+      // Начинаем fade out анимацию
+      setAbilityTooltipVisible(false);
+      
+      // Убираем всплывающий блок из DOM после завершения анимации
+      abilityFadeTimeoutRef.current = setTimeout(() => {
+        setAbilityTooltipMounted(false);
+        setSelectedAbility(null);
+        abilityFadeTimeoutRef.current = null;
+      }, 200); // 200ms для завершения fade out
+    }
+  };
+
+  // Глобальный слушатель кликов для скрытия тултипа и всплывающего блока способности
   useEffect(() => {
     const handleGlobalClickEvent = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -104,20 +199,32 @@ export default function MainPage() {
                          target.closest('.stat-icon-container') ||
                          target.hasAttribute('data-stat-icon');
       
+      // Проверяем, что клик НЕ по иконке способности
+      const isAbilityIcon = target.classList.contains('ability-icon') || 
+                            target.closest('.ability-icon-container') ||
+                            target.hasAttribute('data-ability-icon');
+      
       if (!isStatIcon && tooltipMounted) {
         handleGlobalClick();
+      }
+      
+      if (!isAbilityIcon && abilityTooltipMounted) {
+        handleAbilityGlobalClick();
       }
     };
 
     document.addEventListener('click', handleGlobalClickEvent);
     return () => document.removeEventListener('click', handleGlobalClickEvent);
-  }, [tooltipMounted]); // Добавляем зависимость от tooltipMounted
+  }, [tooltipMounted, abilityTooltipMounted]); // Добавляем зависимость от abilityTooltipMounted
 
   // Очистка timeout при размонтировании
   useEffect(() => {
     return () => {
       if (fadeTimeoutRef.current) {
         clearTimeout(fadeTimeoutRef.current);
+      }
+      if (abilityFadeTimeoutRef.current) {
+        clearTimeout(abilityFadeTimeoutRef.current);
       }
     };
   }, []);
@@ -140,14 +247,14 @@ export default function MainPage() {
   // Свободная область = полная высота - хедер - футер
   const freeArea = screenHeight - headerHeight - footerHeight;
   
-  // Джаггернаут занимает 50% свободной области
+  // Кентавр занимает 50% свободной области
   const heroHeight = Math.max(200, freeArea * 0.5); // Минимум 200px
   
   // Адаптивная ширина для HeroDisplay
   const heroWidth = Math.min(800, screenWidth - 40);
   
-  // Адаптивный масштаб в зависимости от размера области  
-  // Увеличен для лучшего заполнения кадра (убираем лишние отступы в анимации)
+  // Адаптивный масштаб для кентавра в зависимости от размера области  
+  // Оптимизирован для кадров кентавра разного качества (256px-1024px)
   const adaptiveScale = Math.min(1.2, Math.max(0.3, heroHeight / 700));
 
   // Характеристики для отображения (берем иконки из shopCategories)
@@ -161,14 +268,29 @@ export default function MainPage() {
     { key: 'movement-speed', icon: shopCategories['movement-speed'].icon }
   ];
 
-  // Данные героев для слайдера
+  // Данные героев для слайдера (id соответствует hero_id в heroConfig.ts)
   const heroes = [
     { id: 1, name: 'Джаггернаут', image: '/media/main/heroes/slider/juggernaut.png' },
-    { id: 2, name: 'Слардар', image: '/media/main/heroes/slider/slardar.png' },
-    { id: 3, name: 'Король Скелетов', image: '/media/main/heroes/slider/skeleton_king.png' },
-    { id: 4, name: 'Пожиратель Жизни', image: '/media/main/heroes/slider/life_stealer.png' },
-    { id: 5, name: 'Кентавр', image: '/media/main/heroes/slider/centaur.png' }
+    { id: 2, name: 'Кентавр', image: '/media/main/heroes/slider/centaur.png' }
   ];
+
+  // Получаем текущего героя из данных загруженных с сервера (через heroStore)
+  // Если данные еще не загружены, используем значение по умолчанию
+  const currentHeroNumericId = stats?.heroId ? parseInt(stats.heroId) : parseInt(TEST_HERO_ID);
+  const currentHeroId = mapNumericIdToHeroName(currentHeroNumericId);
+  const currentHeroConfig = getHeroConfigByNumericId(currentHeroNumericId);
+  const gameAbilities = heroAbilitiesManager.getAbilitiesForHero(currentHeroId);
+  
+  // Преобразуем игровые способности в UI-способности с иконками
+  const heroAbilities: UIAbility[] = gameAbilities.map(ability => ({
+    ...ability,
+    icon: ability.id === 'retaliate' 
+      ? '/media/game/assets/heroes/centaur/centaur_abilities/centaur_retaliate.png'
+      : ability.id === 'blade_dance'
+      ? '/media/game/assets/heroes/juggernaut/juggernaut_abilities/juggernaut_blade_dance.png'
+      : '/media/game/assets/default_ability.png', // fallback
+    type: 'passive' as const // Пока все способности пассивные
+  }));
 
   // Количество героев для отображения в слайдере (адаптивно)
   // Рассчитываем оптимальное количество на основе доступного пространства
@@ -197,6 +319,41 @@ export default function MainPage() {
   
   // Адаптивный gap для слайдов
   const adaptiveGap = Math.min(16, Math.max(8, screenWidth * 0.02));
+
+  // Обработчик выбора героя
+  const handleHeroSelect = async (heroId: number) => {
+    // Проверяем что это не текущий герой
+    if (heroId === currentHeroNumericId) {
+      console.log(`Герой ${heroId} уже активен`);
+      return;
+    }
+
+    console.log(`Переключение на героя ${heroId}...`);
+    
+    try {
+      const success = await switchActiveHero(TEST_USER_ID, heroId);
+      if (success) {
+        console.log(`✅ Успешно переключились на героя ${heroId}`);
+        
+        // Загружаем обновленные данные активного героя
+        const activeHeroData = await fetchActiveHeroStats(TEST_USER_ID);
+        if (activeHeroData) {
+          // Обновляем данные героя в store
+          useHeroStore.getState().setStats(activeHeroData.stats);
+          console.log('✅ Данные героя обновлены в store');
+          
+          // Принудительно синхронизируем золото для нового героя
+          syncGoldWithServer(true);
+        } else {
+          console.warn('⚠️ Не удалось загрузить данные нового героя');
+        }
+      } else {
+        console.error('❌ Не удалось переключить героя');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при переключении героя:', error);
+    }
+  };
 
   // Функции для управления слайдером
   const nextHeroSlide = () => {
@@ -351,7 +508,44 @@ export default function MainPage() {
     }, 10);
   };
 
-
+  // Обработчик клика на иконку способности
+  const handleAbilityClick = (ability: UIAbility, event: React.MouseEvent) => {
+    event.stopPropagation(); // Предотвращаем всплытие события
+    
+    // Если кликнули на ту же способность, что уже показана - скрываем всплывающий блок
+    if (selectedAbility && selectedAbility.ability.id === ability.id && abilityTooltipMounted) {
+      handleAbilityGlobalClick();
+      return;
+    }
+    
+    // Очищаем предыдущий timeout, если есть
+    if (abilityFadeTimeoutRef.current) {
+      clearTimeout(abilityFadeTimeoutRef.current);
+      abilityFadeTimeoutRef.current = null;
+    }
+    
+    // Сбрасываем все состояния для перезапуска анимации
+    setAbilityTooltipVisible(false);
+    setAbilityTooltipMounted(false);
+    setSelectedAbility(null);
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = rect.right + 10; // Справа от иконки
+    const y = rect.top + rect.height / 2; // По центру иконки по вертикали
+    
+    // Задержка для сброса состояний, затем запуск новой анимации
+    setTimeout(() => {
+      // Устанавливаем новую позицию всплывающего блока
+      setSelectedAbility({
+        ability,
+        position: { x, y }
+      });
+      
+      // Показываем всплывающий блок с анимацией
+      setAbilityTooltipMounted(true);
+      setTimeout(() => setAbilityTooltipVisible(true), 10); // Небольшая задержка для плавного появления
+    }, 10);
+  };
 
   // Функция для получения изображения ранга
   const getRankImage = (rankName: string): string => {
@@ -376,13 +570,19 @@ export default function MainPage() {
   return (
     <div 
       onClick={(e) => {
-        // Если клик не по иконке характеристики - скрываем тултип
+        // Если клик не по иконке характеристики или способности - скрываем тултипы
         const target = e.target as HTMLElement;
         const isStatIcon = target.classList.contains('stat-icon') || 
                            target.closest('.stat-icon-container');
+        const isAbilityIcon = target.classList.contains('ability-icon') || 
+                              target.closest('.ability-icon-container');
         
         if (!isStatIcon && tooltipMounted) {
           handleGlobalClick();
+        }
+        
+        if (!isAbilityIcon && abilityTooltipMounted) {
+          handleAbilityGlobalClick();
         }
       }}
       style={{
@@ -400,7 +600,7 @@ export default function MainPage() {
       }}
     >
       
-      {/* Джаггернаут адаптивно занимающий 50% свободной области */}
+      {/* Кентавр адаптивно занимающий 50% свободной области */}
     <div style={{ 
         position: 'relative',
         width: '100vw', // На всю ширину экрана
@@ -413,30 +613,125 @@ export default function MainPage() {
         backgroundPosition: '75% 59%', // Показываем центральную часть
         backgroundRepeat: 'no-repeat',
         marginLeft: 'calc(-50vw + 50%)', // Расширяем контейнер на всю ширину экрана
-        zIndex: 0 // Фон позади джаггернаута
+        zIndex: 0 // Фон позади кентавра
       }}>
         
 
 
-        {/* Джаггернаут */}
+        {/* Иконки способностей героя (слева) */}
+        {heroAbilities.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            left: `clamp(15px, 3vw, 30px)`,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: `clamp(8px, 1.5vw, 15px)`,
+            zIndex: 2
+          }}>
+                         {heroAbilities.map((ability: UIAbility, index: number) => (
+              <div
+                key={ability.id}
+                className="ability-icon-container"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAbilityClick(ability, e);
+                }}
+                data-ability-icon={ability.id}
+                style={{
+                  width: `clamp(50px, 8vw, 80px)`,
+                  height: `clamp(50px, 8vw, 80px)`,
+                  background: 'linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%)',
+                  border: '3px solid rgba(255, 215, 0, 0.6)',
+                  borderRadius: `clamp(8px, 1.5vw, 12px)`,
+                  padding: '0',
+                  boxShadow: `
+                    0 8px 32px rgba(0, 0, 0, 0.7),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+                    0 0 15px rgba(255, 215, 0, 0.3)
+                  `,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 1)';
+                  e.currentTarget.style.transform = 'scale(1.05) translateY(-2px)';
+                  e.currentTarget.style.boxShadow = `
+                    0 12px 40px rgba(0, 0, 0, 0.8),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+                    0 0 25px rgba(255, 215, 0, 0.5)
+                  `;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.6)';
+                  e.currentTarget.style.transform = 'scale(1) translateY(0px)';
+                  e.currentTarget.style.boxShadow = `
+                    0 8px 32px rgba(0, 0, 0, 0.7),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+                    0 0 15px rgba(255, 215, 0, 0.3)
+                  `;
+                }}
+              >
+                {/* Декоративный блик */}
+                <div style={{
+                  position: 'absolute',
+                  top: '10%',
+                  left: '10%',
+                  width: '30%',
+                  height: '30%',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 50%)',
+                  borderRadius: '50%',
+                  pointerEvents: 'none'
+                }} />
+                
+                                 {/* Иконка способности */}
+                 <img
+                   className="ability-icon"
+                   src={ability.icon}
+                   alt={ability.name}
+                   style={{
+                     width: '100%',
+                     height: '100%',
+                     objectFit: 'cover',
+                     filter: 'drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8)) brightness(1.1)',
+                     transition: 'transform 0.3s ease',
+                     borderRadius: `clamp(4px, 1vw, 6px)`
+                   }}
+                 />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Герой с адаптивным качеством (HD/MD/LD) */}
         <HeroDisplay 
           width={heroWidth} 
           height={heroHeight} 
-          scale={adaptiveScale} 
+          scale={adaptiveScale}
+          heroType={currentHeroId}
         />
 
         {/* Значок ранга героя */}
         <div style={{
           position: 'absolute',
-          top: `clamp(10px, 2vh, 25px)`,
+          top: `clamp(8px, 1.5vh, 20px)`,
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 3
         }}>
           {/* Иконка ранга с цифрой уровня поверх */}
           <div style={{
-            width: `clamp(60px, 8vw, 80px)`,
-            height: `clamp(60px, 8vw, 80px)`,
+            width: `clamp(45px, ${Math.min(screenWidth * 0.12, screenHeight * 0.08)}px, 90px)`,
+            height: `clamp(45px, ${Math.min(screenWidth * 0.12, screenHeight * 0.08)}px, 90px)`,
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
@@ -459,15 +754,15 @@ export default function MainPage() {
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              fontSize: `clamp(18px, 4vw, 28px)`,
+              fontSize: `clamp(14px, ${Math.min(screenWidth * 0.045, screenHeight * 0.03)}px, 32px)`,
               fontWeight: 'bold',
               color: '#ffffff',
               textShadow: `
-                3px 3px 6px rgba(0, 0, 0, 1),
-                -2px -2px 4px rgba(0, 0, 0, 1),
-                2px -2px 4px rgba(0, 0, 0, 1),
-                -2px 2px 4px rgba(0, 0, 0, 1),
-                0 0 8px rgba(0, 0, 0, 0.8)
+                ${Math.max(1, Math.min(screenWidth * 0.004, 3))}px ${Math.max(1, Math.min(screenWidth * 0.004, 3))}px ${Math.max(2, Math.min(screenWidth * 0.008, 6))}px rgba(0, 0, 0, 1),
+                -${Math.max(1, Math.min(screenWidth * 0.003, 2))}px -${Math.max(1, Math.min(screenWidth * 0.003, 2))}px ${Math.max(2, Math.min(screenWidth * 0.006, 4))}px rgba(0, 0, 0, 1),
+                ${Math.max(1, Math.min(screenWidth * 0.003, 2))}px -${Math.max(1, Math.min(screenWidth * 0.003, 2))}px ${Math.max(2, Math.min(screenWidth * 0.006, 4))}px rgba(0, 0, 0, 1),
+                -${Math.max(1, Math.min(screenWidth * 0.003, 2))}px ${Math.max(1, Math.min(screenWidth * 0.003, 2))}px ${Math.max(2, Math.min(screenWidth * 0.006, 4))}px rgba(0, 0, 0, 1),
+                0 0 ${Math.max(3, Math.min(screenWidth * 0.01, 8))}px rgba(0, 0, 0, 0.8)
               `,
               lineHeight: 1,
               zIndex: 1
@@ -491,8 +786,7 @@ export default function MainPage() {
           {/* Кнопка заданий */}
           <button
             onClick={() => {
-              console.log('Открыть меню заданий');
-              // Здесь будет логика открытия меню заданий
+              setIsQuestsModalOpen(true);
             }}
             style={{
               width: 'clamp(50px, 6vw, 70px)',
@@ -989,8 +1283,10 @@ export default function MainPage() {
                           if (isSwipping) {
                             e.preventDefault();
                             e.stopPropagation();
+                            return;
                           }
-                          // Здесь можно добавить логику выбора героя
+                          // Вызываем обработчик выбора героя
+                          handleHeroSelect(hero.id);
                         }}
                         onMouseEnter={(e) => {
                           // Улучшаем эффект для карточки
@@ -1235,10 +1531,120 @@ export default function MainPage() {
         </div>
       )}
 
+      {/* Всплывающий блок с информацией о способности */}
+      {abilityTooltipMounted && selectedAbility && (
+        <div
+          ref={abilityTooltipRef}
+          style={{
+            position: 'fixed',
+            left: `${selectedAbility.position.x}px`,
+            top: `${selectedAbility.position.y}px`,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            color: 'white',
+            padding: `clamp(8px, 2.5vw, 16px)`,
+            borderRadius: `clamp(6px, 1.5vw, 10px)`,
+            fontSize: `clamp(10px, 2vw, 14px)`,
+            minWidth: `clamp(160px, 40vw, 280px)`,
+            maxWidth: `clamp(200px, 60vw, 320px)`,
+            zIndex: 2000,
+            pointerEvents: 'none',
+            border: '2px solid rgba(255, 215, 0, 0.6)',
+            boxShadow: `
+              0 15px 50px rgba(0, 0, 0, 0.8),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+              0 0 30px rgba(255, 215, 0, 0.3)
+            `,
+            opacity: abilityTooltipVisible ? 1 : 0,
+            transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+            transform: `translate(0, -50%) scale(${abilityTooltipVisible ? 1 : 0.9})`,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)'
+          }}
+        >
+          {/* Название способности */}
+          <div style={{
+            fontSize: `clamp(12px, 2.5vw, 16px)`,
+            fontWeight: 'bold',
+            color: '#ffd700',
+            textAlign: 'center',
+            marginBottom: `clamp(6px, 1.5vw, 10px)`,
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+            textTransform: 'uppercase',
+            letterSpacing: `clamp(0.5px, 0.15vw, 0.8px)`
+          }}>
+            {selectedAbility.ability.name}
+          </div>
+          
+          {/* Разделительная линия */}
+          <div style={{
+            width: '100%',
+            height: '1px',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.8) 50%, transparent 100%)',
+            marginBottom: `clamp(6px, 1.5vw, 10px)`
+          }} />
+          
+          {/* Описание способности */}
+          <div style={{
+            color: '#e0e0e0',
+            lineHeight: 1.3,
+            textAlign: 'center',
+            fontSize: `clamp(9px, 1.8vw, 12px)`
+          }}>
+            {selectedAbility.ability.description}
+          </div>
+          
+          {/* Индикатор типа способности */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: `clamp(6px, 1.5vw, 10px)`,
+            gap: `clamp(3px, 0.8vw, 5px)`
+          }}>
+            <div style={{
+              padding: `clamp(2px, 0.4vw, 3px) clamp(4px, 1vw, 8px)`,
+              backgroundColor: selectedAbility.ability.type === 'passive' ? 'rgba(100, 200, 100, 0.2)' : 'rgba(200, 100, 100, 0.2)',
+              border: `1px solid ${selectedAbility.ability.type === 'passive' ? 'rgba(100, 200, 100, 0.6)' : 'rgba(200, 100, 100, 0.6)'}`,
+              borderRadius: `clamp(2px, 0.5vw, 4px)`,
+              fontSize: `clamp(8px, 1.5vw, 11px)`,
+              color: selectedAbility.ability.type === 'passive' ? '#90ff90' : '#ff9090',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              letterSpacing: '0.3px'
+            }}>
+              {selectedAbility.ability.type === 'passive' ? 'Пассивная' : 'Активная'}
+            </div>
+          </div>
+          
+          {/* Стрелочка, указывающая на иконку */}
+          <div
+            style={{
+              position: 'absolute',
+              left: '-8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '0',
+              height: '0',
+              borderTop: '8px solid transparent',
+              borderBottom: '8px solid transparent',
+              borderRight: '8px solid rgba(0, 0, 0, 0.75)',
+            }}
+          />
+        </div>
+      )}
+
       {/* Модальное окно героев */}
       <HeroesModal 
         isVisible={isHeroesModalOpen}
         onClose={() => setIsHeroesModalOpen(false)}
+      />
+
+      {/* Модальное окно заданий */}
+      <QuestsModal
+        isVisible={isQuestsModalOpen}
+        onClose={() => setIsQuestsModalOpen(false)}
+        userId={TEST_USER_ID}
       />
       
     </div>

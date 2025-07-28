@@ -5,6 +5,11 @@ import { useState } from 'react';
 import { useGame } from '../../../contexts/GameContext';
 import NavigationConfirmModal from '../NavigationConfirmModal';
 import { audioManager } from '../../../game/managers/SoundManager';
+import battleIconUrl from '/media/interface_icons/battle_alt_7.svg';
+import mainIconUrl from '/media/interface_icons/main.svg';
+import shopIconUrl from '/media/interface_icons/shop.svg';
+import helpIconUrl from '/media/interface_icons/help.svg';
+import ratingIconUrl from '/media/interface_icons/rating.svg';
 import './Footer.css';
 
 export default function Footer() {
@@ -18,17 +23,18 @@ export default function Footer() {
 
   // Массив пунктов меню
   const menuItems = [
-    { label: 'main', icon: 'fas fa-home', path: '/main' },
-    { label: 'shop', icon: 'fa fa-shopping-cart', path: '/shop' },
-    { label: 'game', icon: 'fa fa-angle-double-up', path: '/game' },
-    { label: 'help', icon: 'fas fa-question-circle', path: '/help' },
+    { label: 'main', icon: mainIconUrl, type: 'svg', path: '/main' },
+    { label: 'shop', icon: shopIconUrl, type: 'svg', path: '/shop' },
+    { label: 'game', icon: battleIconUrl, type: 'svg', path: '/game' },
+    { label: 'help', icon: helpIconUrl, type: 'svg', path: '/help' },
+    { label: 'rating', icon: ratingIconUrl, type: 'svg', path: '/rating' },
   ];
 
   // Определяем активный пункт меню по текущему пути
   const activeIndex = menuItems.findIndex((item) => location.pathname.startsWith(item.path));
   
-  // Рассчитываем позицию красной полоски
-  const leftPosition = `${(activeIndex >= 0 ? activeIndex : 0) * 25}%`;
+  // Рассчитываем позицию красной полоски (100% / 5 пунктов = 20%)
+  const leftPosition = `${(activeIndex >= 0 ? activeIndex : 0) * 20}%`;
 
   // Функция получения золота за сессию
   const getSessionGold = (): number => {
@@ -67,8 +73,28 @@ export default function Footer() {
       return;
     }
 
+    // Проверяем состояние игры для определения нужности подтверждения
+    const shouldShowConfirmation = () => {
+      // Если игра не активна, подтверждение не нужно
+      if (!isGameActive || isPaused) return false;
+      
+      // Если не переход с игры, подтверждение не нужно
+      if (location.pathname !== '/game' || item.path === '/game') return false;
+      
+      // 🔥 НОВОЕ: Если игра в состоянии ожидания клика, подтверждение не нужно
+      if (gameController && typeof gameController.getCurrentState === 'function') {
+        const currentState = gameController.getCurrentState();
+        if (currentState === 'waiting_for_start') {
+          console.log('🎮 Игра в состоянии ожидания - переходим без подтверждения');
+          return false;
+        }
+      }
+      
+      return true;
+    };
+
     // Если игра активна и пользователь хочет покинуть игру (переход С игры)
-    if (location.pathname === '/game' && isGameActive && !isPaused && item.path !== '/game') {
+    if (shouldShowConfirmation()) {
       
       
       // Ставим игру на паузу
@@ -82,7 +108,7 @@ export default function Footer() {
     } else {
       
       
-      // Обычная навигация
+      // Обычная навигация (включая выход из состояния WAITING_FOR_START)
       navigate(item.path);
     }
   };
@@ -161,7 +187,11 @@ export default function Footer() {
           className={`footer-item ${index === activeIndex ? 'active' : ''} ${isMenuBlocked ? 'blocked' : ''}`}
             onClick={() => handleTabClick(item)}
         >
-          <i className={item.icon}></i>
+          {item.type === 'svg' ? (
+            <img src={item.icon} alt={item.label} className="footer-svg-icon" />
+          ) : (
+            <i className={item.icon}></i>
+          )}
         </div>
       ))}
 

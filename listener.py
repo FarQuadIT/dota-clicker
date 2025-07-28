@@ -3,15 +3,29 @@ import psycopg2
 from collections import defaultdict
 from flask_cors import CORS
 from datetime import datetime
+import random
 
 app = Flask(__name__)
 
 CORS(app)
+connection_conf = {'dbname': "cliker_dota_db",
+                   'user': "cliker",
+                   'password': "cliker",
+                   'host': "localhost",
+                   'port': "5432"}
+
+
+# connection_conf = {'dbname': "cliker_dota_db",
+#                    'user': "cliker",
+#                    'password': "cliker",
+#                    'host': "176.124.212.234",
+#                    'port': "5432"}
 
 @app.route('/update_item_level', methods=['POST'])
 def update_item_level():
-    con = psycopg2.connect(dbname="cliker_dota_db", user="cliker", password="cliker", host="176.124.212.234",
-                           port="5432")
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
     user_id = request.json.get('userId')
     hero_id = request.json.get('heroId')
     item_id = request.json.get('itemId')
@@ -62,7 +76,8 @@ def update_item_level():
                                 on conflict(user_id, hero_id)
                                 do update
                                     set current_money = user_money.current_money - {cost} + 
-                                    (SELECT ROUND(EXTRACT(EPOCH FROM NOW() - last_updated)*offline_money) from user_money where user_id = {user_id}),
+                                    (SELECT ROUND(EXTRACT(EPOCH FROM NOW() - last_updated)*offline_money) from user_money 
+                                    where user_id = {user_id} and hero_id = {hero_id}),
                                         last_updated = current_timestamp,
                                         offline_money = {current_income},
                                         is_current_hero = True;''')
@@ -97,14 +112,17 @@ def update_item_level():
     return jsonify({'message': 'completed'})
 
 
+# TODO может быть косяк, если человек пройдет первый лвл с первого раза
+
 @app.route('/update_user_money', methods=['POST'])
 def update_user_money():
-    # con = psycopg2.connect(dbname="cliker_dota_db", user="cliker", password="cliker", host="localhost", port="5432")
-    con = psycopg2.connect(dbname="cliker_dota_db", user="cliker", password="cliker", host="176.124.212.234",
-                           port="5432")
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
     user_id = request.json.get('userId')
     hero_id = request.json.get('heroId')
     income = request.json.get('income', 0)
+    diamonds = request.json.get('diamond', 0)
     with con.cursor() as cursor:
         if hero_id is None:
             cursor.execute(f'''select coalesce(hero_id, 1) from public.user_money
@@ -118,9 +136,14 @@ def update_user_money():
                                         on conflict(user_id, hero_id)
                                         do update
                                             set current_money = public.user_money.current_money + {income} + 
-                                            (SELECT ROUND(EXTRACT(EPOCH FROM NOW() - last_updated)*offline_money) from user_money where user_id = {user_id}),
+                                            (SELECT ROUND(EXTRACT(EPOCH FROM NOW() - last_updated)*offline_money) 
+                                                from user_money where user_id = {user_id} and hero_id = {hero_id}),
                                                 last_updated = current_timestamp,
                                                 is_current_hero = True;''')
+        if diamonds:
+            cursor.execute(f'''update public.users
+                                set diamonds = diamonds - {diamonds}
+                                where user_id = {user_id}''')
         con.commit()
     con.close()
     return jsonify({'message': 'completed'})
@@ -128,9 +151,9 @@ def update_user_money():
 
 @app.route('/hero_data', methods=['GET'])
 def get_hero_data():
-    # con = psycopg2.connect(dbname="cliker_dota_db", user="cliker", password="cliker", host="localhost", port="5432")
-    con = psycopg2.connect(dbname="cliker_dota_db", user="cliker", password="cliker", host="176.124.212.234",
-                           port="5432")
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
     user_id = request.args.get('userId')
     hero_id = request.args.get('heroId')
     print(user_id, hero_id, 'ids')
@@ -172,7 +195,6 @@ def get_hero_data():
         result_dict['userId'] = user_id
         result_dict['coins'] = element[2]
         # result_dict['coins'] = element[2] + int((element[12] - element[11]).total_seconds()) * element[10] if int(
-            # (element[12] - element[11]).total_seconds()) < 28800 else 28800 * element[10]
         result_dict['maxHealth'] = element[3]
         result_dict['healthRegen'] = element[4]
         result_dict['maxEnergy'] = element[5]
@@ -188,9 +210,9 @@ def get_hero_data():
 
 @app.route('/hero_items', methods=['GET'])
 def get_user_data():
-    # con = psycopg2.connect(dbname="cliker_dota_db", user="cliker", password="cliker", host="localhost", port="5432")
-    con = psycopg2.connect(dbname="cliker_dota_db", user="cliker", password="cliker", host="176.124.212.234",
-                           port="5432")
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
     user_id = request.args.get('userId')
     hero_id = request.args.get('heroId')
     result_dict = defaultdict(defaultdict)
@@ -221,13 +243,174 @@ def get_user_data():
                                 left join user_item_m uim on id.item_id = uim.item_id;''')
         for element in cursor.fetchall():
             result_dict[element[0]][element[1]] = {'itemId': element[1],
-                                            'itemName': element[2],
-                                            'baseValue': element[3],
-                                            'currentLevel': element[4],
-                                            'currentValue': element[5],
-                                            'currentPrice': element[6]}
+                                                   'itemName': element[2],
+                                                   'baseValue': element[3],
+                                                   'currentLevel': element[4],
+                                                   'currentValue': element[5],
+                                                   'currentPrice': element[6]}
     con.close()
     return jsonify({'userId': user_id, 'heroId': hero_id, 'items': result_dict})
+
+
+# Чтобы увеличить уровень героя надо вызвать запрос метод put url:IP/level_up и указать user_id, на выходе  {'message': 'completed'}
+@app.route('/level_up', methods=['PUT'])
+def level_up():
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
+    user_id = request.args.get('userId')
+    with con.cursor() as cursor:
+        cursor.execute(f'''select hero_id from user_money where user_id = {user_id} and is_current_hero = True''')
+        hero_id = cursor.fetchone()[0]
+        cursor.execute(f'''update public.user_hero
+                            set level = level + 1
+                            where hero_id = {hero_id} and user_id = {user_id}''')
+    con.commit()
+    con.close()
+    return jsonify({'message': 'completed'})
+
+
+@app.route('/add_diamonds', methods=['PUT'])
+def add_diamonds():
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
+    user_id = request.args.get('userId')
+    diamonds = request.args.get('diamonds')
+    with con.cursor() as cursor:
+        cursor.execute(f'''update public.users
+                            set diamonds = diamonds + {diamonds}
+                            where user_id = {user_id}''')
+    con.commit()
+    con.close()
+    return jsonify({'message': 'completed'})
+
+
+# При входе человека в игру вызывается get IP/user_info если пользователь в базе уже есть и выбрал перового героя, то
+# вернется json с именем пользователя и 2 списка с id открытых героев и закрытых.
+# Если человек не логинился, то вернется {'message': 'first_login'}
+# Если логинился, но не выбрал 1-го то вернется {'user_nm': 'имя пользователя с хэштэгом','message': 'no_heroes'}
+@app.route('/user_info', methods=['GET'])
+def get_user_info():
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
+    user_id = request.args.get('userId')
+    enabled_heroes = []
+    disabled_heroes = []
+    result = {}
+    with con.cursor() as cursor:
+        cursor.execute(f'''select user_nm || '#' || user_tag, diamonds from public.users where user_id = {user_id}''')
+        user_info = cursor.fetchone()
+        if user_info is not None:
+            result['user_name'] = user_info[0]
+            result['user_diamonds'] = user_info[1]
+            cursor.execute(f'''select h.hero_id, um.user_id
+                            from public.heroes h 
+                            left join (select hero_id, user_id from public.user_money where user_id = {user_id}) um 
+                            on h.hero_id = um.hero_id 
+                            ;''')
+            for line in cursor.fetchall():
+                if line[1] is not None:
+                    enabled_heroes.append(line[0])
+                else:
+                    disabled_heroes.append(line[0])
+            if enabled_heroes:
+                result['enabled_heroes'] = enabled_heroes
+                result['disabled_heroes'] = disabled_heroes
+            else:
+                result['message'] = 'no_heroes'
+        else:
+            result = {'message': 'first_login'}
+    con.commit()
+    con.close()
+    return jsonify(result)
+
+
+@app.route('/set_user_name', methods=['POST'])
+def set_user_name():
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
+    user_id = request.json.get('userId')
+    user_name = request.json.get('userName', None)
+    with con.cursor() as cursor:
+        cursor.execute(f'''insert into public.users (user_id{', user_nm' if user_name is not None else ''})                
+                            values({user_id}{f", '{user_name}'" if user_name is not None else ''})
+                            on conflict(user_id)
+                            do update
+                                set user_nm =  {f"'{user_name}'" if user_name is not None else "'guest'"}''')
+    con.commit()
+    return jsonify({'message': 'completed'})
+
+
+@app.route('/get_user_quests', methods=['GET'])
+def get_user_quests():
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
+    user_id = request.args.get('userId')
+    quests = []
+    with con.cursor() as cursor:
+        cursor.execute(f'''select uq.quest_id
+                            from public.user_quests uq
+                            where user_id = {user_id} and date_dt = current_date''')
+        select_result = cursor.fetchone()
+        if select_result is None:
+            cursor.execute(f'''select quest_id from public.quests''')
+            numbers = []
+            random_numbers = []
+            for line in cursor.fetchall():
+                numbers.append(line[0])
+            for _ in range(5):
+                if numbers:
+                    chosen = random.choice(numbers)
+                    random_numbers.append(chosen)
+                    numbers.remove(chosen)
+            sql_start = f'''insert into public.user_quests(user_id, quest_id) values'''
+            for number, value in enumerate(random_numbers):
+                if number:
+                    sql_start += ', '
+                sql_start += f'''({user_id}, {value})'''
+            cursor.execute(sql_start)
+        con.commit()
+        cursor.execute(f'''select uq.quest_id, q.description, uq.current_goal, q.max_goal, uq.claimed_reward
+                            from public.user_quests uq
+                            left join public.quests q
+                            on uq.quest_id = q.quest_id
+                            where user_id = {user_id} and date_dt = current_date''')
+        for line in cursor.fetchall():
+            quests.append({'questId': line[0],
+                           'questTitle': line[1],
+                           'questCurrentValue': line[2],
+                           'questGoal': line[3],
+                           'claimedReward': line[4]})
+    result = {'userId': user_id, 'quests': quests}
+    return jsonify(result)
+
+
+@app.route('/update_user_quests', methods=['POST'])
+def update_user_quests():
+    con = psycopg2.connect(dbname=connection_conf['dbname'], user=connection_conf['user'],
+                           password=connection_conf['password'],
+                           host=connection_conf['host'], port=connection_conf['port'])
+    user_id = request.json.get('userId')
+    quests = request.json.get('quests', None)
+    with con.cursor() as cursor:
+        for value in quests:
+            cursor.execute(f'''update public.user_quests
+                                set current_goal = {value['currentValue']},
+                                    claimed_reward = {value['claimedReward'] if 'claimedReward' in value else 'false'}
+                                where user_id = {user_id} and quest_id = {value['questId']}''')
+            con.commit()
+    return jsonify({'message': 'completed'})
+
+
+# сделать проверку существования юзера, если не существует, то отправить на страницу ввода имени
+# добавить ежедневные задания (2 new)
+# добавить изменение уровня +1 только текущий герой (new)
+# таблица юзеров с их валютой и возможностью покупки нового героя (2 new)
+# список доступных юзеру героев new
 
 
 if __name__ == '__main__':

@@ -10,8 +10,9 @@
  * Основано на методе drawHealthBar() из old_project_game/front1/game/creepData/creep.js
  */
 
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { CreepTypeConfig } from '../config/creepsConfig';
+import { assetsManager } from '../managers/AssetsManager';
 
 export class CreepHealthBar extends Container {
   // Компоненты PixiJS
@@ -82,14 +83,22 @@ export class CreepHealthBar extends Container {
     this.healthBar = new Graphics();
     this.addChild(this.healthBar);
     
-    // Текст здоровья (белый, адаптивный размер Arial, по центру)
+    // Текст здоровья с улучшенным стилем
     this.healthText = new Text({
       text: '',
       style: {
         fontFamily: 'Doka',
         fontSize: this.currentFontSize,
         fill: '#ffffff',
-        align: 'center'
+        align: 'center',
+        stroke: { color: '#000000', width: 1, alpha: 0.7 }, // Тонкая полупрозрачная обводка
+        dropShadow: {
+          color: '#000000',
+          blur: 2,
+          angle: Math.PI / 6,
+          distance: 1,
+          alpha: 0.8
+        }
       }
     });
     this.addChild(this.healthText);
@@ -99,28 +108,40 @@ export class CreepHealthBar extends Container {
   }
   
   /**
-   * Обновление позиции полоски относительно крипа
+   * УПРОЩЕННОЕ позиционирование полоски относительно крипа
+   * 
+   * Полоска всегда в центре верхнего края спрайта крипа
    * 
    * @param creepX - позиция крипа по X
    * @param creepY - позиция крипа по Y
    * @param creepWidth - ширина крипа
+   * @param creepHeight - высота крипа
    * @param scale - масштаб крипа
    */
-  public updatePosition(creepX: number, creepY: number, creepWidth: number, scale: number): void {
+  public updatePosition(creepX: number, creepY: number, creepWidth: number, creepHeight: number, scale: number): void {
     // Пересчитываем ширину полоски для адаптивности
     this.updateBarWidth(creepWidth, scale);
     
     // Обновляем размер шрифта в зависимости от масштаба крипа (аналогично герою)
     this.updateFontSize(scale);
     
-    // АДАПТИВНОЕ позиционирование с учетом масштаба (как у героя)
-    // Преобразуем фиксированные смещения в относительные к масштабу крипа
-    const adaptiveOffsetX = this.config.healthBarOffsetX * scale;
-    const adaptiveOffsetY = this.config.healthBarOffsetY * scale;
+    // НАСТРАИВАЕМОЕ позиционирование с учетом anchor.set(0.5)
+    // У крипа anchor.set(0.5), поэтому creepX/creepY указывают на ЦЕНТР спрайта
+    const centerX = creepX; // creepX уже центр спрайта (anchor 0.5)
+    const topY = creepY - creepHeight / 2; // Верхний край = центр - половина высоты
     
-    // Позиционирование с учетом адаптивных смещений
-    const barX = creepX - this.barWidth / 2 + adaptiveOffsetX; // Центрируем по крипу + адаптивное смещение
-    const barY = creepY + adaptiveOffsetY; // Позиция с учетом адаптивного смещения
+    // Базовая позиция: полоска на верхнем краю спрайта с отступом
+    const baseBarY = topY - 25; // 25px над спрайтом
+    
+    // Применяем пользовательские смещения из конфигурации крипа
+    // ВАЖНО: Учитываем размер спрайт-листа для пропорциональных смещений
+    const spriteAdaptationFactor = this.getSpriteSheetAdaptationFactor();
+    const offsetX = this.config.healthBarOffsetX * scale * spriteAdaptationFactor; // Смещение с учетом масштаба И размера спрайт-листа
+    const offsetY = this.config.healthBarOffsetY * scale * spriteAdaptationFactor; // Смещение с учетом масштаба И размера спрайт-листа
+    
+    // Центрируем по X + пользовательское смещение
+    const barX = centerX - this.barWidth / 2 + offsetX;
+    const barY = baseBarY + offsetY; // Применяем смещение по Y
     
     this.x = barX;
     this.y = barY;
@@ -155,12 +176,20 @@ export class CreepHealthBar extends Container {
     if (this.currentFontSize !== newFontSize) {
       this.currentFontSize = newFontSize;
       
-      // Обновляем стиль текста
+      // Обновляем стиль текста с улучшенным оформлением
       this.healthText.style = {
         fontFamily: 'Doka',
         fontSize: this.currentFontSize,
         fill: '#ffffff',
-        align: 'center'
+        align: 'center',
+        stroke: { color: '#000000', width: 1, alpha: 0.7 }, // Тонкая полупрозрачная обводка
+        dropShadow: {
+          color: '#000000',
+          blur: 2,
+          angle: Math.PI / 6,
+          distance: 1,
+          alpha: 0.8
+        }
       };
     }
   }
@@ -196,23 +225,54 @@ export class CreepHealthBar extends Container {
    * Обновление отображения полоски и текста
    */
   private updateDisplay(): void {
+    const cornerRadius = 3; // Скругленные углы для современного вида
+    
     // Очищаем графику
     this.backgroundBar.clear();
     this.healthBar.clear();
     
-    // Рисуем фон полоски (rgba(255, 0, 0, 0.8))
-    this.backgroundBar.rect(0, 0, this.barWidth, this.barHeight);
-    this.backgroundBar.fill({ color: 0xff0000, alpha: 0.8 });
+    // Красные цвета для здоровья крипа (не яркие)
+    const bgColor = 0x2d0000; // Темно-красный фон
+    const borderColor = 0x660000; // Темная красная рамка
+    const fillColor = 0xcc4444; // Спокойный красный (не яркий)
+    const fillHighlight = 0xdd6666; // Светло-красный градиент сверху
     
-    // Рисуем текущее здоровье (#ff4d4d)
+    // Рисуем тень полоски (чуть сдвинута вниз и вправо)
+    this.backgroundBar.roundRect(1, 1, this.barWidth, this.barHeight, cornerRadius);
+    this.backgroundBar.fill({ color: 0x000000, alpha: 0.4 });
+    
+    // Рисуем основной фон полоски со скругленными углами
+    this.backgroundBar.roundRect(0, 0, this.barWidth, this.barHeight, cornerRadius);
+    this.backgroundBar.fill({ color: bgColor, alpha: 0.9 });
+    
+    // Рисуем рамку
+    this.backgroundBar.roundRect(0, 0, this.barWidth, this.barHeight, cornerRadius);
+    this.backgroundBar.stroke({ color: borderColor, width: 1, alpha: 0.8 });
+    
+    // Рисуем заполнение полоски с градиентом
     const healthPercentage = this.maxHealth > 0 ? this.currentHealth / this.maxHealth : 0;
-    const healthWidth = this.barWidth * healthPercentage;
-    
-    this.healthBar.rect(0, 0, healthWidth, this.barHeight);
-    this.healthBar.fill({ color: 0xff4d4d, alpha: 1.0 });
+    if (healthPercentage > 0) {
+      const fillWidth = this.barWidth * healthPercentage;
+      
+      // Основное заполнение
+      this.healthBar.roundRect(1, 1, fillWidth - 2, this.barHeight - 2, cornerRadius - 1);
+      this.healthBar.fill({ color: fillColor, alpha: 0.9 });
+      
+      // Верхний блик для объема (градиент эффект)
+      const highlightHeight = Math.max(1, (this.barHeight - 2) * 0.4);
+      this.healthBar.roundRect(1, 1, fillWidth - 2, highlightHeight, cornerRadius - 1);
+      this.healthBar.fill({ color: fillHighlight, alpha: 0.3 });
+      
+      // Внутренняя рамка заполнения для четкости
+      this.healthBar.roundRect(1, 1, fillWidth - 2, this.barHeight - 2, cornerRadius - 1);
+      this.healthBar.stroke({ color: fillColor, width: 0.5, alpha: 0.6 });
+    }
     
     // Обновляем текст здоровья
     this.healthText.text = `${Math.round(this.currentHealth)}/${this.maxHealth}`;
+    
+    // Автоматически подгоняем размер шрифта чтобы текст помещался в полоску
+    this.fitTextToBar(this.healthText, this.barWidth);
     
     // Центрируем текст по полоске
     this.healthText.x = this.barWidth / 2 - this.healthText.width / 2;
@@ -246,10 +306,89 @@ export class CreepHealthBar extends Container {
    * @param creepX - текущая позиция крипа по X
    * @param creepY - текущая позиция крипа по Y
    * @param creepWidth - ширина крипа
+   * @param creepHeight - высота крипа
    * @param scale - масштаб крипа
    */
-  public onResize(creepX: number, creepY: number, creepWidth: number, scale: number): void {
-    // Обновляем позицию полоски с новыми размерами экрана
-    this.updatePosition(creepX, creepY, creepWidth, scale);
+  public onResize(creepX: number, creepY: number, creepWidth: number, creepHeight: number, scale: number): void {
+        // Обновляем позицию полоски с новыми размерами экрана
+    this.updatePosition(creepX, creepY, creepWidth, creepHeight, scale);
   }
-} 
+
+  /**
+   * Автоматически подгоняет размер шрифта текста чтобы он помещался в полоску
+   * 
+   * @param textElement - элемент текста для подгонки
+   * @param maxWidth - максимальная ширина полоски
+   */
+  private fitTextToBar(textElement: Text, maxWidth: number): void {
+    const padding = 8; // Отступ от краев полоски
+    const availableWidth = maxWidth - padding;
+    
+    // Получаем изначальный размер шрифта
+    let fontSize = this.currentFontSize;
+    
+    // Уменьшаем размер шрифта пока текст не поместится
+    while (textElement.width > availableWidth && fontSize > this.minFontSize) {
+      fontSize = Math.max(this.minFontSize, fontSize - 1);
+      
+      // Создаем новый стиль с уменьшенным размером шрифта
+      const newStyle = new TextStyle({
+        fontFamily: 'Doka',
+        fontSize: fontSize,
+        fill: '#ffffff',
+        align: 'center',
+        stroke: { color: '#000000', width: 1, alpha: 0.7 },
+        dropShadow: {
+          color: '#000000',
+          blur: 2,
+          angle: Math.PI / 6,
+          distance: 1,
+          alpha: 0.8
+        }
+      });
+      
+      textElement.style = newStyle;
+    }
+  }
+
+  /**
+   * Вычисляет коэффициент адаптации на основе размера спрайт-листа
+   * 
+   * Обеспечивает пропорциональные смещения независимо от качества:
+   * - HD (1024×1024): коэффициент = 1.0 (базовый размер)
+   * - MD (512×512): коэффициент = 0.5 (вдвое меньше смещения)  
+   * - LD (256×256): коэффициент = 0.25 (вчетверо меньше смещения)
+   */
+  private getSpriteSheetAdaptationFactor(): number {
+    const qualityInfo = assetsManager.getQualityInfo();
+    
+    switch (qualityInfo.quality) {
+      case 'hd': return 1.0;    // 1024px - базовый размер (смещения как есть)
+      case 'md': return 0.5;    // 512px - вдвое меньше смещения  
+      case 'ld': return 0.25;   // 256px - вчетверо меньше смещения
+      default: return 1.0;      // Fallback на базовый размер
+    }
+  }
+
+  /**
+   * Получение центра healthbar по X координате
+   * Используется для точного позиционирования чисел урона
+   */
+  public getCenterX(): number {
+    return this.x + this.barWidth / 2;
+  }
+  
+  /**
+   * Получение Y координаты healthbar для позиционирования над ним
+   */
+  public getTopY(): number {
+    return this.y;
+  }
+  
+  /**
+   * Получение ширины healthbar
+   */
+  public getBarWidth(): number {
+    return this.barWidth;
+  }
+}  

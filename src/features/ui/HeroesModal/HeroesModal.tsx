@@ -1,5 +1,8 @@
 import React from 'react';
 import './HeroesModal.css';
+import { TEST_USER_ID, TEST_HERO_ID } from '../../../shared/constants';
+import { switchActiveHero, fetchActiveHeroStats } from '../../../shared/api/apiService';
+import { useHeroStore } from '../../../contexts/heroStore';
 
 /**
  * Пропсы для модального окна всех героев
@@ -12,14 +15,11 @@ interface HeroesModalProps {
 }
 
 /**
- * Данные героев
+ * Данные героев (id соответствует hero_id в heroConfig.ts)
  */
 const heroes = [
   { id: 1, name: 'Джаггернаут', image: '/media/main/heroes/slider/juggernaut.png' },
-  { id: 2, name: 'Слардар', image: '/media/main/heroes/slider/slardar.png' },
-  { id: 3, name: 'Король Скелетов', image: '/media/main/heroes/slider/skeleton_king.png' },
-  { id: 4, name: 'Пожиратель Жизни', image: '/media/main/heroes/slider/life_stealer.png' },
-  { id: 5, name: 'Кентавр', image: '/media/main/heroes/slider/centaur.png' }
+  { id: 2, name: 'Кентавр', image: '/media/main/heroes/slider/centaur.png' }
 ];
 
 /**
@@ -29,12 +29,52 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
   isVisible,
   onClose
 }) => {
+  // Получаем данные героя из store
+  const stats = useHeroStore((state) => state.stats);
+  
   if (!isVisible) return null;
 
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
     // Закрываем модалку при клике на overlay, но не на само модальное окно
     if (event.target === event.currentTarget) {
       onClose();
+    }
+  };
+
+  // Обработчик выбора героя
+  const handleHeroSelect = async (heroId: number) => {
+    // Получаем ID текущего героя из store точно так же, как в MainPage.tsx
+    const currentHeroNumericId = stats?.heroId ? parseInt(stats.heroId) : parseInt(TEST_HERO_ID);
+    
+    // Проверяем что это не текущий герой (эта проверка не критична)
+    if (heroId === currentHeroNumericId) {
+      console.log(`Герой ${heroId} уже активен`);
+      onClose();
+      return;
+    }
+
+    console.log(`Переключение на героя ${heroId}...`);
+    
+    try {
+      const success = await switchActiveHero(TEST_USER_ID, heroId);
+      if (success) {
+        console.log(`✅ Успешно переключились на героя ${heroId}`);
+        onClose();
+        
+        // Загружаем обновленные данные активного героя
+        const activeHeroData = await fetchActiveHeroStats(TEST_USER_ID);
+        if (activeHeroData) {
+          // Обновляем данные героя в store
+          useHeroStore.getState().setStats(activeHeroData.stats);
+          console.log('✅ Данные героя обновлены в store');
+        } else {
+          console.warn('⚠️ Не удалось загрузить данные нового героя');
+        }
+      } else {
+        console.error('❌ Не удалось переключить героя');
+      }
+    } catch (error) {
+      console.error('❌ Ошибка при переключении героя:', error);
     }
   };
 
@@ -96,7 +136,12 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
         <div className="heroes-modal-content">
           <div className="heroes-grid">
             {heroes.map((hero) => (
-              <div key={hero.id} className="hero-card">
+              <div 
+                key={hero.id} 
+                className="hero-card"
+                onClick={() => handleHeroSelect(hero.id)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="hero-image-container">
                   <img 
                     src={hero.image} 
