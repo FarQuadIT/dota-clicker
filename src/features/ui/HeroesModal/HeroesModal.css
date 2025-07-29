@@ -136,7 +136,7 @@
   background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.6) 50%, transparent 100%);
 }
 
-.hero-card:hover {
+.hero-card:hover:not(.hero-disabled) {
   border-color: rgba(255, 215, 0, 0.6);
   box-shadow: 
     0 8px 24px rgba(0, 0, 0, 0.6),
@@ -144,6 +144,27 @@
     inset 0 -1px 0 rgba(0, 0, 0, 0.3),
     0 0 15px rgba(255, 215, 0, 0.3);
   transform: translateY(-2px);
+}
+
+/* Заблокированная карточка */
+.hero-card.hero-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hero-card.hero-disabled:hover {
+  transform: none;
+  border-color: rgba(100, 120, 140, 0.3);
+}
+
+/* Текущий активный герой */
+.hero-card.hero-current {
+  border-color: rgba(0, 255, 0, 0.6);
+  background: linear-gradient(135deg, rgba(0, 40, 0, 0.3) 0%, rgba(0, 60, 0, 0.2) 50%, rgba(0, 40, 0, 0.3) 100%);
+}
+
+.hero-card.hero-current::before {
+  background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 0, 0.6) 50%, transparent 100%);
 }
 
 /* Контейнер изображения героя */
@@ -158,6 +179,7 @@
     0 4px 16px rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 .hero-image {
@@ -168,13 +190,58 @@
   filter: drop-shadow(2px 2px 6px rgba(0, 0, 0, 0.8));
 }
 
-.hero-card:hover .hero-image {
+.hero-card:hover:not(.hero-disabled) .hero-image {
   transform: scale(1.05);
+}
+
+/* Замочек для заблокированных героев */
+.hero-lock-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+}
+
+.hero-lock-overlay i {
+  color: #c9aa71;
+  font-size: 18px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Индикатор текущего героя */
+.hero-current-indicator {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: rgba(0, 255, 0, 0.9);
+  border: 2px solid rgba(0, 200, 0, 0.8);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 255, 0, 0.4);
+}
+
+.hero-current-indicator i {
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 /* Название героя */
 .hero-name {
-  margin: 0;
+  margin: 0 0 8px 0;
   font-size: 14px;
   color: #c9aa71;
   font-weight: bold;
@@ -187,6 +254,27 @@
   overflow: hidden;
   text-overflow: ellipsis;
   width: 100%;
+}
+
+/* Статус героя */
+.hero-status {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-align: center;
+  margin-top: 4px;
+  color: #00ff00;
+  background: rgba(0, 255, 0, 0.1);
+  border: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.hero-status-locked {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
 }
 
 /* Кнопки действий */
@@ -263,6 +351,29 @@
   .hero-name {
     font-size: 12px;
   }
+
+  .hero-status {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .hero-lock-overlay {
+    width: 32px;
+    height: 32px;
+  }
+
+  .hero-lock-overlay i {
+    font-size: 14px;
+  }
+
+  .hero-current-indicator {
+    width: 20px;
+    height: 20px;
+  }
+
+  .hero-current-indicator i {
+    font-size: 10px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -292,10 +403,33 @@
   .hero-name {
     font-size: 11px;
   }
+
+  .hero-status {
+    font-size: 9px;
+    padding: 2px 5px;
+  }
   
   .heroes-modal-btn {
     width: 100%;
     min-width: auto;
+  }
+
+  .hero-lock-overlay {
+    width: 28px;
+    height: 28px;
+  }
+
+  .hero-lock-overlay i {
+    font-size: 12px;
+  }
+
+  .hero-current-indicator {
+    width: 18px;
+    height: 18px;
+  }
+
+  .hero-current-indicator i {
+    font-size: 9px;
   }
 }
 
@@ -325,5 +459,21 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/* Анимация замочка */
+.hero-lock-overlay {
+  animation: lockPulse 2s infinite;
+}
+
+@keyframes lockPulse {
+  0%, 100% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
   }
 } 

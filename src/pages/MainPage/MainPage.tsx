@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useHeroStore } from '../../contexts/heroStore';
+import { useUser } from '../../contexts/UserContext';
 import { shopCategories } from '../../shared/constants/shopConfig';
 import HeroDisplay from '../../features/ui/HeroDisplay';
 import { heroLevelSystem, type HeroLevelData } from '../../game/systems/HeroLevelSystem';
@@ -265,10 +266,18 @@ export default function MainPage() {
   ];
 
   // Данные героев для слайдера (id соответствует hero_id в heroConfig.ts)
-  const heroes = [
+  const allHeroes = [
     { id: 1, name: 'Джаггернаут', image: '/media/main/heroes/slider/juggernaut.png' },
     { id: 2, name: 'Кентавр', image: '/media/main/heroes/slider/centaur.png' }
   ];
+
+  // Получаем данные пользователя для фильтрации доступных героев
+  const { userData } = useUser();
+  
+  // Фильтруем героев - показываем только enabled_heroes
+  const heroes = allHeroes.filter(hero => 
+    userData?.enabledHeroes.includes(hero.id) ?? false
+  );
 
   // Получаем текущего героя из данных загруженных с сервера (через heroStore)
   // Если данные еще не загружены, используем значение по умолчанию

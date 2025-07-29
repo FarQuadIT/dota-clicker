@@ -15,6 +15,19 @@ export interface UserInfo {
 }
 
 /**
+ * Типы ответов от /user_info API
+ */
+export type UserInfoResponse = 
+  | { message: 'first_login' }
+  | { message: 'no_heroes'; user_name: string }
+  | { 
+      user_name: string;
+      user_diamonds?: number;
+      enabled_heroes: number[];
+      disabled_heroes: number[];
+    };
+
+/**
  * Функция для получения характеристик АКТИВНОГО героя с сервера
  * 
  * Запрашивает данные активного героя пользователя без указания конкретного heroId.
@@ -445,11 +458,12 @@ export async function addGoldToServer(userId: string, goldAmount: number): Promi
 
 /**
  * Функция для получения информации о пользователе с сервера
+ * Обрабатывает все сценарии: первый вход, нет героя, полные данные
  * 
  * @param userId - ID пользователя
- * @returns Объект с информацией о пользователе, включая осколки, или null в случае ошибки
+ * @returns Объект с типом ответа или null в случае ошибки
  */
-export async function fetchUserInfo(userId: string): Promise<UserInfo | null> {
+export async function fetchUserInfo(userId: string): Promise<UserInfoResponse | null> {
   try {
     // Создаем параметры запроса
     const query = new URLSearchParams({ userId }).toString();
@@ -465,26 +479,72 @@ export async function fetchUserInfo(userId: string): Promise<UserInfo | null> {
     // Преобразуем ответ в JSON
     const userData = await response.json();
     
-    // Проверяем что пользователь существует
+    // Возвращаем данные в зависимости от типа ответа
     if (userData.message === 'first_login') {
-      return null;
+      return { message: 'first_login' };
     }
     
     if (userData.message === 'no_heroes') {
-      return null;
+      return { 
+        message: 'no_heroes', 
+        user_name: userData.user_name 
+      };
     }
     
-    // Возвращаем данные пользователя
+    // Полные данные пользователя
     return {
-      userName: userData.user_name,
-      diamonds: userData.user_diamonds ?? 0, // Осколки пользователя
-      enabledHeroes: userData.enabled_heroes ?? [],
-      disabledHeroes: userData.disabled_heroes ?? []
+      user_name: userData.user_name,
+      user_diamonds: userData.user_diamonds ?? 0,
+      enabled_heroes: userData.enabled_heroes ?? [],
+      disabled_heroes: userData.disabled_heroes ?? []
     };
   } catch (error) {
     console.error('❌ Ошибка при загрузке информации о пользователе:', error);
     return null;
   }
+}
+
+/**
+ * Функция для установки имени пользователя
+ * 
+ * @param userId - ID пользователя
+ * @param userName - Имя пользователя
+ * @returns Promise<boolean> - true при успехе, false при ошибке
+ */
+export async function setUserName(userId: string, userName: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/set_user_name`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId: parseInt(userId),
+        userName: userName
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Ошибка установки имени: ${response.status} ${response.statusText}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Ошибка при установке имени пользователя:', error);
+    return false;
+  }
+}
+
+/**
+ * Функция для выбора стартового героя
+ * Использует существующий API /update_user_money для выбора героя
+ * 
+ * @param userId - ID пользователя 
+ * @param heroId - ID выбранного героя
+ * @returns Promise<boolean> - true в случае успеха, false при ошибке
+ */
+export async function selectStarterHero(userId: string, heroId: number): Promise<boolean> {
+  return await switchActiveHero(userId, heroId);
 }
 
 /**

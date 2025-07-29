@@ -18,7 +18,7 @@ export const API_BASE_URL = 'https://ch17400.tmweb.ru/api' as const;
  * ID тестового пользователя
  * Используется во всех запросах к API для идентификации пользователя
  */
-export const TEST_USER_ID = "6969" as const;
+export const TEST_USER_ID = "169692" as const;
 
 /**
  * ID тестового героя

@@ -3,6 +3,7 @@ import './HeroesModal.css';
 import { TEST_USER_ID, TEST_HERO_ID } from '../../../shared/constants';
 import { switchActiveHero, fetchActiveHeroStats } from '../../../shared/api/apiService';
 import { useHeroStore } from '../../../contexts/heroStore';
+import { useUser } from '../../../contexts/UserContext';
 
 /**
  * Пропсы для модального окна всех героев
@@ -31,6 +32,9 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
 }) => {
   // Получаем характеристики героя из хранилища
   const stats = useHeroStore((state) => state.stats);
+  
+  // Получаем данные пользователя для проверки доступности героев
+  const { userData, isHeroEnabled, isHeroDisabled } = useUser();
 
   if (!isVisible) return null;
 
@@ -43,43 +47,39 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
 
   // Обработчик выбора героя
   const handleHeroSelect = async (heroId: number) => {
+    // Проверяем что герой доступен
+    if (!isHeroEnabled(heroId)) {
+      console.log(`Герой ${heroId} недоступен для выбора`);
+      return;
+    }
+
     // Получаем ID текущего героя из store точно так же, как в MainPage.tsx
     const currentHeroNumericId = stats?.heroId ? parseInt(stats.heroId) : parseInt(TEST_HERO_ID);
     
     // Проверяем что это не текущий герой (эта проверка не критична)
     if (heroId === currentHeroNumericId) {
+      console.log(`Герой ${heroId} уже активен`);
       onClose();
       return;
     }
 
-    
     try {
       const success = await switchActiveHero(TEST_USER_ID, heroId);
       if (success) {
-        onClose();
+        console.log(`✅ Герой успешно переключен на ${heroId}`);
         
         // Загружаем обновленные данные активного героя
         const activeHeroData = await fetchActiveHeroStats(TEST_USER_ID);
         if (activeHeroData) {
           // Обновляем данные героя в store
           useHeroStore.getState().setStats(activeHeroData.stats);
-          
-          // Инициализируем золото и доход для нового героя напрямую
-          if ((window as any).initializeGoldContext) {
-            // Получаем текущее количество алмазов, чтобы не перезаписать их
-            const currentDiamonds = (window as any).getCurrentDiamonds 
-              ? (window as any).getCurrentDiamonds() 
-              : 0;
-              
-            (window as any).initializeGoldContext(
-              activeHeroData.gold,
-              activeHeroData.income,
-              currentDiamonds // Сохраняем текущие алмазы
-            );
-          }
+          console.log(`✅ Данные героя ${heroId} обновлены в store`);
         } else {
           console.warn('⚠️ Не удалось загрузить данные нового героя');
         }
+        
+        // Закрываем модальное окно
+        onClose();
       } else {
         console.error('❌ Не удалось переключить героя');
       }
@@ -91,86 +91,80 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
   return (
     <div className="heroes-modal-overlay" onClick={handleOverlayClick}>
       <div className="heroes-modal">
-        
-        {/* Декоративные элементы по углам */}
-        <div style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          width: '20px',
-          height: '20px',
-          border: '2px solid rgba(255, 215, 0, 0.4)',
-          borderLeft: 'none',
-          borderBottom: 'none',
-          borderRadius: '0 4px 0 0',
-          pointerEvents: 'none'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '8px',
-          left: '8px',
-          width: '20px',
-          height: '20px',
-          border: '2px solid rgba(255, 215, 0, 0.4)',
-          borderRight: 'none',
-          borderTop: 'none',
-          borderRadius: '0 0 0 4px',
-          pointerEvents: 'none'
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: '8px',
-          right: '8px',
-          width: '20px',
-          height: '20px',
-          border: '2px solid rgba(255, 215, 0, 0.4)',
-          borderLeft: 'none',
-          borderTop: 'none',
-          borderRadius: '0 0 4px 0',
-          pointerEvents: 'none'
-        }} />
-        
         {/* Заголовок */}
         <div className="heroes-modal-header">
-          <h2 className="heroes-modal-title">⚔️ ГЕРОИ</h2>
+          <h2 className="heroes-modal-title">Герои</h2>
           <button 
             className="heroes-modal-close-btn"
             onClick={onClose}
-            aria-label="Закрыть героев"
+            aria-label="Закрыть"
           >
-            ✕
+            ×
           </button>
         </div>
 
-        {/* Основное содержимое */}
+        {/* Основной контент */}
         <div className="heroes-modal-content">
           <div className="heroes-grid">
-            {heroes.map((hero) => (
-              <div 
-                key={hero.id} 
-                className="hero-card"
-                onClick={() => handleHeroSelect(hero.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="hero-image-container">
-                  <img 
-                    src={hero.image} 
-                    alt={hero.name}
-                    className="hero-image"
-                  />
+            {heroes.map((hero) => {
+              const isEnabled = isHeroEnabled(hero.id);
+              const isDisabled = isHeroDisabled(hero.id);
+              const currentHeroNumericId = stats?.heroId ? parseInt(stats.heroId) : parseInt(TEST_HERO_ID);
+              const isCurrentHero = hero.id === currentHeroNumericId;
+
+              return (
+                <div
+                  key={hero.id}
+                  className={`hero-card ${isDisabled ? 'hero-disabled' : ''} ${isCurrentHero ? 'hero-current' : ''}`}
+                  onClick={() => handleHeroSelect(hero.id)}
+                  style={{
+                    cursor: isDisabled ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <div className="hero-image-container">
+                    <img 
+                      src={hero.image} 
+                      alt={hero.name}
+                      className="hero-image"
+                      style={{
+                        filter: isDisabled ? 'grayscale(100%) brightness(0.5)' : 'none'
+                      }}
+                    />
+                    
+                    {/* Замочек для недоступных героев */}
+                    {isDisabled && (
+                      <div className="hero-lock-overlay">
+                        <i className="fas fa-lock" />
+                      </div>
+                    )}
+
+                    {/* Индикатор текущего героя */}
+                    {isCurrentHero && (
+                      <div className="hero-current-indicator">
+                        <i className="fas fa-check" />
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="hero-name">{hero.name}</h3>
+                  
+                  {/* Статус героя */}
+                  {isCurrentHero && (
+                    <div className="hero-status">Активен</div>
+                  )}
+                  {isDisabled && (
+                    <div className="hero-status hero-status-locked">Заблокирован</div>
+                  )}
                 </div>
-                <h3 className="hero-name">{hero.name}</h3>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
         {/* Кнопки действий */}
         <div className="heroes-modal-actions">
-          <button
+          <button 
             className="heroes-modal-btn heroes-modal-btn-close"
             onClick={onClose}
-            aria-label="Закрыть героев"
           >
             Закрыть
           </button>

@@ -1,0 +1,458 @@
+/* Основной контейнер страницы первого входа */
+.first-login-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #0f1419 0%, #1c2028 50%, #0f1419 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+  overflow: hidden;
+}
+
+/* Декоративный фон */
+.first-login-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(255, 215, 0, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 40% 60%, rgba(255, 215, 0, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Основное модальное окно */
+.first-login-modal {
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.9) 50%, rgba(20, 25, 30, 0.95) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  border-radius: 12px;
+  box-shadow: 
+    0 16px 64px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(255, 215, 0, 0.2);
+  padding: 40px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  color: white;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  animation: modalAppear 0.5s ease-out;
+}
+
+/* Декоративные элементы для модального окна */
+.first-login-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.8) 50%, transparent 100%);
+}
+
+.first-login-modal::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  border-right: none;
+  border-bottom: none;
+  border-radius: 6px 0 0 0;
+  pointer-events: none;
+}
+
+/* Заголовок */
+.first-login-header {
+  text-align: center;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+.first-login-title {
+  font-size: 2.2rem;
+  font-weight: bold;
+  color: #c9aa71;
+  margin: 0 0 15px 0;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  line-height: 1.2;
+}
+
+.first-login-subtitle {
+  font-size: 1.1rem;
+  color: #a0a0a0;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.5px;
+}
+
+/* Форма ввода имени */
+.first-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.input-label {
+  font-size: 1rem;
+  color: #c9aa71;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.name-input {
+  padding: 15px 20px;
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(10, 15, 20, 0.8) 0%, rgba(25, 30, 35, 0.6) 100%);
+  color: white;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    0 0 0 rgba(255, 215, 0, 0);
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(255, 215, 0, 0.3);
+  background: linear-gradient(135deg, rgba(15, 20, 25, 0.9) 0%, rgba(30, 35, 40, 0.7) 100%);
+}
+
+.name-input::placeholder {
+  color: #666;
+}
+
+.name-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Кнопка отправки */
+.submit-btn {
+  padding: 15px 30px;
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%);
+  color: #c9aa71;
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(25, 30, 35, 0.95) 0%, rgba(40, 45, 50, 0.85) 50%, rgba(25, 30, 35, 0.95) 100%);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(255, 215, 0, 0.4);
+  transform: translateY(-2px);
+  border-color: rgba(255, 215, 0, 0.8);
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.6),
+    inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Секция выбора героев */
+.heroes-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.heroes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 30px;
+  justify-items: center;
+}
+
+/* Карточка героя */
+.hero-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 25px;
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.8) 0%, rgba(35, 40, 45, 0.6) 50%, rgba(20, 25, 30, 0.8) 100%);
+  border: 2px solid rgba(100, 120, 140, 0.3);
+  border-radius: 12px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  transition: all 0.4s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  min-width: 180px;
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.6) 50%, transparent 100%);
+}
+
+.hero-card:hover:not(.disabled) {
+  border-color: rgba(255, 215, 0, 0.8);
+  box-shadow: 
+    0 16px 48px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 0 25px rgba(255, 215, 0, 0.4);
+  transform: translateY(-5px) scale(1.02);
+}
+
+.hero-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Контейнер изображения героя */
+.hero-image-container {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 3px solid rgba(100, 120, 140, 0.4);
+  box-shadow: 
+    0 6px 24px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: all 0.4s ease;
+  filter: drop-shadow(3px 3px 8px rgba(0, 0, 0, 0.8));
+}
+
+.hero-card:hover:not(.disabled) .hero-image {
+  transform: scale(1.1);
+}
+
+/* Название героя */
+.hero-name {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #c9aa71;
+  font-weight: bold;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+  line-height: 1.2;
+}
+
+/* Индикатор загрузки на карточке героя */
+.hero-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #c9aa71;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  animation: pulse 1.5s infinite;
+}
+
+/* Подсказка по выбору героя */
+.hero-selection-hint {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.hero-selection-hint p {
+  color: #888;
+  font-size: 0.95rem;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Сообщение об ошибке */
+.error-message {
+  background: linear-gradient(135deg, rgba(200, 50, 50, 0.2) 0%, rgba(150, 30, 30, 0.3) 100%);
+  border: 1px solid rgba(200, 50, 50, 0.5);
+  border-radius: 6px;
+  padding: 15px;
+  color: #ff6b6b;
+  text-align: center;
+  font-weight: bold;
+  box-shadow: 0 4px 16px rgba(200, 50, 50, 0.2);
+}
+
+/* Анимации */
+@keyframes modalAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .first-login-modal {
+    padding: 30px 25px;
+    max-width: 95vw;
+  }
+  
+  .first-login-title {
+    font-size: 1.8rem;
+  }
+  
+  .first-login-subtitle {
+    font-size: 1rem;
+  }
+  
+  .heroes-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .hero-card {
+    padding: 20px;
+    min-width: auto;
+    width: 100%;
+    max-width: 250px;
+    justify-self: center;
+  }
+  
+  .hero-image-container {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .hero-name {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .first-login-modal {
+    padding: 25px 20px;
+    max-width: 98vw;
+  }
+  
+  .first-login-title {
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+  }
+  
+  .first-login-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .name-input {
+    padding: 12px 15px;
+    font-size: 1rem;
+  }
+  
+  .submit-btn {
+    padding: 12px 25px;
+    font-size: 1rem;
+  }
+  
+  .hero-card {
+    padding: 15px;
+  }
+  
+  .hero-image-container {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .hero-name {
+    font-size: 1rem;
+  }
+}
+
+/* Анимации для различных состояний загрузки */
+.first-login-container[data-status="loading"] .first-login-modal {
+  animation: loadingPulse 2s infinite;
+}
+
+@keyframes loadingPulse {
+  0%, 100% {
+    box-shadow: 
+      0 16px 64px rgba(0, 0, 0, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+      0 0 30px rgba(255, 215, 0, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 16px 64px rgba(0, 0, 0, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+      0 0 40px rgba(255, 215, 0, 0.4);
+  }
+}
