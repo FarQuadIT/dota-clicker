@@ -232,11 +232,7 @@ class AssetsManager {
       const maxVertexAttribs = gl.getParameter(gl.MAX_VERTEX_ATTRIBS) as number;
       const maxRenderbufferSize = gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number;
       
-      console.log(`📊 GPU характеристики:`, {
-        maxTextureSize,
-        maxVertexAttribs,
-        maxRenderbufferSize
-      });
+
 
       // Определяем мощность по характеристикам GPU
       if (maxTextureSize >= 8192 && maxVertexAttribs >= 16) {
@@ -271,21 +267,12 @@ class AssetsManager {
       const smallestDimension = Math.min(screenWidth, screenHeight);
       const largestDimension = Math.max(screenWidth, screenHeight);
       
-      console.log(`📱 Анализ устройства:`, {
-        userAgent: userAgent.substring(0, 100) + '...',
-        screenWidth,
-        screenHeight,
-        pixelRatio,
-        isMobile,
-        isTablet,
-        smallestDimension,
-        largestDimension
-      });
+
       
       // Логика определения типа устройства:
       // 1. Сначала проверяем User Agent
       if (isTablet) {
-        console.log('🖥️ Обнаружен планшет по User Agent');
+
         return 'tablet';
       }
       
@@ -294,10 +281,10 @@ class AssetsManager {
         // Смартфоны обычно имеют самую маленькую сторону < 500px
         // Планшеты в портретном режиме могут быть помечены как mobile, но имеют большие размеры
         if (smallestDimension >= 500) {
-          console.log('📱 Обнаружен планшет (большой экран мобильного устройства)');
+
           return 'tablet';
         } else {
-          console.log('📱 Обнаружен смартфон');
+
           return 'smartphone';
         }
       }
@@ -305,18 +292,18 @@ class AssetsManager {
       // 2. Если User Agent не содержит мобильных признаков, анализируем размер экрана
       // Смартфоны: самая маленькая сторона < 500px
       if (smallestDimension < 500) {
-        console.log('📱 Обнаружен смартфон по размеру экрана');
+
         return 'smartphone';
       }
       
       // Планшеты: самая маленькая сторона 500-900px
       if (smallestDimension >= 500 && smallestDimension < 900) {
-        console.log('🖥️ Обнаружен планшет по размеру экрана');
+
         return 'tablet';
       }
       
       // ПК/десктопы: все остальные случаи (обычно самая маленькая сторона >= 900px)
-      console.log('🖥️ Обнаружен ПК/десктоп');
+
       return 'desktop';
       
     } catch (error) {
@@ -349,9 +336,7 @@ class AssetsManager {
     // Определяем тип устройства
     const deviceType = this.detectDeviceType();
     
-    console.log(`🎮 Определение качества спрайт листов:`);
-    console.log(`📱 Тип устройства: ${deviceType}`);
-    console.log(`⚡ Мощность GPU: ${devicePower}`);
+
     
     // Получаем максимальный размер текстуры GPU для проверки ограничений
     let maxTextureSize = 4096; // Безопасное значение по умолчанию
@@ -387,7 +372,7 @@ class AssetsManager {
       maxSupportedQuality = 'ld';
     }
     
-    console.log(`🎯 Максимально поддерживаемое качество по GPU: ${maxSupportedQuality.toUpperCase()} (max texture: ${maxTextureSize}px)`);
+
     
     // Новая логика выбора качества по типу устройства
     let desiredQuality: QualityLevel;
@@ -454,7 +439,7 @@ class AssetsManager {
     // Проверяем ограничения iOS (дополнительная безопасность)
     const isIOSDevice = this.isIOS();
     if (isIOSDevice && desiredQuality === 'hd') {
-      console.log('📱 iOS устройство - ограничиваем HD до MD для стабильности');
+
       desiredQuality = 'md';
       qualityReason += ' → снижено до MD (iOS ограничение)';
     }
@@ -463,13 +448,13 @@ class AssetsManager {
     const finalQuality = canSupportQuality(desiredQuality) ? desiredQuality : maxSupportedQuality;
     
     if (finalQuality !== desiredQuality) {
-      console.log(`⚠️ Снижаем качество с ${desiredQuality.toUpperCase()} до ${finalQuality.toUpperCase()} из-за ограничения GPU`);
+
       qualityReason += ` → снижено до ${finalQuality.toUpperCase()} (GPU лимит: ${maxTextureSize}px)`;
     } else {
-      console.log(`✅ Используем желаемое качество ${finalQuality.toUpperCase()}`);
+
     }
     
-    console.log(`📝 Обоснование: ${qualityReason}`);
+
     
     return finalQuality;
   }
@@ -518,19 +503,14 @@ class AssetsManager {
    */
   public async loadGameAssets(): Promise<void> {
     try {
-      console.log('🎮 Загрузка игровых ресурсов...');
 
       // Определяем мощность устройства и выбираем уровень качества
       this.devicePower = this.detectDevicePower();
       this.selectedQuality = this.selectQualityLevel(this.devicePower);
       
-      console.log(`🔧 Мощность устройства: ${this.devicePower}`);
-      console.log(`🎨 Выбранное качество: ${this.selectedQuality}`);
-      console.log(`📝 ${this.getQualityInfo().description}`);
       
       // Проверяем ограничения мобильных устройств
       const maxTextureSize = this.detectMaxTextureSize();
-      console.log(`📱 Максимальный размер текстуры: ${maxTextureSize}x${maxTextureSize}`);
       
       // Создаем манифест - структуру, описывающую все ресурсы для загрузки
       const assetManifest = this.createAssetManifest();
@@ -666,7 +646,7 @@ class AssetsManager {
       }
     }
     
-    console.log(`🧪 ТЕСТОВЫЙ РЕЖИМ: Загружаем только крипов: ${creepTypes.join(', ')}`);
+
     
     return creepManifest;
   }
@@ -854,7 +834,6 @@ class AssetsManager {
     // Объединяем автоматически сгенерированные конфигурации с fallback
     const finalCreepManifest = { ...creepManifest, ...fallbackCreeps };
     
-    console.log(`🧪 ИТОГО крипов в манифесте: ${Object.keys(finalCreepManifest).join(', ')}`);
 
     return {
       // Ресурсы героев - автоматически генерируются из heroConfig.ts
@@ -1389,7 +1368,6 @@ class AssetsManager {
       
       if (gl) {
         const maxSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-        console.log(`🔍 Обнаружен максимальный размер текстуры: ${maxSize}x${maxSize}`);
         
         // Предупреждение для устройств с ограничениями
         if (maxSize < 4096) {

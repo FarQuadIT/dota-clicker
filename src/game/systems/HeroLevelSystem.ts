@@ -58,7 +58,6 @@ export class HeroLevelSystem extends SimpleEventEmitter {
     this.isLoading = true;
     
     try {
-      console.log(`⬆️ Повышаем уровень героя с ${this.currentLevel} на сервере...`);
       
       // Вызываем API для повышения уровня
       const success = await levelUpActiveHero(TEST_USER_ID);
@@ -71,7 +70,7 @@ export class HeroLevelSystem extends SimpleEventEmitter {
           const oldLevel = this.currentLevel;
           this.currentLevel = newLevel;
           
-          console.log(`✅ Уровень повышен с ${oldLevel} до ${newLevel}`);
+
           this.emit('levelUp', this.currentLevel);
         } else {
           console.warn('⚠️ Сервер не подтвердил повышение уровня');
@@ -138,7 +137,7 @@ export class HeroLevelSystem extends SimpleEventEmitter {
     if (level >= 1 && level <= this.maxLevel) {
       const oldLevel = this.currentLevel;
       this.currentLevel = level;
-      console.log(`🔄 Уровень синхронизирован: ${oldLevel} -> ${level}`);
+
       this.emit('levelChanged', this.currentLevel);
     }
   }
@@ -148,7 +147,7 @@ export class HeroLevelSystem extends SimpleEventEmitter {
    */
   resetLevel(): void {
     this.currentLevel = 1;
-    console.log('🔄 Уровень сброшен к начальному');
+
     this.emit('levelReset');
   }
 
@@ -161,14 +160,14 @@ export class HeroLevelSystem extends SimpleEventEmitter {
     this.isLoading = true;
     
     try {
-      console.log('📥 Загружаем уровень героя с сервера...');
+
       
       const level = await getActiveHeroLevel(TEST_USER_ID);
       
       if (level !== null && level >= 1 && level <= this.maxLevel) {
         const oldLevel = this.currentLevel;
         this.currentLevel = level;
-        console.log(`✅ Уровень загружен с сервера: ${level}`);
+
         
         if (oldLevel !== level) {
           this.emit('levelChanged', this.currentLevel);
@@ -206,7 +205,7 @@ if (typeof window !== 'undefined') {
   (window as any).updateHeroLevelFromServer = (newLevel: number) => {
     if (newLevel && newLevel >= 1 && newLevel <= 30) {
       heroLevelSystem.setLevel(newLevel);
-      console.log(`🔄 Уровень обновлен извне: ${newLevel}`);
+
     }
   };
 } 

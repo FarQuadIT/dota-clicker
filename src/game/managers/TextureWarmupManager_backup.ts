@@ -102,12 +102,9 @@ export class TextureWarmupManagerBackup {
   public setTestBoss(bossType: string | null): void {
     if (bossType === null) {
       this.testBossMode.enabled = false;
-      console.log('🧪 Тестовый режим боссов ВЫКЛЮЧЕН - возврат к обычной игре');
     } else {
       this.testBossMode.enabled = true;
       this.testBossMode.bossType = bossType;
-      console.log(`🧪 Тестовый режим боссов: переключаемся на босса "${bossType}"`);
-      console.log('💡 Перезапусти уровень чтобы изменения вступили в силу');
     }
   }
   
@@ -127,12 +124,9 @@ export class TextureWarmupManagerBackup {
   public setTestCreep(creepType: string | null): void {
     if (creepType === null) {
       this.testCreepMode.enabled = false;
-      console.log('🧪 Тестовый режим обычных крипов ВЫКЛЮЧЕН - возврат к обычной игре');
     } else {
       this.testCreepMode.enabled = true;
       this.testCreepMode.creepType = creepType;
-      console.log(`🧪 Тестовый режим обычных крипов: переключаемся на крипа "${creepType}"`);
-      console.log('💡 Перезапусти уровень чтобы изменения вступили в силу');
     }
   }
   // ===============================================
@@ -145,7 +139,6 @@ export class TextureWarmupManagerBackup {
       return;
     }
     
-    console.log(`🔥 Прогрев текстур для уровня ${level}...`);
     
     // Очищаем старую очередь
     this.clearWarmupQueue();
@@ -167,8 +160,6 @@ export class TextureWarmupManagerBackup {
     const normalCreeps = creepSequence.filter(c => !c.isBoss).length;
     const bosses = creepSequence.filter(c => c.isBoss).length;
     
-    console.log(`✅ Прогрев завершен! Готово ${totalCreeps} крипов для уровня ${level} (${normalCreeps} обычных + ${bosses} босс)`);
-    console.log(`📋 Последовательность крипов:`, creepSequence.map(c => c.isBoss ? `${c.creepType} (BOSS)` : c.creepType).join(', '));
   }
 
   /**
@@ -182,7 +173,6 @@ export class TextureWarmupManagerBackup {
     
     // ТЕСТОВЫЙ РЕЖИМ БОССОВ: Создаем только боссов выбранного типа
     if (this.testBossMode.enabled) {
-      console.log(`🧪 ТЕСТОВЫЙ РЕЖИМ БОССОВ: Создаем только боссов типа "${this.testBossMode.bossType}"`);
       
       // Создаем 10 боссов одного типа для удобного тестирования
       for (let i = 0; i < 10; i++) {
@@ -194,7 +184,6 @@ export class TextureWarmupManagerBackup {
     
     // ТЕСТОВЫЙ РЕЖИМ ОБЫЧНЫХ КРИПОВ: Создаем только обычных крипов выбранного типа
     if (this.testCreepMode.enabled) {
-      console.log(`🧪 ТЕСТОВЫЙ РЕЖИМ ОБЫЧНЫХ КРИПОВ: Создаем только крипов типа "${this.testCreepMode.creepType}"`);
       
       // Создаем 10 обычных крипов одного типа для удобного тестирования
       for (let i = 0; i < 10; i++) {
@@ -229,7 +218,6 @@ export class TextureWarmupManagerBackup {
     
     const creepConfig = getCreepConfig(creepType);
     if (!creepConfig) {
-      console.error(`❌ Не найдена конфигурация для крипа: ${creepType}`);
       return;
     }
 
@@ -271,12 +259,10 @@ export class TextureWarmupManagerBackup {
    */
   public getNextLevelCreep(): Creep | null {
     if (this.levelCreepQueue.length === 0) {
-      console.log('⚠️ Очередь крипов уровня пуста');
       return null;
     }
 
     const creep = this.levelCreepQueue.shift()!;
-    console.log(`✅ Взяли следующего крипа из очереди: ${creep.getCreepType()}`);
     
     return creep;
   }
@@ -305,14 +291,12 @@ export class TextureWarmupManagerBackup {
         // Коррекция позиции для боссов
         if (typeConfig.bossPositionOffsetY) {
           relativeY += typeConfig.bossPositionOffsetY;
-          console.log(`👑 Применена коррекция позиции для босса ${creep.getCreepType()}: ${typeConfig.bossPositionOffsetY}`);
         }
         
         // Коррекция зоны коллизии для боссов
         if (typeConfig.bossCollisionZoneMultiplier) {
           const newCollisionZone = typeConfig.collisionZone * typeConfig.bossCollisionZoneMultiplier;
           creep.setCollisionZone(newCollisionZone);
-          console.log(`⚔️ Применена коррекция зоны коллизии для босса ${creep.getCreepType()}: ${typeConfig.collisionZone} → ${newCollisionZone} (×${typeConfig.bossCollisionZoneMultiplier})`);
         }
       }
     }
@@ -325,7 +309,6 @@ export class TextureWarmupManagerBackup {
       healthBar.visible = true;
     }
     
-    console.log(`🎮 Крип ${creep.getCreepType()} ${isBoss ? '(БОСС)' : ''} подготовлен для игры`);
   }
 
   /**

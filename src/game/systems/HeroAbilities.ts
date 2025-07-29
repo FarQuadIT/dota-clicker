@@ -29,7 +29,6 @@ const IS_MOBILE = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.tes
  */
 function mobileLog(message: string, ...args: any[]): void {
   if (!IS_MOBILE) {
-    console.log(message, ...args);
   }
 }
 

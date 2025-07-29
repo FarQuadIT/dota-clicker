@@ -278,7 +278,6 @@ export class DamageEffectManager {
    * Очистка всех эффектов
    */
   public cleanup(): void {
-    console.log(`🧹 Очищаем ${this.effects.length} эффектов урона`);
     
     try {
       // Создаем копию массива для безопасной итерации
@@ -299,7 +298,7 @@ export class DamageEffectManager {
         }
       }
       
-      console.log('✅ Все эффекты урона очищены');
+      
     } catch (error) {
       console.error('❌ Критическая ошибка при очистке эффектов урона:', error);
       this.effects = [];

@@ -85,7 +85,6 @@ export default function Footer() {
       if (gameController && typeof gameController.getCurrentState === 'function') {
         const currentState = gameController.getCurrentState();
         if (currentState === 'waiting_for_start') {
-          console.log('🎮 Игра в состоянии ожидания - переходим без подтверждения');
           return false;
         }
       }

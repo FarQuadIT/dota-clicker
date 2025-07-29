@@ -156,9 +156,6 @@ class QualitySelector {
     const deviceType = this.detectDeviceType();
     const devicePower = this.detectDevicePower();
     
-    console.log(`🎮 Выбор качества для главной страницы (HD/MD только):`);
-    console.log(`📱 Тип устройства: ${deviceType}`);
-    console.log(`⚡ Мощность: ${devicePower}`);
     
     // Получаем максимальный размер текстуры
     let maxTextureSize = 4096;
@@ -213,7 +210,6 @@ class QualitySelector {
 
     // Проверяем ограничения iOS
     if (this.isIOS() && desiredQuality === 'hd') {
-      console.log('📱 iOS устройство - ограничиваем HD до MD');
       desiredQuality = 'md';
       qualityReason += ' → снижено до MD (iOS ограничение)';
     }
@@ -221,13 +217,10 @@ class QualitySelector {
     // Применяем ограничение по размеру текстуры
     if (!canSupportQuality(desiredQuality)) {
       const fallbackQuality: QualityLevel = 'md'; // Всегда фоллбек на MD
-      console.log(`⚠️ Снижаем качество с ${desiredQuality} до ${fallbackQuality} из-за ограничения GPU`);
       desiredQuality = fallbackQuality;
       qualityReason += ` → снижено до ${desiredQuality} (GPU лимит: ${maxTextureSize}px)`;
     }
 
-    console.log(`✅ Выбрано качество: ${desiredQuality}`);
-    console.log(`📝 ${qualityReason}`);
 
     return desiredQuality;
   }
@@ -265,9 +258,7 @@ const AnimatedHero: React.FC<{
     
     if (spritesheetPath) {
       try {
-        console.log(`🗑️ Выгружаем спрайтлист: ${spritesheetPath}`);
         await Assets.unload(spritesheetPath);
-        console.log(`✅ Спрайтлист ${spritesheetPath} выгружен из памяти`);
       } catch (error) {
         console.warn(`⚠️ Ошибка при выгрузке спрайтлиста ${spritesheetPath}:`, error);
       }
@@ -302,10 +293,8 @@ const AnimatedHero: React.FC<{
         
         const config = heroConfig[`front_${quality}`];
         
-        console.log(`🎮 Загрузка ${heroType} качества ${quality}:`, config.path);
         
         const spritesheetTexture = await Assets.load(config.path);
-        console.log(`✅ Спрайтлист ${heroType} загружен:`, spritesheetTexture);
         
         // Сохраняем путь для последующей выгрузки
         currentSpritesheetPathRef.current = config.path;
@@ -327,8 +316,6 @@ const AnimatedHero: React.FC<{
           frames.push(frameTexture);
         }
 
-        console.log(`📦 Создано кадров ${heroType}: ${frames.length}`);
-        console.log(`🎯 Качество: ${quality}, размер кадра: ${config.frameWidth}x${config.frameHeight}px`);
         setTextures(frames);
         setIsLoading(false);
 
@@ -345,7 +332,6 @@ const AnimatedHero: React.FC<{
   // Очистка ресурсов при размонтировании компонента
   useEffect(() => {
     return () => {
-      console.log(`🧹 Очистка ресурсов компонента AnimatedHero для ${heroType}`);
       cleanupResources();
     };
   }, []);
@@ -353,11 +339,9 @@ const AnimatedHero: React.FC<{
   // Запускаем анимацию после создания спрайта
   useEffect(() => {
     if (spriteRef.current && textures.length > 0) {
-      console.log('Настройка анимации кентавра...');
       spriteRef.current.animationSpeed = 0.45; // Плавная анимация
       spriteRef.current.loop = true;
       spriteRef.current.play();
-      console.log('Анимация кентавра запущена!');
     }
   }, [textures]);
 
@@ -369,7 +353,6 @@ const AnimatedHero: React.FC<{
       case 'md': multiplier = 1.0; break;   // 512px - увеличиваем для четкости
       default: multiplier = 1.0; break;     // По умолчанию как MD
     }
-    console.log(`📏 Компенсационный масштаб для ${selectedQuality}: x${multiplier}`);
     return multiplier;
   }, [selectedQuality]);
 

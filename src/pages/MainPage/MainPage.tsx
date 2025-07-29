@@ -70,17 +70,14 @@ export default function MainPage() {
   useEffect(() => {
     const reloadHeroData = async () => {
       try {
-        console.log('🔄 Перезагружаем данные героя на главной странице...');
         const activeHeroData = await fetchActiveHeroStats(TEST_USER_ID);
         if (activeHeroData && activeHeroData.stats) {
           setStats(activeHeroData.stats);
-          console.log('✅ Данные героя обновлены на главной странице');
           
           // Синхронизируем уровень с сервера
           if (activeHeroData.stats.level) {
             const currentSystemLevel = heroLevelSystem.getCurrentLevel();
             if (activeHeroData.stats.level !== currentSystemLevel) {
-              console.log(`🔄 Синхронизируем уровень после обновления: система=${currentSystemLevel}, сервер=${activeHeroData.stats.level}`);
               heroLevelSystem.setLevel(activeHeroData.stats.level);
             }
           }
@@ -129,7 +126,6 @@ export default function MainPage() {
       // Если уровень в герое отличается от системы уровней, синхронизируем
       const currentSystemLevel = heroLevelSystem.getCurrentLevel();
       if (stats.level !== currentSystemLevel) {
-        console.log(`🔄 Синхронизируем уровень: система=${currentSystemLevel}, сервер=${stats.level}`);
         heroLevelSystem.setLevel(stats.level);
       }
     }
@@ -324,23 +320,19 @@ export default function MainPage() {
   const handleHeroSelect = async (heroId: number) => {
     // Проверяем что это не текущий герой
     if (heroId === currentHeroNumericId) {
-      console.log(`Герой ${heroId} уже активен`);
       return;
     }
 
-    console.log(`Переключение на героя ${heroId}...`);
     
     try {
       const success = await switchActiveHero(TEST_USER_ID, heroId);
       if (success) {
-        console.log(`✅ Успешно переключились на героя ${heroId}`);
         
         // Загружаем обновленные данные активного героя
         const activeHeroData = await fetchActiveHeroStats(TEST_USER_ID);
         if (activeHeroData) {
           // Обновляем данные героя в store
           useHeroStore.getState().setStats(activeHeroData.stats);
-          console.log('✅ Данные героя обновлены в store');
           
           // Принудительно синхронизируем золото для нового героя
           syncGoldWithServer(true);

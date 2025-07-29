@@ -122,7 +122,6 @@ export class LevelDisplaySystem {
       // Количество делений = общее количество - 1 (так как джаггернаут двигается по границам)
       this.progressDivisions = Math.max(1, this.totalCreepsOnLevel - 1);
       
-      console.log(`📊 Уровень ${level}: ${levelConfig.creepCount} обычных крипов + 1 босс = ${this.totalCreepsOnLevel} всего, делений: ${this.progressDivisions}`);
       
     } catch (error) {
       console.error(`❌ Ошибка получения конфигурации уровня ${level}:`, error);
@@ -411,7 +410,6 @@ export class LevelDisplaySystem {
         const newIconScale = adaptiveIconSize / Math.max(newIconTexture.width, newIconTexture.height);
         this.levelIconSprite.scale.set(newIconScale);
         
-        console.log(`✨ Значок уровня изменен: ${oldLevelName} → ${newLevelName} (scale: ${newIconScale.toFixed(3)})`);
       } catch (error) {
         console.error('❌ Ошибка обновления значка уровня:', error);
       }
@@ -438,11 +436,9 @@ export class LevelDisplaySystem {
       if (oldRankName !== newRankName) {
         // Повышение ранга (бронза→серебро, серебро→золото и т.д.)
         audioManager.playSound('rank_up');
-        console.log(`🎵 Воспроизведен звук повышения ранга: ${oldRankName} → ${newRankName}`);
       } else {
         // Обычное повышение уровня в пределах одного ранга
         audioManager.playSound('level_up');
-        console.log(`🎵 Воспроизведен звук повышения уровня: ${oldLevel} → ${newLevel}`);
       }
     } catch (error) {
       console.warn('⚠️ Ошибка воспроизведения звука уровня:', error);
@@ -476,11 +472,10 @@ export class LevelDisplaySystem {
       if (isRankUp) {
         // Эффект повышения ранга - более яркий и масштабный
         this.createRankUpEffect(effectContainer);
-        console.log(`✨ Воспроизведен эффект повышения ранга: ${oldRankName} → ${newRankName}`);
       } else {
         // Эффект обычного повышения уровня
         this.createLevelUpEffect(effectContainer);
-        console.log(`✨ Воспроизведен эффект повышения уровня: ${oldLevel} → ${newLevel}`);
+        
       }
       
       // Автоматически удаляем контейнер эффектов через 3 секунды

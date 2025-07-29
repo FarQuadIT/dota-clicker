@@ -166,19 +166,6 @@ export class Creep extends AnimatedSprite {
     // Ограничиваем масштаб разумными пределами
     const clampedScale = Math.max(0.1, Math.min(3.0, finalScale));
     
-    console.log(`🐻 Creep scaling (${this.creepType}):`, {
-      screenHeight: this.app.screen.height,
-      targetHeightPercent,
-      targetHeightPx,
-      quality: qualityInfo.quality,
-      estimatedSpriteHeight,
-      requiredScale,
-      configScale: this.config.scale,
-      finalScale,
-      clampedScale,
-      actualSpriteHeight: estimatedSpriteHeight * clampedScale,
-      actualScreenPercent: (estimatedSpriteHeight * clampedScale) / this.app.screen.height
-    });
     
     // Применяем итоговый масштаб
     this.scale.set(clampedScale);
@@ -334,11 +321,6 @@ export class Creep extends AnimatedSprite {
       const normalizedDelta = deltaTime / 16.67;
       const creepSpeed = this.moveSpeed * normalizedDelta;
       this.x -= creepSpeed;
-      
-      // 🔍 ОТЛАДКА: Логируем скорость крипа для сравнения с фоном
-      if (Math.floor(Date.now() / 1000) % 2 === 0 && Math.random() < 0.01) {
-        console.log(`🐻 Крип: deltaTime=${deltaTime.toFixed(2)}, normalizedDelta=${normalizedDelta.toFixed(2)}, moveSpeed=${this.moveSpeed.toFixed(2)}, speed=${creepSpeed.toFixed(2)}`);
-      }
     }
 
     // Проверяем кадр атаки если герой передан и крип атакует

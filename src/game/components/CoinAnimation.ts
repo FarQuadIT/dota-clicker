@@ -263,8 +263,6 @@ export class CoinAnimationManager {
           console.warn('⚠️ Ошибка при удалении анимации монеты:', error);
         }
       }
-      
-      console.log('✅ Все анимации монет очищены');
     } catch (error) {
       console.error('❌ Критическая ошибка при очистке анимаций монет:', error);
       this.activeAnimations = [];

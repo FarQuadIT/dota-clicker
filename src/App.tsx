@@ -41,15 +41,12 @@ function AppContent() {
     
     const initializeAudioSystem = async () => {
       try {
-        console.log('🎵 Инициализация звуковой системы из App.tsx...');
         await audioManager.initialize();
         
         if (!isCancelled) {
-          console.log('✅ Звуковая система инициализирована глобально');
         }
       } catch (error) {
         if (!isCancelled) {
-          console.warn('⚠️ Ошибка инициализации звуковой системы:', error);
         }
       }
     };

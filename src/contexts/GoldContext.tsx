@@ -253,7 +253,6 @@ export const GoldProvider = ({ children }: { children: ReactNode }) => {
    */
   const updateLastSyncTime = useCallback(() => {
     const currentTime = Date.now();
-    console.log(`⏰ Обновление времени последней синхронизации: ${new Date(currentTime).toLocaleTimeString()}`);
     setLastServerSyncTime(currentTime);
   }, []);
 

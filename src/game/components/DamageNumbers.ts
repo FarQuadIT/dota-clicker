@@ -432,8 +432,6 @@ export class DamageNumberManager {
     
     // Включаем сортировку по zIndex
     this.app.stage.sortableChildren = true;
-    
-    console.log(`🎭 DamageNumberManager: Режим производительности ${IS_LOW_END ? 'ВКЛЮЧЕН' : 'ВЫКЛЮЧЕН'} (iOS: ${IS_IOS})`);
   }
   
   /**
@@ -654,7 +652,6 @@ export class DamageNumberManager {
         }
       }
       
-      console.log('✅ Все числа урона очищены');
     } catch (error) {
       console.error('❌ Критическая ошибка при очистке чисел урона:', error);
       // В любом случае очищаем массив

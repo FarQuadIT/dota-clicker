@@ -49,11 +49,7 @@ const DeviceDiagnostic = () => {
       const vendor = gl.getParameter(gl.VENDOR);
       const rendererInfo = gl.getParameter(gl.RENDERER);
       
-      console.log('📱 GPU Information:');
-      console.log(`  Vendor: ${vendor}`);
-      console.log(`  Renderer: ${rendererInfo}`);
-      console.log(`  Max Texture Size: ${maxTextureSize}x${maxTextureSize}`);
-      console.log(`  Max Combined Textures: ${maxCombinedTextures}`);
+
       
       // Предупреждение если размер текстуры мал
       if (maxTextureSize < 4096) {
@@ -664,7 +660,6 @@ export default function GamePage() {
    if (isCleaningUpRef.current) return; // Предотвращаем множественные cleanup
    isCleaningUpRef.current = true;
    
-   console.log('🧹 Принудительная очистка ресурсов...');
    
    try {
      // Останавливаем игру через контекст
@@ -719,7 +714,7 @@ export default function GamePage() {
        gameContainerRef.current.innerHTML = '';
      }
      
-     console.log('✅ Принудительная очистка завершена');
+
    } catch (error) {
      console.error('❌ Ошибка при принудительной очистке:', error);
    }
@@ -729,18 +724,15 @@ export default function GamePage() {
  useEffect(() => {
    const handleVisibilityChange = () => {
      if (document.hidden) {
-       console.log('📱 Страница потеряла видимость - принудительная очистка');
        forceCleanupResources();
      }
    };
 
    const handleBeforeUnload = () => {
-     console.log('📱 Страница выгружается - принудительная очистка');
      forceCleanupResources();
    };
 
    const handlePageHide = () => {
-     console.log('📱 Событие pagehide - принудительная очистка');
      forceCleanupResources();
    };
 
@@ -894,11 +886,6 @@ export default function GamePage() {
          const vendor = gl.getParameter(gl.VENDOR);
          const rendererInfo = gl.getParameter(gl.RENDERER);
          
-         console.log('📱 GPU Information:');
-         console.log(`  Vendor: ${vendor}`);
-         console.log(`  Renderer: ${rendererInfo}`);
-         console.log(`  Max Texture Size: ${maxTextureSize}x${maxTextureSize}`);
-         console.log(`  Max Combined Textures: ${maxCombinedTextures}`);
          
          // Предупреждение если размер текстуры мал
          if (maxTextureSize < 4096) {
@@ -1080,7 +1067,7 @@ export default function GamePage() {
            
            // 🔍 ОТЛАДКА: Логируем скорости каждые 60 кадров
            if (Math.floor(Date.now() / 1000) % 2 === 0 && Math.random() < 0.01) {
-             console.log(`🎮 Фон: deltaMS=${time.deltaMS.toFixed(2)}, normalizedDelta=${normalizedDelta.toFixed(2)}, speed=${backgroundSpeed.toFixed(2)}`);
+
            }
          }
        });
@@ -1127,7 +1114,7 @@ export default function GamePage() {
     */
    async function createGameController(app: Application): Promise<void> {
       try {
-        console.log('🎮 Создание GameController...');
+
         
         // 🔥 НОВОЕ: Очищаем все существующие ticker'ы перед созданием нового контроллера
         if (app.ticker) {
@@ -1208,7 +1195,6 @@ export default function GamePage() {
         // Запускаем игровой цикл
         gameController.startGameLoop();
         
-        console.log('✅ GameController успешно создан и запущен');
         
       } catch (error) {
         console.error('❌ Ошибка создания игрового контроллера:', error);
@@ -1229,14 +1215,12 @@ export default function GamePage() {
      const { mapNumericIdToHeroName } = await import('../../game/config/heroConfig');
      const heroType = mapNumericIdToHeroName(heroId);
      
-     console.log(`🎮 Создаем героя: ID=${heroId}, тип=${heroType}`);
      
      // Создаем экземпляр героя
      const hero = new Hero(app, heroType);
      
      // Настройка callback'ов, которые были в оригинальном коде
      heroLevelSystem.on('levelUp', (newLevel: number) => {
-       console.log(`🆙 Герой достиг уровня ${newLevel}`);
      });
      
      // Связываем героя с системой уровней для тестирования
@@ -1253,7 +1237,7 @@ export default function GamePage() {
 
    // 🔥 УЛУЧШЕННАЯ функция очистки при размонтировании компонента
    return () => {
-     console.log('🧹 Компонент размонтируется - запуск очистки');
+  
      
      // Отмечаем что компонент размонтирован
      isMountedRef.current = false;

@@ -29,9 +29,9 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
   isVisible,
   onClose
 }) => {
-  // Получаем данные героя из store
+  // Получаем характеристики героя из хранилища
   const stats = useHeroStore((state) => state.stats);
-  
+
   if (!isVisible) return null;
 
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -48,17 +48,14 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
     
     // Проверяем что это не текущий герой (эта проверка не критична)
     if (heroId === currentHeroNumericId) {
-      console.log(`Герой ${heroId} уже активен`);
       onClose();
       return;
     }
 
-    console.log(`Переключение на героя ${heroId}...`);
     
     try {
       const success = await switchActiveHero(TEST_USER_ID, heroId);
       if (success) {
-        console.log(`✅ Успешно переключились на героя ${heroId}`);
         onClose();
         
         // Загружаем обновленные данные активного героя
@@ -66,7 +63,20 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
         if (activeHeroData) {
           // Обновляем данные героя в store
           useHeroStore.getState().setStats(activeHeroData.stats);
-          console.log('✅ Данные героя обновлены в store');
+          
+          // Инициализируем золото и доход для нового героя напрямую
+          if ((window as any).initializeGoldContext) {
+            // Получаем текущее количество алмазов, чтобы не перезаписать их
+            const currentDiamonds = (window as any).getCurrentDiamonds 
+              ? (window as any).getCurrentDiamonds() 
+              : 0;
+              
+            (window as any).initializeGoldContext(
+              activeHeroData.gold,
+              activeHeroData.income,
+              currentDiamonds // Сохраняем текущие алмазы
+            );
+          }
         } else {
           console.warn('⚠️ Не удалось загрузить данные нового героя');
         }
