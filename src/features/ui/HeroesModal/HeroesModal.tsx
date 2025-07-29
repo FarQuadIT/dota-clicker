@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './HeroesModal.css';
 import { TEST_USER_ID, TEST_HERO_ID } from '../../../shared/constants';
 import { switchActiveHero, fetchActiveHeroStats } from '../../../shared/api/apiService';
 import { useHeroStore } from '../../../contexts/heroStore';
 import { useUser } from '../../../contexts/UserContext';
+import HeroPreview from './HeroPreview';
 
 /**
  * Пропсы для модального окна всех героев
@@ -36,6 +37,9 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
   // Получаем данные пользователя для проверки доступности героев
   const { userData, isHeroEnabled, isHeroDisabled } = useUser();
 
+  // Состояние для превью героя
+  const [previewHero, setPreviewHero] = useState<{ id: number; name: string } | null>(null);
+
   if (!isVisible) return null;
 
   const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
@@ -47,6 +51,15 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
 
   // Обработчик выбора героя
   const handleHeroSelect = async (heroId: number) => {
+    const hero = heroes.find(h => h.id === heroId);
+    
+    // Если герой заблокирован - открываем превью
+    if (isHeroDisabled(heroId)) {
+      console.log(`Открываем превью героя ${heroId}`);
+      setPreviewHero(hero || null);
+      return;
+    }
+
     // Проверяем что герой доступен
     if (!isHeroEnabled(heroId)) {
       console.log(`Герой ${heroId} недоступен для выбора`);
@@ -88,6 +101,23 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
     }
   };
 
+  // Обработчик закрытия превью
+  const handleClosePreview = () => {
+    setPreviewHero(null);
+  };
+
+  // Если открыт превью героя, показываем его
+  if (previewHero) {
+    return (
+      <HeroPreview
+        heroId={previewHero.id}
+        heroName={previewHero.name}
+        onClose={handleClosePreview}
+        onBack={handleClosePreview}
+      />
+    );
+  }
+
   return (
     <div className="heroes-modal-overlay" onClick={handleOverlayClick}>
       <div className="heroes-modal">
@@ -118,41 +148,30 @@ const HeroesModal: React.FC<HeroesModalProps> = ({
                   className={`hero-card ${isDisabled ? 'hero-disabled' : ''} ${isCurrentHero ? 'hero-current' : ''}`}
                   onClick={() => handleHeroSelect(hero.id)}
                   style={{
-                    cursor: isDisabled ? 'not-allowed' : 'pointer'
+                    cursor: isDisabled ? 'pointer' : (isCurrentHero ? 'default' : 'pointer')
                   }}
                 >
-                  <div className="hero-image-container">
-                    <img 
-                      src={hero.image} 
-                      alt={hero.name}
-                      className="hero-image"
-                      style={{
-                        filter: isDisabled ? 'grayscale(100%) brightness(0.5)' : 'none'
-                      }}
-                    />
-                    
-                    {/* Замочек для недоступных героев */}
-                    {isDisabled && (
-                      <div className="hero-lock-overlay">
-                        <i className="fas fa-lock" />
-                      </div>
-                    )}
-
-                    {/* Индикатор текущего героя */}
-                    {isCurrentHero && (
-                      <div className="hero-current-indicator">
-                        <i className="fas fa-check" />
-                      </div>
-                    )}
-                  </div>
-                  <h3 className="hero-name">{hero.name}</h3>
+                  <img 
+                    src={hero.image} 
+                    alt={hero.name}
+                    className="hero-image"
+                    style={{
+                      filter: isDisabled ? 'grayscale(100%) brightness(0.5)' : 'none'
+                    }}
+                  />
                   
-                  {/* Статус героя */}
-                  {isCurrentHero && (
-                    <div className="hero-status">Активен</div>
-                  )}
+                  {/* Замочек для недоступных героев */}
                   {isDisabled && (
-                    <div className="hero-status hero-status-locked">Заблокирован</div>
+                    <div className="hero-lock-overlay">
+                      <i className="fas fa-lock" />
+                    </div>
+                  )}
+
+                  {/* Индикатор текущего героя */}
+                  {isCurrentHero && (
+                    <div className="hero-current-indicator">
+                      <i className="fas fa-check" />
+                    </div>
                   )}
                 </div>
               );

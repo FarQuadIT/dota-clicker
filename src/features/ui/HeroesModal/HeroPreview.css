@@ -1,0 +1,609 @@
+/* Overlay для превью героя */
+.hero-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2500; /* Выше обычного модального окна */
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Модальное окно превью */
+.hero-preview-modal {
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.6);
+  border-radius: 8px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  max-width: 800px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: white;
+  box-sizing: border-box;
+  position: relative;
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Декоративные элементы */
+.hero-preview-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.8) 50%, transparent 100%);
+}
+
+/* Заголовок превью */
+.hero-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 25px 15px;
+  border-bottom: 1px solid rgba(136, 136, 136, 0.3);
+}
+
+.hero-preview-back-btn {
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.95) 0%, rgba(35, 40, 45, 0.85) 50%, rgba(20, 25, 30, 0.95) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  border-radius: 6px;
+  color: #c9aa71;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 12px;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.hero-preview-back-btn:hover {
+  border-color: rgba(255, 215, 0, 0.8);
+  transform: translateY(-1px);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.hero-preview-title {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #c9aa71;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hero-preview-close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.2s ease;
+  line-height: 1;
+}
+
+.hero-preview-close-btn:hover {
+  color: #fff;
+}
+
+/* Основной контент */
+.hero-preview-content {
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* Верхняя часть с анимацией и способностями */
+.hero-preview-top {
+  display: flex;
+  gap: 25px;
+  align-items: flex-start;
+}
+
+/* Контейнер анимации */
+.hero-preview-animation {
+  flex: 1;
+  max-width: 360px; /* Уменьшил с 400px */
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.8) 0%, rgba(35, 40, 45, 0.6) 50%, rgba(20, 25, 30, 0.8) 100%);
+  border: 2px solid rgba(100, 120, 140, 0.3);
+  border-radius: 8px;
+  padding: 15px; /* Уменьшил с 20px */
+  position: relative;
+  
+  /* Добавляем фоновое изображение как на главной странице */
+  background-image: url('/media/game/images/forest_background1.jpg');
+  background-size: 1000%; /* Покрывает всю область без искажений */
+  background-position: 75% 59%; /* Показываем центральную часть */
+  background-repeat: no-repeat;
+  background-blend-mode: overlay;
+  
+  /* Предотвращаем переполнение */
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.hero-preview-animation::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+/* Стили для HeroDisplay внутри превью */
+.hero-preview-animation > div {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 280px;
+  box-sizing: border-box;
+  /* Центрируем содержимое */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Блок способностей */
+.hero-preview-abilities {
+  flex: 1;
+  max-width: 280px; /* Только на больших экранах */
+}
+
+.hero-preview-abilities-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #c9aa71;
+  margin: 0 0 12px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(201, 170, 113, 0.3);
+  padding-bottom: 6px;
+}
+
+.hero-preview-ability {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.8) 0%, rgba(35, 40, 45, 0.6) 50%, rgba(20, 25, 30, 0.8) 100%);
+  border: 2px solid rgba(100, 120, 140, 0.3);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+}
+
+.hero-preview-ability-icon {
+  width: 50px;
+  height: 50px;
+  border: 2px solid rgba(255, 215, 0, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.hero-preview-ability-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(1.1);
+}
+
+.hero-preview-ability-info {
+  flex: 1;
+}
+
+.hero-preview-ability-name {
+  font-size: 15px;
+  font-weight: bold;
+  color: #ffd700;
+  margin: 0 0 4px 0;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.hero-preview-ability-desc {
+  font-size: 13px;
+  color: #e0e0e0;
+  margin: 0 0 6px 0;
+  line-height: 1.3;
+}
+
+.hero-preview-ability-type {
+  font-size: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(100, 200, 100, 0.2);
+  border: 1px solid rgba(100, 200, 100, 0.6);
+  color: #90ff90;
+}
+
+/* Блок характеристик */
+.hero-preview-stats {
+  width: 100%;
+}
+
+.hero-preview-stats-title {
+  font-size: 1.1rem; /* Уменьшил с 1.2rem */
+  font-weight: bold;
+  color: #c9aa71;
+  margin: 0 0 12px 0; /* Уменьшил с 15px */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(201, 170, 113, 0.3);
+  padding-bottom: 6px; /* Уменьшил с 8px */
+  text-align: center;
+}
+
+.hero-preview-stats-grid {
+  /* Центрированная сетка по ширине содержимого */
+  display: grid;
+  grid-template-columns: repeat(7, 1fr); /* Фиксированно 7 колонок равной ширины */
+  gap: clamp(3px, 1.5vw, 10px);
+  width: max-content; /* Ширина по содержимому */
+  max-width: 100%; /* Не больше ширины контейнера */
+  margin: 0 auto; /* Центрирование по горизонтали */
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.8) 0%, rgba(35, 40, 45, 0.6) 50%, rgba(20, 25, 30, 0.8) 100%);
+  border: 2px solid rgba(100, 120, 140, 0.3);
+  border-radius: 6px;
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.hero-preview-stat {
+  /* Одинаковая ширина для всех элементов */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(1px, 0.8vw, 4px);
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(100, 120, 140, 0.3);
+  border-radius: clamp(3px, 0.8vw, 6px);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  padding: clamp(4px, 1.8vw, 10px) clamp(3px, 1.2vw, 8px); /* Увеличил padding для большей ширины */
+  height: fit-content;
+  min-width: clamp(45px, 8vw, 70px); /* Минимальная ширина каждого элемента */
+}
+
+.hero-preview-stat:hover {
+  background: rgba(201, 170, 113, 0.15);
+  border-color: rgba(201, 170, 113, 0.5);
+  transform: translateY(-1px);
+}
+
+.hero-preview-stat-icon {
+  /* Увеличенные иконки для лучшей читаемости */
+  width: clamp(28px, 4vw, 40px);
+  height: clamp(28px, 4vw, 40px);
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.hero-preview-stat-value {
+  /* Увеличенный текст для лучшей читаемости */
+  font-size: clamp(12px, 2.8vw, 18px);
+  color: #ffd700;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  text-align: center;
+  line-height: 1.1;
+  white-space: nowrap; /* Предотвращаем перенос строк */
+}
+
+.hero-preview-stat-name {
+  font-size: 8px;
+  color: #c0c0c0;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 500;
+  display: none; /* Скрываем названия как на главной странице */
+}
+
+/* Кнопки действий */
+.hero-preview-actions {
+  display: flex;
+  justify-content: center;
+  padding-top: 15px;
+}
+
+.hero-preview-buy-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 30px;
+  border: 2px solid rgba(138, 43, 226, 0.6);
+  background: linear-gradient(135deg, rgba(75, 0, 130, 0.3) 0%, rgba(138, 43, 226, 0.2) 50%, rgba(75, 0, 130, 0.3) 100%);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+  cursor: not-allowed;
+  font-size: 16px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-radius: 6px;
+  color: rgba(138, 43, 226, 0.7);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-preview-buy-btn:disabled {
+  opacity: 0.7;
+}
+
+.hero-preview-buy-btn .fas {
+  font-size: 18px;
+  color: rgba(138, 43, 226, 0.8);
+}
+
+.hero-preview-coming-soon {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: rgba(255, 107, 107, 0.9);
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .hero-preview-modal {
+    width: 98%;
+    max-height: 95vh;
+  }
+  
+  .hero-preview-header {
+    padding: 15px 20px 10px;
+  }
+  
+  .hero-preview-title {
+    font-size: 1.4rem;
+  }
+  
+  .hero-preview-content {
+    padding: 18px;
+    gap: 18px;
+  }
+  
+  .hero-preview-top {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .hero-preview-animation {
+    max-width: 100%;
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+  
+  .hero-preview-abilities {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .hero-preview-stats-grid {
+    grid-template-columns: repeat(7, 1fr); /* Сохраняем 7 колонок */
+    gap: clamp(2px, 1.2vw, 8px);
+    padding: 10px;
+    width: max-content; /* Сохраняем ширину по содержимому */
+    max-width: 100%; /* Не больше контейнера */
+    margin: 0 auto; /* Центрирование */
+  }
+  
+  .hero-preview-stat {
+    padding: clamp(3px, 1.5vw, 8px) clamp(2px, 1vw, 6px);
+    min-width: clamp(40px, 7vw, 65px); /* Увеличенная минимальная ширина */
+  }
+  
+  .hero-preview-stat-icon {
+    width: clamp(24px, 3.8vw, 34px);
+    height: clamp(24px, 3.8vw, 34px);
+  }
+  
+  .hero-preview-stat-value {
+    font-size: clamp(10px, 2.4vw, 16px);
+  }
+  
+  .hero-preview-buy-btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-preview-modal {
+    width: 100%;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    overflow-y: auto;
+  }
+  
+  .hero-preview-header {
+    padding: 12px 15px 8px;
+  }
+  
+  .hero-preview-title {
+    font-size: 1.2rem;
+  }
+  
+  .hero-preview-content {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .hero-preview-animation {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  
+  .hero-preview-animation > div {
+    max-height: 220px !important;
+  }
+  
+  .hero-preview-abilities {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .hero-preview-ability {
+    gap: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .hero-preview-ability-icon {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .hero-preview-ability-name {
+    font-size: 14px;
+  }
+  
+  .hero-preview-ability-desc {
+    font-size: 12px;
+  }
+  
+  .hero-preview-stats-grid {
+    grid-template-columns: repeat(7, 1fr); /* Сохраняем 7 колонок */
+    gap: clamp(1px, 0.8vw, 5px);
+    padding: 8px;
+    width: max-content; /* Сохраняем ширину по содержимому */
+    max-width: 100%; /* Не больше контейнера */
+    margin: 0 auto; /* Центрирование */
+  }
+  
+  .hero-preview-stat {
+    padding: clamp(2px, 1.2vw, 6px) clamp(1px, 0.8vw, 4px);
+    min-width: clamp(35px, 6vw, 55px); /* Увеличенная минимальная ширина */
+  }
+  
+  .hero-preview-stat-icon {
+    width: clamp(20px, 3.2vw, 28px);
+    height: clamp(20px, 3.2vw, 28px);
+  }
+  
+  .hero-preview-stat-value {
+    font-size: clamp(9px, 2vw, 13px);
+  }
+  
+  .hero-preview-stat-name {
+    font-size: 7px;
+    line-height: 1.1;
+    display: none;
+  }
+  
+  .hero-preview-buy-btn {
+    padding: 10px 15px;
+    font-size: 13px;
+  }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Стили для кнопки покупки героя за осколки */
+.hero-preview-buy-btn {
+  background: linear-gradient(135deg, rgba(20, 25, 30, 0.9) 0%, rgba(35, 40, 45, 0.7) 50%, rgba(20, 25, 30, 0.9) 100%) !important;
+  border: 2px solid rgba(255, 140, 0, 0.6) !important;
+  color: #ff8c00 !important;
+  cursor: pointer !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+.hero-preview-buy-btn:hover:not(.disabled) {
+  border-color: rgba(255, 140, 0, 0.8) !important;
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(255, 140, 0, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+.hero-preview-buy-btn.disabled {
+  cursor: not-allowed !important;
+  border-color: rgba(100, 120, 140, 0.4) !important;
+  color: #999 !important;
+  opacity: 0.6 !important;
+}
+
+.hero-preview-diamonds-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}

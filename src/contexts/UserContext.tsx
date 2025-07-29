@@ -1,6 +1,6 @@
 // src/contexts/UserContext.tsx
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { fetchUserInfo, setUserName, selectStarterHero, type UserInfoResponse } from '../shared/api/apiService';
 import { TEST_USER_ID } from '../shared/constants';
 
@@ -74,7 +74,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Обработка разных типов ответа
+      // Обработка разных типов ответа с правильными type guards
       if (response.message === 'first_login') {
         setStatus('first_login');
         setUserData(null);
@@ -87,7 +87,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           disabledHeroes: []
         });
       } else {
-        // Полные данные пользователя
+        // Полные данные пользователя (когда message отсутствует)
         setStatus('authenticated');
         setUserData({
           userName: response.user_name,

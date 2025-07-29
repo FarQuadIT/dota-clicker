@@ -5,6 +5,46 @@ import { mapHeroData, mapItemsData } from './mappers';
 import type { ShopItem, UpdateItemPayload, QuestsResponse, UpdateQuestsPayload } from '../types';
 
 /**
+ * Интерфейс для информации о герое от API
+ */
+export interface HeroInfo {
+  damage: number;
+  energyRegen: number;
+  healthRegen: number;
+  heroId: string;
+  heroName: string;
+  maxEnergy: number;
+  maxHealth: number;
+  movementSpeed: number;
+  vampirism: number;
+}
+
+/**
+ * Функция для получения информации о герое по ID
+ * 
+ * @param heroId - ID героя для получения информации
+ * @returns Объект с характеристиками героя или null в случае ошибки
+ */
+export async function fetchHeroInfo(heroId: number): Promise<HeroInfo | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/hero_info?heroId=${heroId}`);
+    
+    if (!response.ok) {
+      console.error(`Ошибка получения информации о герое ${heroId}:`, response.status, response.statusText);
+      return null;
+    }
+    
+    const heroInfo: HeroInfo = await response.json();
+    console.log(`Получена информация о герое ${heroId}:`, heroInfo);
+    
+    return heroInfo;
+  } catch (error) {
+    console.error(`Ошибка сети при получении информации о герое ${heroId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Интерфейс для информации о пользователе
  */
 export interface UserInfo {
@@ -21,6 +61,7 @@ export type UserInfoResponse =
   | { message: 'first_login' }
   | { message: 'no_heroes'; user_name: string }
   | { 
+      message?: undefined; // Указываем что message отсутствует в третьем варианте
       user_name: string;
       user_diamonds?: number;
       enabled_heroes: number[];
@@ -232,6 +273,8 @@ export async function getCurrentActiveHero(userId: string): Promise<number | nul
     return null;
   }
 }
+
+
 
 /**
  * Функция для смены активного героя пользователя
@@ -1001,3 +1044,62 @@ if (typeof window !== 'undefined') {
     };
 
   }
+
+/**
+ * Функция для покупки героя за осколки
+ * 
+ * @param userId - ID пользователя
+ * @param heroId - ID героя, которого покупаем
+ * @param diamondCost - Стоимость героя в осколках
+ * @returns Promise<boolean> - true если покупка успешна, false при ошибке
+ */
+export async function purchaseHeroWithDiamonds(userId: string, heroId: number, diamondCost: number): Promise<boolean> {
+  try {
+    console.log(`🛒 Покупка героя ${heroId} за ${diamondCost} осколков для пользователя ${userId}`);
+    
+    // Создаем payload для API
+    const payload = {
+      userId: parseInt(userId),
+      heroId: heroId,
+      diamond: diamondCost
+    };
+    
+    console.log('🛒 Payload для покупки героя:', payload);
+    
+    // Отправляем POST запрос для списания осколков
+    const response = await fetch(`${API_BASE_URL}/update_user_money`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    console.log(`🛒 Ответ сервера:`, response.status, response.statusText);
+    
+    // Проверяем успешность запроса
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Ошибка ответа сервера:', errorText);
+      throw new Error(`Ошибка покупки героя: ${response.status} ${response.statusText}`);
+    }
+    
+    // Проверяем ответ сервера
+    const result = await response.json();
+    console.log('🛒 Результат покупки:', result);
+
+    const success = result.message === 'completed';
+    
+    if (success) {
+      console.log(`✅ Герой ${heroId} успешно куплен за ${diamondCost} осколков`);
+    } else {
+      console.error(`❌ Покупка героя ${heroId} не удалась:`, result);
+    }
+    
+    return success;
+    
+  } catch (error) {
+    console.error('❌ Ошибка при покупке героя:', error);
+    return false;
+  }
+}

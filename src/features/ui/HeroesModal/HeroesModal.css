@@ -23,8 +23,9 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   padding: 25px;
+  min-width: 350px;
   max-width: 600px;
-  width: 90%;
+  width: auto;
   max-height: 80vh;
   color: white;
   box-sizing: border-box;
@@ -94,36 +95,46 @@
 
 /* Основной контент */
 .heroes-modal-content {
-  margin-bottom: 25px;
+  margin-bottom: 20px;
   overflow-y: auto;
   max-height: 60vh;
 }
 
 /* Сетка героев */
 .heroes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 20px;
-  padding: 10px 0;
+  display: grid !important;
+  grid-template-columns: repeat(3, 80px) !important;
+  gap: 12px;
+  padding: 5px 0;
+  justify-content: start;
+  width: 264px;
+  margin: 0 auto;
+  grid-auto-flow: row !important;
 }
 
 /* Карточка героя */
 .hero-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 15px;
-  background: linear-gradient(135deg, rgba(20, 25, 30, 0.8) 0%, rgba(35, 40, 45, 0.6) 50%, rgba(20, 25, 30, 0.8) 100%);
+  width: 80px !important;
+  height: 80px !important;
+  min-width: 80px !important;
+  min-height: 80px !important;
+  max-width: 80px !important;
+  max-height: 80px !important;
   border: 2px solid rgba(100, 120, 140, 0.3);
-  border-radius: 8px;
+  border-radius: 6px;
   box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3);
   transition: all 0.3s ease;
   cursor: pointer;
   position: relative;
   overflow: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: block;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .hero-card::before {
@@ -134,16 +145,6 @@
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, transparent 0%, rgba(255, 215, 0, 0.6) 50%, transparent 100%);
-}
-
-.hero-card:hover:not(.hero-disabled) {
-  border-color: rgba(255, 215, 0, 0.6);
-  box-shadow: 
-    0 8px 24px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 0 15px rgba(255, 215, 0, 0.3);
-  transform: translateY(-2px);
 }
 
 /* Заблокированная карточка */
@@ -167,27 +168,28 @@
   background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 0, 0.6) 50%, transparent 100%);
 }
 
-/* Контейнер изображения героя */
-.hero-image-container {
-  width: 100px;
-  height: 100px;
-  border-radius: 6px;
-  overflow: hidden;
-  margin-bottom: 12px;
-  border: 2px solid rgba(100, 120, 140, 0.3);
-  box-shadow: 
-    0 4px 16px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
-  position: relative;
-}
-
+/* Изображение героя */
 .hero-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   transition: all 0.3s ease;
-  filter: drop-shadow(2px 2px 6px rgba(0, 0, 0, 0.8));
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8));
+  border-radius: 4px;
+  display: block;
+  margin: 0;
+  padding: 0;
+}
+
+.hero-card:hover:not(.hero-disabled) {
+  border-color: rgba(255, 215, 0, 0.6);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 0 8px rgba(255, 215, 0, 0.3);
+  transform: translateY(-1px);
 }
 
 .hero-card:hover:not(.hero-disabled) .hero-image {
@@ -239,43 +241,7 @@
   font-weight: bold;
 }
 
-/* Название героя */
-.hero-name {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  color: #c9aa71;
-  font-weight: bold;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
 
-/* Статус героя */
-.hero-status {
-  font-size: 11px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  text-align: center;
-  margin-top: 4px;
-  color: #00ff00;
-  background: rgba(0, 255, 0, 0.1);
-  border: 1px solid rgba(0, 255, 0, 0.3);
-}
-
-.hero-status-locked {
-  color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-}
 
 /* Кнопки действий */
 .heroes-modal-actions {
@@ -327,7 +293,9 @@
 @media (max-width: 768px) {
   .heroes-modal {
     padding: 20px;
+    min-width: 360px;
     max-width: 90vw;
+    width: auto;
   }
   
   .heroes-modal-title {
@@ -335,51 +303,53 @@
   }
   
   .heroes-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 15px;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 15px !important;
+    padding: 5px 0;
+    justify-content: flex-start !important;
+    width: 300px !important;
+    margin: 0 auto;
   }
   
   .hero-card {
-    padding: 12px;
-  }
-  
-  .hero-image-container {
-    width: 80px;
-    height: 80px;
-  }
-  
-  .hero-name {
-    font-size: 12px;
-  }
-
-  .hero-status {
-    font-size: 10px;
-    padding: 2px 6px;
+    width: 90px !important;
+    height: 90px !important;
+    min-width: 90px !important;
+    min-height: 90px !important;
+    max-width: 90px !important;
+    max-height: 90px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    flex-shrink: 0;
   }
 
   .hero-lock-overlay {
-    width: 32px;
-    height: 32px;
+    width: 45px;
+    height: 45px;
   }
 
   .hero-lock-overlay i {
-    font-size: 14px;
+    font-size: 21px;
   }
 
   .hero-current-indicator {
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
   }
 
   .hero-current-indicator i {
-    font-size: 10px;
+    font-size: 15px;
   }
 }
 
 @media (max-width: 480px) {
   .heroes-modal {
     padding: 15px;
+    min-width: 280px;
     max-width: 95vw;
+    width: auto;
   }
   
   .heroes-modal-title {
@@ -387,26 +357,26 @@
   }
   
   .heroes-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 12px;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    padding: 5px 0;
+    justify-content: flex-start !important;
+    width: 225px !important;
+    margin: 0 auto;
   }
   
   .hero-card {
-    padding: 10px;
-  }
-  
-  .hero-image-container {
-    width: 70px;
-    height: 70px;
-  }
-  
-  .hero-name {
-    font-size: 11px;
-  }
-
-  .hero-status {
-    font-size: 9px;
-    padding: 2px 5px;
+    width: 67px !important;
+    height: 67px !important;
+    min-width: 67px !important;
+    min-height: 67px !important;
+    max-width: 67px !important;
+    max-height: 67px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box;
+    flex-shrink: 0;
   }
   
   .heroes-modal-btn {
@@ -415,21 +385,21 @@
   }
 
   .hero-lock-overlay {
-    width: 28px;
-    height: 28px;
+    width: 33px;
+    height: 33px;
   }
 
   .hero-lock-overlay i {
-    font-size: 12px;
+    font-size: 16px;
   }
 
   .hero-current-indicator {
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
   }
 
   .hero-current-indicator i {
-    font-size: 9px;
+    font-size: 12px;
   }
 }
 
